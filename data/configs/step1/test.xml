@@ -1,0 +1,1516 @@
+<View>
+    <Style>.source_view .lsf-richtext__line {font-size: 20px;}</Style>
+    <View className="source_view" style="display: flex; color: orchid; font-style: italic;">
+        <Text name="source_t" value="Platform: "/>
+        <Text name="source" value="$source"/>
+        <Text name="p_id_t" value="Platform id :"/>
+        <Text name="platform_id" value="$platform_id"/>
+    </View>
+    <Style>.title_view .lsf-richtext__line {font-size: 22px;}</Style>
+    <View className="title_view">
+        <Header value="Text content"/>
+        <Text name="text1_t" value="Text 1:"/>
+        <Text name="title" value="$text_1" selectionEnabled="false" id="title_text"/>
+        <Text name="gap0" value=" "/>
+        <Text name="text2_t" value="Text 2 (eventual for YouTube):"/>
+        <Text name="description" value="$text_2" selectionEnabled="false"/>
+    </View>
+    <Header value="Video (only YouTube)"/>
+    <HyperText name="video" width="540" height="auto" value="$video_embedd" inline="true"/>
+    <HyperText name="video_link" value="" inline="true" clickableLinks="true">
+        <a href="$video_url" target="_blank">YOUTUBE LINK</a>
+    </HyperText>
+    <View className="language_detection_block" style="display: flex; ">
+        <Text name="language_t" value="Detected language (only for Youtube): " selectionEnabled="false"/>
+        <Text name="language" value="$language" selectionEnabled="false"/>
+    </View>
+    <Text name="lang_correct"
+          value="Is the language of the text as detected correctly? This is only for youtube-TEXT. (Default: Yes)"/>
+    <Choices name="language_correct" toName="language" showInline="true">
+        <Choice value="No"/>
+    </Choices>
+    <Text name="lang_video_same" value="VIDEO SAME LANG...? (Default: Yes)"/>
+    <Choices name="language_video_same" toName="language" showInline="true">
+        <Choice value="No"/>
+    </Choices>
+
+    <Header value="Images (only for Twitter)"/>
+    <View style="display: flex; flex-wrap: wrap;">
+        <View>
+            <Text value="Image 1" name="media_1_l"/>
+            <Image width="640px" valueList="$img_1" name="img_1" zoomControl="false"/>
+        </View>
+        <View>
+            <Text value="Image 2" name="media_2_l"/>
+            <Image width="640px" valueList="$img_2" name="img_2" zoomControl="false"/>
+        </View>
+        <View>
+            <Text value="Image 3" name="media_3_l"/>
+            <Image width="640px" valueList="$img_3" name="img_3" zoomControl="false"/>
+        </View>
+        <View>
+            <Text value="Image 4" name="media_4_l"/>
+            <Image width="640px" valueList="$img_4" name="img_4" zoomControl="false"/>
+        </View>
+    </View>
+
+    <View>
+        <Header value="Is there any harmful content?"/>
+        <Choices name="any_harmful" toName="title" showInline="true" choice="multiple">
+            <Choice value="Text"/>
+            <Choice value="Video"/>
+            <Choice value="Image 1"/>
+            <Choice value="Image 2"/>
+            <Choice value="Image 3"/>
+            <Choice value="Image 4"/>
+        </Choices>
+        <View visibleWhen="choice-selected" whenTagName="any_harmful"
+              whenChoiceValue="Text,Video,Image 1,Image 2,Image 3,Image 4">
+            <Text name="harmful_detail_t" value="Why is this content harmful?"/>
+            <TextArea name="harmful_detail" toName="title"/>
+        </View>
+    </View>
+
+    <View>
+        <Header value="Is there Nature in either the text or the visual content? (Default: No)"/>
+        <Choices name="any-nature" toName="title">
+            <Choice value="Yes"/>
+        </Choices>
+
+        <View visibleWhen="choice-selected" whenTagName="any-nature" whenChoiceValue="Yes">
+            <Text name="any-nature_text_t" value="Is there nature in the TEXT content? (Default: No)"
+                  selectionEnabled="false"/>
+            <Choices name="any-nature_text" toName="title">
+                <Choice value="Yes"/>
+            </Choices>
+        </View>
+
+        <View visibleWhen="choice-selected" whenTagName="any-nature" whenChoiceValue="Yes">
+            <Text name="any-nature_visual_t" value="Is there nature in the VISUAL content? (Default: No)"
+                  selectionEnabled="false"/>
+            <Choices name="any-nature_visual" toName="title">
+                <Choice value="Yes"/>
+            </Choices>
+        </View>
+
+        <Header value="Do you want to mark this task for the 'coding game'?"/>
+        <Choices name="for_coding_game" toName="title" showInline="true">
+            <Choice value="No"/>
+            <Choice value="Yes"/>
+        </Choices>
+    </View>
+
+
+    <View visibleWhen="choice-selected" whenTagName="any-nature" whenChoiceValue="Yes">
+        <Text name="rel_media" value="Select relevant Images (Twitter only)" selectionEnabled="false"/>
+        <Choices name="media_relevant" toName="title" choice="multiple" showInline="true">
+            <Choice value="Image 1"/>
+            <Choice value="Image 2"/>
+            <Choice value="Image 3"/>
+            <Choice value="Image 4"/>
+        </Choices>
+    </View>
+    <View visibleWhen="choice-selected" whenTagName="any_nature" whenChoiceValue="t,m,tm">
+
+        <Header value="Is there a Human-Nature Action?"/>
+        <Choices name="any_stewardship" toName="title">
+            <Choice value="Text No / Media No" alias="-"/>
+            <Choice value="Text Yes / Media No" alias="t"/>
+            <Choice value="Text No / Media Yes" alias="m"/>
+            <Choice value="Text Yes/ Media Yes" alias="tm"/>
+        </Choices>
+        <Header value="Is there any Nature Value Expression (either in the text or in the media content)?"/>
+        <Choices name="any_value_expression" toName="title" showInline="true">
+            <Choice value="No"/>
+            <Choice value="Yes"/>
+        </Choices>
+        <View visibleWhen="choice-selected" whenTagName="any_value_expression" whenChoiceValue="Yes" required="false">
+            <Header value="Nature Value Expression in Text"/>
+            <Choices name="text_value_expression" toName="title" showInline="true">
+                <Choice value="None"/>
+                <Choice value="Implicit"/>
+                <Choice value="Explicit"/>
+            </Choices>
+            <Header value="Nature Value Expression in Media content"/>
+            <Choices name="media_value_expression" toName="title" required="false" showInline="true">
+                <Choice value="None"/>
+                <Choice value="Implicit"/>
+                <Choice value="Explicit"/>
+            </Choices>
+
+            <Header>Nature Element/Process</Header>
+            <Collapse bordered="true" accordion="true">
+                <Panel value="Material">
+                    <Text value="Nature Element/Process 'Material' in Text" name="Material--ne_t_0_t"/>
+                    <Choices name="Material--ne_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Material--ne_t_0" whenChoiceValue="No">
+                        <Text value="Nature Element/Process 'Material' in media" name="Material--ne_m_0_t"/>
+                        <Choices name="Material--ne_m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Material--ne_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects Nature Element/Process 'Material' in Text"
+                              name="Material--ne_m_rej_0_t"/>
+                        <Choices name="Material--ne_m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Immaterial">
+                    <Text value="Nature Element/Process 'Immaterial' in Text" name="Immaterial--ne_t_0_t"/>
+                    <Choices name="Immaterial--ne_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Immaterial--ne_t_0" whenChoiceValue="No">
+                        <Text value="Nature Element/Process 'Immaterial' in media" name="Immaterial--ne_m_0_t"/>
+                        <Choices name="Immaterial--ne_m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Immaterial--ne_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects Nature Element/Process  'Immaterial' in Text"
+                              name="Immaterial--ne_m_rej_0_t"/>
+                        <Choices name="Immaterial--ne_m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Biotic">
+                    <Text value="Nature Element/Process 'Biotic' in Text" name="Biotic--ne_t_0_t"/>
+                    <Choices name="Biotic--ne_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Biotic--ne_t_0" whenChoiceValue="No">
+                        <Text value="Nature Element/Process 'Biotic' in media" name="Biotic--ne_m_0_t"/>
+                        <Choices name="Biotic--ne_m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Biotic--ne_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects Nature Element/Process  'Biotic' in Text"
+                              name="Biotic--ne_m_rej_0_t"/>
+                        <Choices name="Biotic--ne_m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Abiotic">
+                    <Text value="Nature Element/Process 'Abiotic' in Text" name="Abiotic--ne_t_0_t"/>
+                    <Choices name="Abiotic--ne_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Abiotic--ne_t_0" whenChoiceValue="No">
+                        <Text value="Nature Element/Process 'Abiotic' in media" name="Abiotic--ne_m_0_t"/>
+                        <Choices name="Abiotic--ne_m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Abiotic--ne_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects Nature Element/Process  'Abiotic' in Text"
+                              name="Abiotic--ne_m_rej_0_t"/>
+                        <Choices name="Abiotic--ne_m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Artificial surfaces">
+                    <Text value="Nature Element/Process 'Artificial surfaces' in Text"
+                          name="Artificial surfaces--ne_t_0_t"/>
+                    <Choices name="Artificial surfaces--ne_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Artificial surfaces--ne_t_0" whenChoiceValue="No">
+                        <Text value="Nature Element/Process 'Artificial surfaces' in media"
+                              name="Artificial surfaces--ne_m_0_t"/>
+                        <Choices name="Artificial surfaces--ne_m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Artificial surfaces--ne_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects Nature Element/Process  'Artificial surfaces' in Text"
+                              name="Artificial surfaces--ne_m_rej_0_t"/>
+                        <Choices name="Artificial surfaces--ne_m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Agricultural areas">
+                    <Text value="Nature Element/Process 'Agricultural areas' in Text"
+                          name="Agricultural areas--ne_t_0_t"/>
+                    <Choices name="Agricultural areas--ne_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Agricultural areas--ne_t_0" whenChoiceValue="No">
+                        <Text value="Nature Element/Process 'Agricultural areas' in media"
+                              name="Agricultural areas--ne_m_0_t"/>
+                        <Choices name="Agricultural areas--ne_m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Agricultural areas--ne_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects Nature Element/Process  'Agricultural areas' in Text"
+                              name="Agricultural areas--ne_m_rej_0_t"/>
+                        <Choices name="Agricultural areas--ne_m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Forest and seminatural areas">
+                    <Text value="Nature Element/Process 'Forest and seminatural areas' in Text"
+                          name="Forest and seminatural areas--ne_t_0_t"/>
+                    <Choices name="Forest and seminatural areas--ne_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Forest and seminatural areas--ne_t_0"
+                          whenChoiceValue="No">
+                        <Text value="Nature Element/Process 'Forest and seminatural areas' in media"
+                              name="Forest and seminatural areas--ne_m_0_t"/>
+                        <Choices name="Forest and seminatural areas--ne_m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Forest and seminatural areas--ne_t_0"
+                          whenChoiceValue="Yes">
+                        <Text value="Media rejects Nature Element/Process  'Forest and seminatural areas' in Text"
+                              name="Forest and seminatural areas--ne_m_rej_0_t"/>
+                        <Choices name="Forest and seminatural areas--ne_m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Wetlands">
+                    <Text value="Nature Element/Process 'Wetlands' in Text" name="Wetlands--ne_t_0_t"/>
+                    <Choices name="Wetlands--ne_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Wetlands--ne_t_0" whenChoiceValue="No">
+                        <Text value="Nature Element/Process 'Wetlands' in media" name="Wetlands--ne_m_0_t"/>
+                        <Choices name="Wetlands--ne_m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Wetlands--ne_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects Nature Element/Process  'Wetlands' in Text"
+                              name="Wetlands--ne_m_rej_0_t"/>
+                        <Choices name="Wetlands--ne_m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Water bodies">
+                    <Text value="Nature Element/Process 'Water bodies' in Text" name="Water bodies--ne_t_0_t"/>
+                    <Choices name="Water bodies--ne_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Water bodies--ne_t_0" whenChoiceValue="No">
+                        <Text value="Nature Element/Process 'Water bodies' in media" name="Water bodies--ne_m_0_t"/>
+                        <Choices name="Water bodies--ne_m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Water bodies--ne_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects Nature Element/Process  'Water bodies' in Text"
+                              name="Water bodies--ne_m_rej_0_t"/>
+                        <Choices name="Water bodies--ne_m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Human">
+                    <Text value="Nature Element/Process 'Human' in Text" name="Human--ne_t_0_t"/>
+                    <Choices name="Human--ne_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Human--ne_t_0" whenChoiceValue="No">
+                        <Text value="Nature Element/Process 'Human' in media" name="Human--ne_m_0_t"/>
+                        <Choices name="Human--ne_m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Human--ne_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects Nature Element/Process  'Human' in Text" name="Human--ne_m_rej_0_t"/>
+                        <Choices name="Human--ne_m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Positive">
+                    <Text value="Nature Element/Process 'Positive' in Text" name="Positive--ne_t_0_t"/>
+                    <Choices name="Positive--ne_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Positive--ne_t_0" whenChoiceValue="No">
+                        <Text value="Nature Element/Process 'Positive' in media" name="Positive--ne_m_0_t"/>
+                        <Choices name="Positive--ne_m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Positive--ne_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects Nature Element/Process  'Positive' in Text"
+                              name="Positive--ne_m_rej_0_t"/>
+                        <Choices name="Positive--ne_m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Negative">
+                    <Text value="Nature Element/Process 'Negative' in Text" name="Negative--ne_t_0_t"/>
+                    <Choices name="Negative--ne_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <Text name="negative_detail_t" value="Specify the negative Nature Element/Process"/>
+                    <TextArea name="negative_detail" toName="title"/>
+                    <View visibleWhen="choice-selected" whenTagName="Negative--ne_t_0" whenChoiceValue="No">
+                        <Text value="Nature Element/Process 'Negative' in media" name="Negative--ne_m_0_t"/>
+                        <Choices name="Negative--ne_m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Negative--ne_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects Nature Element/Process  'Negative' in Text"
+                              name="Negative--ne_m_rej_0_t"/>
+                        <Choices name="Negative--ne_m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Other">
+                    <Text value="Name the Other Nature Element/Process" name="ne_o_0_t"/>
+                    <TextArea name="ne_o_t_0_t" toName="title"/>
+                    <Text value="Nature Element/Process 'Other' in Text" name="Other--ne_t_0_t"/>
+                    <Choices name="Other--ne_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Other--ne_t_0" whenChoiceValue="No">
+                        <Text value="Nature Element/Process 'Other' in media" name="Other--ne_m_0_t"/>
+                        <Choices name="Other--ne_m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Other--ne_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects Nature Element/Process  'Other' in Text" name="Other--ne_m_rej_0_t"/>
+                        <Choices name="Other--ne_m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                </Panel>
+            </Collapse>
+            <View visibleWhen="choice-selected" whenTagName="any_stewardship" whenChoiceValue="t,m,tm">
+                <Header>Human-Nature Action</Header>
+                <Collapse bordered="true" accordion="true">
+                    <Panel value="Preservation">
+                        <Text value="Human-Nature Action 'Preservation' in Text" name="Preservation--t_0_t"/>
+                        <Choices name="Preservation--t_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                        <View visibleWhen="choice-selected" whenTagName="Preservation--t_0" whenChoiceValue="No">
+                            <Text value="Human-Nature Action 'Preservation' in Media" name="Preservation--m_0_t"/>
+                            <Choices name="Preservation--m_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                        <View visibleWhen="choice-selected" whenTagName="Preservation--t_0" whenChoiceValue="Yes">
+                            <Text value="Media rejects SA 'Preservation' in Text" name="Preservation--m_rej_0_t"/>
+                            <Choices name="Preservation--m_rej_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                    </Panel>
+                    <Panel value="Restoration">
+                        <Text value="Human-Nature Action 'Restoration' in Text" name="Restoration--t_0_t"/>
+                        <Choices name="Restoration--t_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                        <View visibleWhen="choice-selected" whenTagName="Restoration--t_0" whenChoiceValue="No">
+                            <Text value="Human-Nature Action 'Restoration' in Media" name="Restoration--m_0_t"/>
+                            <Choices name="Restoration--m_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                        <View visibleWhen="choice-selected" whenTagName="Restoration--t_0" whenChoiceValue="Yes">
+                            <Text value="Media rejects SA 'Restoration' in Text" name="Restoration--m_rej_0_t"/>
+                            <Choices name="Restoration--m_rej_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                    </Panel>
+                    <Panel value="Sustainable_use_of_resources">
+                        <Text value="Human-Nature Action 'Sustainable_use_of_resources' in Text"
+                              name="Sustainable_use_of_resources--t_0_t"/>
+                        <Choices name="Sustainable_use_of_resources--t_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                        <View visibleWhen="choice-selected" whenTagName="Sustainable_use_of_resources--t_0"
+                              whenChoiceValue="No">
+                            <Text value="Human-Nature Action 'Sustainable_use_of_resources' in Media"
+                                  name="Sustainable_use_of_resources--m_0_t"/>
+                            <Choices name="Sustainable_use_of_resources--m_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                        <View visibleWhen="choice-selected" whenTagName="Sustainable_use_of_resources--t_0"
+                              whenChoiceValue="Yes">
+                            <Text value="Media rejects SA 'Sustainable_use_of_resources' in Text"
+                                  name="Sustainable_use_of_resources--m_rej_0_t"/>
+                            <Choices name="Sustainable_use_of_resources--m_rej_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                    </Panel>
+                    <Panel value="Advocacy">
+                        <Text value="Human-Nature Action 'Advocacy' in Text" name="Advocacy--t_0_t"/>
+                        <Choices name="Advocacy--t_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                        <View visibleWhen="choice-selected" whenTagName="Advocacy--t_0" whenChoiceValue="No">
+                            <Text value="Human-Nature Action 'Advocacy' in Media" name="Advocacy--m_0_t"/>
+                            <Choices name="Advocacy--m_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                        <View visibleWhen="choice-selected" whenTagName="Advocacy--t_0" whenChoiceValue="Yes">
+                            <Text value="Media rejects SA 'Advocacy' in Text" name="Advocacy--m_rej_0_t"/>
+                            <Choices name="Advocacy--m_rej_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                    </Panel>
+                    <Panel value="Education">
+                        <Text value="Human-Nature Action 'Education' in Text" name="Education--t_0_t"/>
+                        <Choices name="Education--t_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                        <View visibleWhen="choice-selected" whenTagName="Education--t_0" whenChoiceValue="No">
+                            <Text value="Human-Nature Action 'Education' in Media" name="Education--m_0_t"/>
+                            <Choices name="Education--m_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                        <View visibleWhen="choice-selected" whenTagName="Education--t_0" whenChoiceValue="Yes">
+                            <Text value="Media rejects SA 'Education' in Text" name="Education--m_rej_0_t"/>
+                            <Choices name="Education--m_rej_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                    </Panel>
+                    <Panel value="Monitoring">
+                        <Text value="Human-Nature Action 'Monitoring' in Text" name="Monitoring--t_0_t"/>
+                        <Choices name="Monitoring--t_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                        <View visibleWhen="choice-selected" whenTagName="Monitoring--t_0" whenChoiceValue="No">
+                            <Text value="Human-Nature Action 'Monitoring' in Media" name="Monitoring--m_0_t"/>
+                            <Choices name="Monitoring--m_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                        <View visibleWhen="choice-selected" whenTagName="Monitoring--t_0" whenChoiceValue="Yes">
+                            <Text value="Media rejects SA 'Monitoring' in Text" name="Monitoring--m_rej_0_t"/>
+                            <Choices name="Monitoring--m_rej_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                    </Panel>
+                    <Panel value="Posing">
+                        <Text value="Human-Nature Action 'Posing' in Text" name="Posing--t_0_t"/>
+                        <Choices name="Posing--t_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                        <View visibleWhen="choice-selected" whenTagName="Posing--t_0" whenChoiceValue="No">
+                            <Text value="Human-Nature Action 'Posing' in Media" name="Posing--m_0_t"/>
+                            <Choices name="Posing--m_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                        <View visibleWhen="choice-selected" whenTagName="Posing--t_0" whenChoiceValue="Yes">
+                            <Text value="Media rejects SA 'Posing' in Text" name="Posing--m_rej_0_t"/>
+                            <Choices name="Posing--m_rej_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                    </Panel>
+                    <Panel value="Jogging">
+                        <Text value="Human-Nature Action 'Jogging' in Text" name="Jogging--t_0_t"/>
+                        <Choices name="Jogging--t_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                        <View visibleWhen="choice-selected" whenTagName="Jogging--t_0" whenChoiceValue="No">
+                            <Text value="Human-Nature Action 'Jogging' in Media" name="Jogging--m_0_t"/>
+                            <Choices name="Jogging--m_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                        <View visibleWhen="choice-selected" whenTagName="Jogging--t_0" whenChoiceValue="Yes">
+                            <Text value="Media rejects SA 'Jogging' in Text" name="Jogging--m_rej_0_t"/>
+                            <Choices name="Jogging--m_rej_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                    </Panel>
+                    <Panel value="Picnic">
+                        <Text value="Human-Nature Action 'Picnic' in Text" name="Picnic--t_0_t"/>
+                        <Choices name="Picnic--t_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                        <View visibleWhen="choice-selected" whenTagName="Picnic--t_0" whenChoiceValue="No">
+                            <Text value="Human-Nature Action 'Picnic' in Media" name="Picnic--m_0_t"/>
+                            <Choices name="Picnic--m_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                        <View visibleWhen="choice-selected" whenTagName="Picnic--t_0" whenChoiceValue="Yes">
+                            <Text value="Media rejects SA 'Picnic' in Text" name="Picnic--m_rej_0_t"/>
+                            <Choices name="Picnic--m_rej_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                    </Panel>
+                    <Panel value="Other">
+                        <Text value="Name the Other Human-Nature Action" name="sa_o_0_t"/>
+                        <TextArea name="sa_o_t_0_t" toName="title"/>
+                        <Text value="Human-Nature Action 'Other' in Text" name="Other--sa_t_0_t"/>
+                        <Choices name="Other--t_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                        <View visibleWhen="choice-selected" whenTagName="Other--t_0" whenChoiceValue="No">
+                            <Text value="Human-Nature Action 'Other' in Media" name="Other--m_0_t"/>
+                            <Choices name="Other--m_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                        <View visibleWhen="choice-selected" whenTagName="Other--t_0" whenChoiceValue="Yes">
+                            <Text value="Media rejects SA 'Other' in Text" name="Other--m_rej_0_t"/>
+                            <Choices name="Other--m_rej_0" toName="title" showInline="true">
+                                <Choice value="Yes"/>
+                                <Choice value="No"/>
+                            </Choices>
+                        </View>
+                    </Panel>
+                </Collapse>
+            </View>
+            <Header>Relational Value</Header>
+            <Collapse>
+                <Panel value="Personal identity">
+                    <Text value="Relational Value 'Personal identity' in Text" name="Personal_identity--rv_t_0_t"/>
+                    <Choices name="Personal_identity--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Personal_identity--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Personal identity' in Media" name="Personal_identity--m_0_t"/>
+                        <Choices name="Personal_identity--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Personal_identity--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Personal identity' in Text" name="Personal_identity--m_rej_0_t"/>
+                        <Choices name="Personal_identity--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Personal_identity--0_certain_t"
+                          value="Are you certain about this Relational value type?"/>
+                    <Choices name="Personal_identity--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Personal_identity--0_certain" whenChoiceValue="No">
+                        <Text name="Personal_identity--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Personal_identity--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Cultural identity">
+                    <Text value="Relational Value 'Cultural identity' in Text" name="Cultural_identity--rv_t_0_t"/>
+                    <Choices name="Cultural_identity--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Cultural_identity--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Cultural identity' in Media" name="Cultural_identity--m_0_t"/>
+                        <Choices name="Cultural_identity--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Cultural_identity--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Cultural identity' in Text" name="Cultural_identity--m_rej_0_t"/>
+                        <Choices name="Cultural_identity--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Cultural_identity--0_certain_t"
+                          value="Are you certain about this Relational value type?"/>
+                    <Choices name="Cultural_identity--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Cultural_identity--0_certain" whenChoiceValue="No">
+                        <Text name="Cultural_identity--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Cultural_identity--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Social cohesion">
+                    <Text value="Relational Value 'Social cohesion' in Text" name="Social_cohesion--rv_t_0_t"/>
+                    <Choices name="Social_cohesion--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Social_cohesion--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Social cohesion' in Media" name="Social_cohesion--m_0_t"/>
+                        <Choices name="Social_cohesion--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Social_cohesion--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Social cohesion' in Text" name="Social_cohesion--m_rej_0_t"/>
+                        <Choices name="Social_cohesion--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Social_cohesion--0_certain_t"
+                          value="Are you certain about this Relational value type?"/>
+                    <Choices name="Social_cohesion--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Social_cohesion--0_certain" whenChoiceValue="No">
+                        <Text name="Social_cohesion--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Social_cohesion--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Social memory">
+                    <Text value="Relational Value 'Social memory' in Text" name="Social_memory--rv_t_0_t"/>
+                    <Choices name="Social_memory--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Social_memory--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Social memory' in Media" name="Social_memory--m_0_t"/>
+                        <Choices name="Social_memory--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Social_memory--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Social memory' in Text" name="Social_memory--m_rej_0_t"/>
+                        <Choices name="Social_memory--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Social_memory--0_certain_t" value="Are you certain about this Relational value type?"/>
+                    <Choices name="Social_memory--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Social_memory--0_certain" whenChoiceValue="No">
+                        <Text name="Social_memory--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Social_memory--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Social relations">
+                    <Text value="Relational Value 'Social relations' in Text" name="Social_relations--rv_t_0_t"/>
+                    <Choices name="Social_relations--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Social_relations--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Social relations' in Media" name="Social_relations--m_0_t"/>
+                        <Choices name="Social_relations--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Social_relations--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Social relations' in Text" name="Social_relations--m_rej_0_t"/>
+                        <Choices name="Social_relations--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Social_relations--0_certain_t"
+                          value="Are you certain about this Relational value type?"/>
+                    <Choices name="Social_relations--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Social_relations--0_certain" whenChoiceValue="No">
+                        <Text name="Social_relations--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Social_relations--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Sense of place">
+                    <Text value="Relational Value 'Sense of place' in Text" name="Sense_of_place--rv_t_0_t"/>
+                    <Choices name="Sense_of_place--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Sense_of_place--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Sense of place' in Media" name="Sense_of_place--m_0_t"/>
+                        <Choices name="Sense_of_place--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Sense_of_place--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Sense of place' in Text" name="Sense_of_place--m_rej_0_t"/>
+                        <Choices name="Sense_of_place--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Sense_of_place--0_certain_t" value="Are you certain about this Relational value type?"/>
+                    <Choices name="Sense_of_place--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Sense_of_place--0_certain" whenChoiceValue="No">
+                        <Text name="Sense_of_place--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Sense_of_place--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Sense of agency">
+                    <Text value="Relational Value 'Sense of agency' in Text" name="Sense_of_agency--rv_t_0_t"/>
+                    <Choices name="Sense_of_agency--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Sense_of_agency--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Sense of agency' in Media" name="Sense_of_agency--m_0_t"/>
+                        <Choices name="Sense_of_agency--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Sense_of_agency--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Sense of agency' in Text" name="Sense_of_agency--m_rej_0_t"/>
+                        <Choices name="Sense_of_agency--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Sense_of_agency--0_certain_t"
+                          value="Are you certain about this Relational value type?"/>
+                    <Choices name="Sense_of_agency--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Sense_of_agency--0_certain" whenChoiceValue="No">
+                        <Text name="Sense_of_agency--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Sense_of_agency--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Spirituality">
+                    <Text value="Relational Value 'Spirituality' in Text" name="Spirituality--rv_t_0_t"/>
+                    <Choices name="Spirituality--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Spirituality--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Spirituality' in Media" name="Spirituality--m_0_t"/>
+                        <Choices name="Spirituality--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Spirituality--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Spirituality' in Text" name="Spirituality--m_rej_0_t"/>
+                        <Choices name="Spirituality--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Spirituality--0_certain_t" value="Are you certain about this Relational value type?"/>
+                    <Choices name="Spirituality--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Spirituality--0_certain" whenChoiceValue="No">
+                        <Text name="Spirituality--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Spirituality--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Stewardship principle">
+                    <Text value="Relational Value 'Stewardship principle' in Text"
+                          name="Stewardship_principle--rv_t_0_t"/>
+                    <Choices name="Stewardship_principle--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Stewardship_principle--rv_t_0"
+                          whenChoiceValue="No">
+                        <Text value="Relational Value 'Stewardship principle' in Media"
+                              name="Stewardship_principle--m_0_t"/>
+                        <Choices name="Stewardship_principle--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Stewardship_principle--rv_t_0"
+                          whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Stewardship principle' in Text"
+                              name="Stewardship_principle--m_rej_0_t"/>
+                        <Choices name="Stewardship_principle--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Stewardship_principle--0_certain_t"
+                          value="Are you certain about this Relational value type?"/>
+                    <Choices name="Stewardship_principle--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Stewardship_principle--0_certain"
+                          whenChoiceValue="No">
+                        <Text name="Stewardship_principle--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Stewardship_principle--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Stewardship eudaimonia">
+                    <Text value="Relational Value 'Stewardship eudaimonia' in Text"
+                          name="Stewardship_eudaimonia--rv_t_0_t"/>
+                    <Choices name="Stewardship_eudaimonia--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Stewardship_eudaimonia--rv_t_0"
+                          whenChoiceValue="No">
+                        <Text value="Relational Value 'Stewardship eudaimonia' in Media"
+                              name="Stewardship_eudaimonia--m_0_t"/>
+                        <Choices name="Stewardship_eudaimonia--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Stewardship_eudaimonia--rv_t_0"
+                          whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Stewardship eudaimonia' in Text"
+                              name="Stewardship_eudaimonia--m_rej_0_t"/>
+                        <Choices name="Stewardship_eudaimonia--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Stewardship_eudaimonia--0_certain_t"
+                          value="Are you certain about this Relational value type?"/>
+                    <Choices name="Stewardship_eudaimonia--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Stewardship_eudaimonia--0_certain"
+                          whenChoiceValue="No">
+                        <Text name="Stewardship_eudaimonia--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Stewardship_eudaimonia--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Literacy">
+                    <Text value="Relational Value 'Literacy' in Text" name="Literacy--rv_t_0_t"/>
+                    <Choices name="Literacy--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Literacy--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Literacy' in Media" name="Literacy--m_0_t"/>
+                        <Choices name="Literacy--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Literacy--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Literacy' in Text" name="Literacy--m_rej_0_t"/>
+                        <Choices name="Literacy--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Literacy--0_certain_t" value="Are you certain about this Relational value type?"/>
+                    <Choices name="Literacy--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Literacy--0_certain" whenChoiceValue="No">
+                        <Text name="Literacy--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Literacy--0_uncertain_other" toName="title" showInline="true" choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Livelihoods">
+                    <Text value="Relational Value 'Livelihoods' in Text" name="Livelihoods--rv_t_0_t"/>
+                    <Choices name="Livelihoods--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Livelihoods--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Livelihoods' in Media" name="Livelihoods--m_0_t"/>
+                        <Choices name="Livelihoods--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Livelihoods--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Livelihoods' in Text" name="Livelihoods--m_rej_0_t"/>
+                        <Choices name="Livelihoods--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Livelihoods--0_certain_t" value="Are you certain about this Relational value type?"/>
+                    <Choices name="Livelihoods--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Livelihoods--0_certain" whenChoiceValue="No">
+                        <Text name="Livelihoods--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Livelihoods--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Well-being">
+                    <Text value="Relational Value 'Well-being' in Text" name="Well-being--rv_t_0_t"/>
+                    <Choices name="Well-being--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Well-being--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Well-being' in Media" name="Well-being--m_0_t"/>
+                        <Choices name="Well-being--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Well-being--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Well-being' in Text" name="Well-being--m_rej_0_t"/>
+                        <Choices name="Well-being--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Well-being--0_certain_t" value="Are you certain about this Relational value type?"/>
+                    <Choices name="Well-being--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Well-being--0_certain" whenChoiceValue="No">
+                        <Text name="Well-being--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Well-being--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Aesthetics">
+                    <Text value="Relational Value 'Aesthetics' in Text" name="Aesthetics--rv_t_0_t"/>
+                    <Choices name="Aesthetics--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Aesthetics--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Aesthetics' in Media" name="Aesthetics--m_0_t"/>
+                        <Choices name="Aesthetics--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Aesthetics--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Aesthetics' in Text" name="Aesthetics--m_rej_0_t"/>
+                        <Choices name="Aesthetics--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Aesthetics--0_certain_t" value="Are you certain about this Relational value type?"/>
+                    <Choices name="Aesthetics--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Aesthetics--0_certain" whenChoiceValue="No">
+                        <Text name="Aesthetics--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Aesthetics--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Reciprocity">
+                    <Text value="Relational Value 'Reciprocity' in Text" name="Reciprocity--rv_t_0_t"/>
+                    <Choices name="Reciprocity--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Reciprocity--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Reciprocity' in Media" name="Reciprocity--m_0_t"/>
+                        <Choices name="Reciprocity--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Reciprocity--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Reciprocity' in Text" name="Reciprocity--m_rej_0_t"/>
+                        <Choices name="Reciprocity--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Reciprocity--0_certain_t" value="Are you certain about this Relational value type?"/>
+                    <Choices name="Reciprocity--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Reciprocity--0_certain" whenChoiceValue="No">
+                        <Text name="Reciprocity--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Reciprocity--0_uncertain_other" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Good life"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Good life">
+                    <Text value="Relational Value 'Good life' in Text" name="Good_life--rv_t_0_t"/>
+                    <Choices name="Good_life--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Good_life--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Good life' in Media" name="Good_life--m_0_t"/>
+                        <Choices name="Good_life--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Good_life--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Good life' in Text" name="Good_life--m_rej_0_t"/>
+                        <Choices name="Good_life--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Good_life--0_certain_t" value="Are you certain about this Relational value type?"/>
+                    <Choices name="Good_life--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Good_life--0_certain" whenChoiceValue="No">
+                        <Text name="Good_life--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Good_life--0_uncertain_other" toName="title" showInline="true" choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Kinship"/>
+                        </Choices>
+                    </View>
+                </Panel>
+                <Panel value="Kinship">
+                    <Text value="Relational Value 'Kinship' in Text" name="Kinship--rv_t_0_t"/>
+                    <Choices name="Kinship--rv_t_0" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Kinship--rv_t_0" whenChoiceValue="No">
+                        <Text value="Relational Value 'Kinship' in Media" name="Kinship--m_0_t"/>
+                        <Choices name="Kinship--m_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <View visibleWhen="choice-selected" whenTagName="Kinship--rv_t_0" whenChoiceValue="Yes">
+                        <Text value="Media rejects RV 'Kinship' in Text" name="Kinship--m_rej_0_t"/>
+                        <Choices name="Kinship--m_rej_0" toName="title" showInline="true">
+                            <Choice value="Yes"/>
+                            <Choice value="No"/>
+                        </Choices>
+                    </View>
+                    <Text name="Kinship--0_certain_t" value="Are you certain about this Relational value type?"/>
+                    <Choices name="Kinship--0_certain" toName="title" showInline="true">
+                        <Choice value="Yes"/>
+                        <Choice value="No"/>
+                    </Choices>
+                    <View visibleWhen="choice-selected" whenTagName="Kinship--0_certain" whenChoiceValue="No">
+                        <Text name="Kinship--0_uncertain_other_t"
+                              value="What other Relational Values could it be confused with?"/>
+                        <Choices name="Kinship--0_uncertain_other" toName="title" showInline="true" choice="multiple">
+                            <Choice value="Personal identity"/>
+                            <Choice value="Cultural identity"/>
+                            <Choice value="Social cohesion"/>
+                            <Choice value="Social memory"/>
+                            <Choice value="Social relations"/>
+                            <Choice value="Sense of place"/>
+                            <Choice value="Sense of agency"/>
+                            <Choice value="Spirituality"/>
+                            <Choice value="Stewardship principle"/>
+                            <Choice value="Stewardship eudaimonia"/>
+                            <Choice value="Literacy"/>
+                            <Choice value="Livelihoods"/>
+                            <Choice value="Well-being"/>
+                            <Choice value="Aesthetics"/>
+                            <Choice value="Reciprocity"/>
+                            <Choice value="Good life"/>
+                        </Choices>
+                    </View>
+                </Panel>
+            </Collapse>
+        </View>
+    </View>
+</View>
