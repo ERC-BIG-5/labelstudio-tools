@@ -127,14 +127,14 @@
         <Header value="Value Expression Types"/>
 
         <!-- ANY VT EXPR -->
-        <Text name="val-expr-any_t"
+        <Text name="val-expr_any_t"
               value="For any of TEXT/VISUAL content: Is Nature Value Expression codable? (Default: No)"/>
-        <Choices name="val-expr-codable_any" toName="title" showInline="true">
+        <Choices name="val-expr_any" toName="title" showInline="true">
             <Choice value="Yes"/>
         </Choices>
 
         <!-- ANY VT EXPR? -->
-        <View visibleWhen="choice-selected" whenTagName="val-expr-any" whenChoiceValue="Yes">
+        <View visibleWhen="choice-selected" whenTagName="val-expr_any" whenChoiceValue="Yes">
             <!-- TEXT VT EXPR -->
             <View className="V_text" visibleWhen="choice-selected" whenTagName="nature_text" whenChoiceValue="Yes">
                 <Text name="val-expr_text_t"
@@ -167,227 +167,227 @@
                 <Text name="rel-value_text_t"
                       value="For the TEXT content: What are the RVs expressed?"/>
                 <Choices name="rel-value_text" toName="title" showInline="true" choice="multiple">
-                    <Choice value="Personal identity" alias="personal_identity"/>
-                    <Choice value="Cultural identity" alias="cultural_identity"/>
-                    <Choice value="Social responsibility" alias="social_responsibility"/>
-                    <Choice value="Social cohesion" alias="social_cohesion"/>
-                    <Choice value="Social memory" alias="social_memory"/>
-                    <Choice value="Social relations" alias="social_relations"/>
-                    <Choice value="Sense of place" alias="sense_of_place"/>
-                    <Choice value="Sense of agency" alias="sense_of_agency"/>
+                    <Choice value="Personal identity" alias="personal-identity"/>
+                    <Choice value="Cultural identity" alias="cultural-identity"/>
+                    <Choice value="Social responsibility" alias="social-responsibility"/>
+                    <Choice value="Social cohesion" alias="social-cohesion"/>
+                    <Choice value="Social memory" alias="social-memory"/>
+                    <Choice value="Social relations" alias="social-relations"/>
+                    <Choice value="Sense of place" alias="sense-of-place"/>
+                    <Choice value="Sense of agency" alias="sense-of-agency"/>
                     <Choice value="Spirituality" alias="spirituality"/>
-                    <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                    <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                    <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                    <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                     <Choice value="Literacy" alias="literacy"/>
                     <Choice value="Livelihoods" alias="livelihoods"/>
                     <Choice value="Well-being" alias="well-being"/>
                     <Choice value="Aesthetics" alias="aesthetics"/>
                     <Choice value="Reciprocity" alias="reciprocity"/>
-                    <Choice value="Good life" alias="good_life"/>
+                    <Choice value="Good life" alias="good-life"/>
                     <Choice value="Kinship" alias="kinship"/>
                 </Choices>
                 <Text name="rel-value_text_expl_t" value="Optional comments"/>
                 <TextArea name="rel-value_text_expl" toName="title" showSubmitButton="true"/>
 
-                <!-- CONFUSION -->
+                <!-- CONFUSION TEXT-->
                 <View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_text"
-                          whenChoiceValue="personal_identity">
+                          whenChoiceValue="personal-identity">
                         <Text value="For the TEXT content: Can the Relational Value 'Personal identity' be confused with other RVs?"
-                              name="rel-value_text_conf-personal_identity-_t"/>
-                        <Choices name="rel-value_text_conf-personal_identity" toName="title" showInline="true"
+                              name="rel-value_text_conf-personal-identity-_t"/>
+                        <Choices name="rel-value_text_conf_-personal-identity" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_text"
-                          whenChoiceValue="cultural_identity">
+                          whenChoiceValue="cultural-identity">
                         <Text value="For the TEXT content: Can the Relational Value 'Cultural identity' be confused with other RVs?"
-                              name="rel-value_text_conf-cultural_identity-_t"/>
-                        <Choices name="rel-value_text_conf-cultural_identity" toName="title" showInline="true"
+                              name="rel-value_text_conf-cultural-identity-_t"/>
+                        <Choices name="rel-value_text_conf_-cultural-identity" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_text"
-                          whenChoiceValue="social_responsibility">
+                          whenChoiceValue="social-responsibility">
                         <Text value="For the TEXT content: Can the Relational Value 'Social responsibility' be confused with other RVs?"
-                              name="rel-value_text_conf-social_responsibility-_t"/>
-                        <Choices name="rel-value_text_conf-social_responsibility" toName="title" showInline="true"
+                              name="rel-value_text_conf-social-responsibility-_t"/>
+                        <Choices name="rel-value_text_conf_-social-responsibility" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_text"
-                          whenChoiceValue="social_cohesion">
+                          whenChoiceValue="social-cohesion">
                         <Text value="For the TEXT content: Can the Relational Value 'Social cohesion' be confused with other RVs?"
-                              name="rel-value_text_conf-social_cohesion-_t"/>
-                        <Choices name="rel-value_text_conf-social_cohesion" toName="title" showInline="true"
+                              name="rel-value_text_conf-social-cohesion-_t"/>
+                        <Choices name="rel-value_text_conf_-social-cohesion" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_text"
-                          whenChoiceValue="social_memory">
+                          whenChoiceValue="social-memory">
                         <Text value="For the TEXT content: Can the Relational Value 'Social memory' be confused with other RVs?"
-                              name="rel-value_text_conf-social_memory-_t"/>
-                        <Choices name="rel-value_text_conf-social_memory" toName="title" showInline="true"
+                              name="rel-value_text_conf-social-memory-_t"/>
+                        <Choices name="rel-value_text_conf_-social-memory" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_text"
-                          whenChoiceValue="social_relations">
+                          whenChoiceValue="social-relations">
                         <Text value="For the TEXT content: Can the Relational Value 'Social relations' be confused with other RVs?"
-                              name="rel-value_text_conf-social_relations-_t"/>
-                        <Choices name="rel-value_text_conf-social_relations" toName="title" showInline="true"
+                              name="rel-value_text_conf-social-relations-_t"/>
+                        <Choices name="rel-value_text_conf_-social-relations" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_text"
-                          whenChoiceValue="sense_of_place">
+                          whenChoiceValue="sense-of-place">
                         <Text value="For the TEXT content: Can the Relational Value 'Sense of place' be confused with other RVs?"
-                              name="rel-value_text_conf-sense_of_place-_t"/>
-                        <Choices name="rel-value_text_conf-sense_of_place" toName="title" showInline="true"
+                              name="rel-value_text_conf-sense-of-place-_t"/>
+                        <Choices name="rel-value_text_conf_-sense-of-place" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_text"
-                          whenChoiceValue="sense_of_agency">
+                          whenChoiceValue="sense-of-agency">
                         <Text value="For the TEXT content: Can the Relational Value 'Sense of agency' be confused with other RVs?"
-                              name="rel-value_text_conf-sense_of_agency-_t"/>
-                        <Choices name="rel-value_text_conf-sense_of_agency" toName="title" showInline="true"
+                              name="rel-value_text_conf-sense-of-agency-_t"/>
+                        <Choices name="rel-value_text_conf_-sense-of-agency" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
@@ -395,74 +395,74 @@
                           whenChoiceValue="spirituality">
                         <Text value="For the TEXT content: Can the Relational Value 'Spirituality' be confused with other RVs?"
                               name="rel-value_text_conf-spirituality-_t"/>
-                        <Choices name="rel-value_text_conf-spirituality" toName="title" showInline="true"
+                        <Choices name="rel-value_text_conf_-spirituality" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_text"
-                          whenChoiceValue="stewardship_principle">
+                          whenChoiceValue="stewardship-principle">
                         <Text value="For the TEXT content: Can the Relational Value 'Stewardship principle' be confused with other RVs?"
-                              name="rel-value_text_conf-stewardship_principle-_t"/>
-                        <Choices name="rel-value_text_conf-stewardship_principle" toName="title" showInline="true"
+                              name="rel-value_text_conf-stewardship-principle-_t"/>
+                        <Choices name="rel-value_text_conf_-stewardship-principle" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_text"
-                          whenChoiceValue="stewardship_eudaimonia">
+                          whenChoiceValue="stewardship-eudaimonia">
                         <Text value="For the TEXT content: Can the Relational Value 'Stewardship eudaimonia' be confused with other RVs?"
-                              name="rel-value_text_conf-stewardship_eudaimonia-_t"/>
-                        <Choices name="rel-value_text_conf-stewardship_eudaimonia" toName="title" showInline="true"
+                              name="rel-value_text_conf-stewardship-eudaimonia-_t"/>
+                        <Choices name="rel-value_text_conf_-stewardship-eudaimonia" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
@@ -470,23 +470,24 @@
                           whenChoiceValue="literacy">
                         <Text value="For the TEXT content: Can the Relational Value 'Literacy' be confused with other RVs?"
                               name="rel-value_text_conf-literacy-_t"/>
-                        <Choices name="rel-value_text_conf-literacy" toName="title" showInline="true" choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                        <Choices name="rel-value_text_conf_-literacy" toName="title" showInline="true"
+                                 choice="multiple">
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
@@ -494,24 +495,24 @@
                           whenChoiceValue="livelihoods">
                         <Text value="For the TEXT content: Can the Relational Value 'Livelihoods' be confused with other RVs?"
                               name="rel-value_text_conf-livelihoods-_t"/>
-                        <Choices name="rel-value_text_conf-livelihoods" toName="title" showInline="true"
+                        <Choices name="rel-value_text_conf_-livelihoods" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
@@ -519,24 +520,24 @@
                           whenChoiceValue="well-being">
                         <Text value="For the TEXT content: Can the Relational Value 'Well-being' be confused with other RVs?"
                               name="rel-value_text_conf-well-being-_t"/>
-                        <Choices name="rel-value_text_conf-well-being" toName="title" showInline="true"
+                        <Choices name="rel-value_text_conf_-well-being" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
@@ -544,24 +545,24 @@
                           whenChoiceValue="aesthetics">
                         <Text value="For the TEXT content: Can the Relational Value 'Aesthetics' be confused with other RVs?"
                               name="rel-value_text_conf-aesthetics-_t"/>
-                        <Choices name="rel-value_text_conf-aesthetics" toName="title" showInline="true"
+                        <Choices name="rel-value_text_conf_-aesthetics" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
@@ -569,44 +570,44 @@
                           whenChoiceValue="reciprocity">
                         <Text value="For the TEXT content: Can the Relational Value 'Reciprocity' be confused with other RVs?"
                               name="rel-value_text_conf-reciprocity-_t"/>
-                        <Choices name="rel-value_text_conf-reciprocity" toName="title" showInline="true"
+                        <Choices name="rel-value_text_conf_-reciprocity" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_text"
-                          whenChoiceValue="good_life">
+                          whenChoiceValue="good-life">
                         <Text value="For the TEXT content: Can the Relational Value 'Good life' be confused with other RVs?"
-                              name="rel-value_text_conf-good_life-_t"/>
-                        <Choices name="rel-value_text_conf-good_life" toName="title" showInline="true"
+                              name="rel-value_text_conf-good-life-_t"/>
+                        <Choices name="rel-value_text_conf_-good-life" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
@@ -619,24 +620,24 @@
                           whenChoiceValue="kinship">
                         <Text value="For the TEXT content: Can the Relational Value 'Kinship' be confused with other RVs?"
                               name="rel-value_text_conf-kinship-_t"/>
-                        <Choices name="rel-value_text_conf-kinship" toName="title" showInline="true" choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                        <Choices name="rel-value_text_conf_-kinship" toName="title" showInline="true" choice="multiple">
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                         </Choices>
                     </View>
                 </View>
@@ -645,231 +646,231 @@
             <!-- RV VISUALS -->
             <View className="V_visual" visibleWhen="choice-selected" whenTagName="val-expr_visual"
                   whenChoiceValue="Explicit,Implicit">
-                <Text name="rel-value_visuals_t"
+                <Text name="rel-value_visual_t"
                       value="For the VISUAL content: What are the RVs expressed?"/>
                 <Choices name="rel-value_visual" toName="title" showInline="true" choice="multiple">
-                    <Choice value="Personal identity" alias="personal_identity"/>
-                    <Choice value="Cultural identity" alias="cultural_identity"/>
-                    <Choice value="Social responsibility" alias="social_responsibility"/>
-                    <Choice value="Social cohesion" alias="social_cohesion"/>
-                    <Choice value="Social memory" alias="social_memory"/>
-                    <Choice value="Social relations" alias="social_relations"/>
-                    <Choice value="Sense of place" alias="sense_of_place"/>
-                    <Choice value="Sense of agency" alias="sense_of_agency"/>
+                    <Choice value="Personal identity" alias="personal-identity"/>
+                    <Choice value="Cultural identity" alias="cultural-identity"/>
+                    <Choice value="Social responsibility" alias="social-responsibility"/>
+                    <Choice value="Social cohesion" alias="social-cohesion"/>
+                    <Choice value="Social memory" alias="social-memory"/>
+                    <Choice value="Social relations" alias="social-relations"/>
+                    <Choice value="Sense of place" alias="sense-of-place"/>
+                    <Choice value="Sense of agency" alias="sense-of-agency"/>
                     <Choice value="Spirituality" alias="spirituality"/>
-                    <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                    <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                    <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                    <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                     <Choice value="Literacy" alias="literacy"/>
                     <Choice value="Livelihoods" alias="livelihoods"/>
                     <Choice value="Well-being" alias="well-being"/>
                     <Choice value="Aesthetics" alias="aesthetics"/>
                     <Choice value="Reciprocity" alias="reciprocity"/>
-                    <Choice value="Good life" alias="good_life"/>
+                    <Choice value="Good life" alias="good-life"/>
                     <Choice value="Kinship" alias="kinship"/>
                 </Choices>
 
                 <Text name="rel-value_visual_expl_t" value="Optional comments"/>
                 <TextArea name="rel-value_visual_expl" toName="title" showSubmitButton="true"/>
 
-                <!-- CONFUSION -->
+                <!-- CONFUSION VISUAL-->
                 <View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_visual"
-                          whenChoiceValue="personal_identity">
+                          whenChoiceValue="personal-identity">
                         <Text value="For the TEXT content: Can the Relational Value 'Personal identity' be confused with other RVs?"
-                              name="rel-value_visual_conf-personal_identity-_t"/>
-                        <Choices name="rel-value_visual_conf-personal_identity" toName="title" showInline="true"
+                              name="rel-value_visual_conf-personal-identity-_t"/>
+                        <Choices name="rel-value_visual_conf-personal-identity" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_visual"
-                          whenChoiceValue="cultural_identity">
+                          whenChoiceValue="cultural-identity">
                         <Text value="For the TEXT content: Can the Relational Value 'Cultural identity' be confused with other RVs?"
-                              name="rel-value_visual_conf-cultural_identity-_t"/>
-                        <Choices name="rel-value_visual_conf-cultural_identity" toName="title" showInline="true"
+                              name="rel-value_visual_conf-cultural-identity-_t"/>
+                        <Choices name="rel-value_visual_conf-cultural-identity" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_visual"
-                          whenChoiceValue="social_responsibility">
+                          whenChoiceValue="social-responsibility">
                         <Text value="For the TEXT content: Can the Relational Value 'Social responsibility' be confused with other RVs?"
-                              name="rel-value_visual_conf-social_responsibility-_t"/>
-                        <Choices name="rel-value_visual_conf-social_responsibility" toName="title" showInline="true"
+                              name="rel-value_visual_conf-social-responsibility-_t"/>
+                        <Choices name="rel-value_visual_conf-social-responsibility" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_visual"
-                          whenChoiceValue="social_cohesion">
+                          whenChoiceValue="social-cohesion">
                         <Text value="For the TEXT content: Can the Relational Value 'Social cohesion' be confused with other RVs?"
-                              name="rel-value_visual_conf-social_cohesion-_t"/>
-                        <Choices name="rel-value_visual_conf-social_cohesion" toName="title" showInline="true"
+                              name="rel-value_visual_conf-social-cohesion-_t"/>
+                        <Choices name="rel-value_visual_conf-social-cohesion" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_visual"
-                          whenChoiceValue="social_memory">
+                          whenChoiceValue="social-memory">
                         <Text value="For the TEXT content: Can the Relational Value 'Social memory' be confused with other RVs?"
-                              name="rel-value_visual_conf-social_memory-_t"/>
-                        <Choices name="rel-value_visual_conf-social_memory" toName="title" showInline="true"
+                              name="rel-value_visual_conf-social-memory-_t"/>
+                        <Choices name="rel-value_visual_conf-social-memory" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_visual"
-                          whenChoiceValue="social_relations">
+                          whenChoiceValue="social-relations">
                         <Text value="For the TEXT content: Can the Relational Value 'Social relations' be confused with other RVs?"
-                              name="rel-value_visual_conf-social_relations-_t"/>
-                        <Choices name="rel-value_visual_conf-social_relations" toName="title" showInline="true"
+                              name="rel-value_visual_conf-social-relations-_t"/>
+                        <Choices name="rel-value_visual_conf-social-relations" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_visual"
-                          whenChoiceValue="sense_of_place">
+                          whenChoiceValue="sense-of-place">
                         <Text value="For the TEXT content: Can the Relational Value 'Sense of place' be confused with other RVs?"
-                              name="rel-value_visual_conf-sense_of_place-_t"/>
-                        <Choices name="rel-value_visual_conf-sense_of_place" toName="title" showInline="true"
+                              name="rel-value_visual_conf-sense-of-place-_t"/>
+                        <Choices name="rel-value_visual_conf-sense-of-place" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_visual"
-                          whenChoiceValue="sense_of_agency">
+                          whenChoiceValue="sense-of-agency">
                         <Text value="For the TEXT content: Can the Relational Value 'Sense of agency' be confused with other RVs?"
-                              name="rel-value_visual_conf-sense_of_agency-_t"/>
-                        <Choices name="rel-value_visual_conf-sense_of_agency" toName="title" showInline="true"
+                              name="rel-value_visual_conf-sense-of-agency-_t"/>
+                        <Choices name="rel-value_visual_conf-sense-of-agency" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
@@ -879,72 +880,72 @@
                               name="rel-value_visual_conf-spirituality-_t"/>
                         <Choices name="rel-value_visual_conf-spirituality" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_visual"
-                          whenChoiceValue="stewardship_principle">
+                          whenChoiceValue="stewardship-principle">
                         <Text value="For the TEXT content: Can the Relational Value 'Stewardship principle' be confused with other RVs?"
-                              name="rel-value_visual_conf-stewardship_principle-_t"/>
-                        <Choices name="rel-value_visual_conf-stewardship_principle" toName="title" showInline="true"
+                              name="rel-value_visual_conf-stewardship-principle-_t"/>
+                        <Choices name="rel-value_visual_conf-stewardship-principle" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_visual"
-                          whenChoiceValue="stewardship_eudaimonia">
+                          whenChoiceValue="stewardship-eudaimonia">
                         <Text value="For the TEXT content: Can the Relational Value 'Stewardship eudaimonia' be confused with other RVs?"
-                              name="rel-value_visual_conf-stewardship_eudaimonia-_t"/>
-                        <Choices name="rel-value_visual_conf-stewardship_eudaimonia" toName="title" showInline="true"
+                              name="rel-value_visual_conf-stewardship-eudaimonia-_t"/>
+                        <Choices name="rel-value_visual_conf-stewardship-eudaimonia" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
@@ -954,22 +955,22 @@
                               name="rel-value_visual_conf-literacy-_t"/>
                         <Choices name="rel-value_visual_conf-literacy" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
@@ -979,22 +980,22 @@
                               name="rel-value_visual_conf-livelihoods-_t"/>
                         <Choices name="rel-value_visual_conf-livelihoods" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
@@ -1004,22 +1005,22 @@
                               name="rel-value_visual_conf-well-being-_t"/>
                         <Choices name="rel-value_visual_conf-well-being" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
@@ -1029,22 +1030,22 @@
                               name="rel-value_visual_conf-aesthetics-_t"/>
                         <Choices name="rel-value_visual_conf-aesthetics" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
@@ -1054,42 +1055,42 @@
                               name="rel-value_visual_conf-reciprocity-_t"/>
                         <Choices name="rel-value_visual_conf-reciprocity" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                             <Choice value="Kinship" alias="kinship"/>
                         </Choices>
                     </View>
                     <View visibleWhen="choice-selected" whenTagName="rel-value_visual"
-                          whenChoiceValue="good_life">
+                          whenChoiceValue="good-life">
                         <Text value="For the TEXT content: Can the Relational Value 'Good life' be confused with other RVs?"
-                              name="rel-value_visual_conf-good_life-_t"/>
-                        <Choices name="rel-value_visual_conf-good_life" toName="title" showInline="true"
+                              name="rel-value_visual_conf-good-life-_t"/>
+                        <Choices name="rel-value_visual_conf-good-life" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
@@ -1104,29 +1105,29 @@
                               name="rel-value_visual_conf-kinship-_t"/>
                         <Choices name="rel-value_visual_conf-kinship" toName="title" showInline="true"
                                  choice="multiple">
-                            <Choice value="Personal identity" alias="personal_identity"/>
-                            <Choice value="Cultural identity" alias="cultural_identity"/>
-                            <Choice value="Social responsibility" alias="social_responsibility"/>
-                            <Choice value="Social cohesion" alias="social_cohesion"/>
-                            <Choice value="Social memory" alias="social_memory"/>
-                            <Choice value="Social relations" alias="social_relations"/>
-                            <Choice value="Sense of place" alias="sense_of_place"/>
-                            <Choice value="Sense of agency" alias="sense_of_agency"/>
+                            <Choice value="Personal identity" alias="personal-identity"/>
+                            <Choice value="Cultural identity" alias="cultural-identity"/>
+                            <Choice value="Social responsibility" alias="social-responsibility"/>
+                            <Choice value="Social cohesion" alias="social-cohesion"/>
+                            <Choice value="Social memory" alias="social-memory"/>
+                            <Choice value="Social relations" alias="social-relations"/>
+                            <Choice value="Sense of place" alias="sense-of-place"/>
+                            <Choice value="Sense of agency" alias="sense-of-agency"/>
                             <Choice value="Spirituality" alias="spirituality"/>
-                            <Choice value="Stewardship principle" alias="stewardship_principle"/>
-                            <Choice value="Stewardship eudaimonia" alias="stewardship_eudaimonia"/>
+                            <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                            <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
                             <Choice value="Literacy" alias="literacy"/>
                             <Choice value="Livelihoods" alias="livelihoods"/>
                             <Choice value="Well-being" alias="well-being"/>
                             <Choice value="Aesthetics" alias="aesthetics"/>
                             <Choice value="Reciprocity" alias="reciprocity"/>
-                            <Choice value="Good life" alias="good_life"/>
+                            <Choice value="Good life" alias="good-life"/>
                         </Choices>
                     </View>
+
                 </View>
 
             </View>
-            <!--            </View>-->
 
         </View>  <!-- Codable Nat Exp -->
 
@@ -1138,26 +1139,26 @@
 
             <Text value="What are the Nature Elements/Process in the TEXT?"
                   name="nep_text_t"/>
-            <Text value="Group 1: Materiality" name="nep_group0_text_t"/>
-            <Choices name="nep-group-0_text" toName="title" showInline="true" required="true" choice="multiple"
+            <Text value="Group 1: Materiality" name="nep_group-0_text_t"/>
+            <Choices name="nep_group-0_text" toName="title" showInline="true" required="true" choice="multiple"
                      requiredMessage="Select one option from the Nature Element/Process (group 1: Materiality) in TEXT">
                 <Choice value="Material" alias="material"/>
                 <Choice value="Immaterial" alias="immaterial"/>
             </Choices>
-            <Text name="nep-group-0_text_expl_t" value="Optional comments"/>
-            <TextArea name="nep-group-0_text_expl" toName="title"/>
+            <Text name="nep_group-0_text_expl_t" value="Optional comments"/>
+            <TextArea name="nep_group-0_text_expl" toName="title"/>
 
-            <Text value="Group 2: Biological" name="nep_group1_text_t"/>
-            <Choices name="nep-group-1_text" toName="title" showInline="true" required="true" choice="multiple"
+            <Text value="Group 2: Biological" name="nep_group-1_text_t"/>
+            <Choices name="nep_group-1_text" toName="title" showInline="true" required="true" choice="multiple"
                      requiredMessage="Select one option from the Nature Element/Process (group 1: Biological) in TEXT">
                 <Choice value="Biotic" alias="biotic"/>
                 <Choice value="Abiotic" alias="abiotic"/>
             </Choices>
-            <Text name="nep-group-1_text_expl_t" value="Optional comments"/>
-            <TextArea name="nep-group-1_text_expl" toName="title"/>
+            <Text name="nep_group-1_text_expl_t" value="Optional comments"/>
+            <TextArea name="nep_group-1_text_expl" toName="title"/>
 
-            <Text value="Group 3: Landscape type" name="nep_group2_text_t"/>
-            <Choices name="nep-group-2_text" toName="title" showInline="true" required="true" choice="multiple"
+            <Text value="Group 3: Landscape type" name="nep_group-2_text_t"/>
+            <Choices name="nep_group-2_text" toName="title" showInline="true" required="true" choice="multiple"
                      requiredMessage="Select one option from the Nature Element/Process (group 2: Landscape type) in TEXT">
                 <Choice value="Artificial surfaces" alias="artificial_surfaces"/>
                 <Choice value="Agricultural areas" alias="agricultural_areas"/>
@@ -1165,8 +1166,8 @@
                 <Choice value="Wetlands" alias="wetlands"/>
                 <Choice value="Water bodies" alias="water_bodies"/>
             </Choices>
-            <Text name="nep-group-2_text_expl_t" value="Optional comments"/>
-            <TextArea name="nep-group-2_text_expl" toName="title"/>
+            <Text name="nep_group-2_text_expl_t" value="Optional comments"/>
+            <TextArea name="nep_group-2_text_expl" toName="title"/>
 
         </View>
 
@@ -1175,26 +1176,26 @@
 
             <Text value="What are the Nature Elements/Process in the VISUAL?"
                   name="nep_visual_t"/>
-            <Text value="Group 1: Materiality" name="nep_group0_visual_t"/>
-            <Choices name="nep-group-0_visual" toName="title" showInline="true" required="true" choice="multiple"
+            <Text value="Group 1: Materiality" name="nep_group-0_visual_t"/>
+            <Choices name="nep_group-0_visual" toName="title" showInline="true" required="true" choice="multiple"
                      requiredMessage="Select one option from the Nature Element/Process (group 1: Materiality) in VISUAL">
                 <Choice value="Material" alias="material"/>
                 <Choice value="Immaterial" alias="immaterial"/>
             </Choices>
-            <Text name="nep-group-0_visual_expl_t" value="Optional comments"/>
-            <TextArea name="nep-group-0_visual_expl" toName="title"/>
+            <Text name="nep_group-0_visual_expl_t" value="Optional comments"/>
+            <TextArea name="nep_group-0_visual_expl" toName="title"/>
 
-            <Text value="Group 2: Biological" name="nep_group1_visual_t"/>
-            <Choices name="nep-group-1_visual" toName="title" showInline="true" required="true" choice="multiple"
+            <Text value="Group 2: Biological" name="nep_group-1_visual_t"/>
+            <Choices name="nep_group-1_visual" toName="title" showInline="true" required="true" choice="multiple"
                      requiredMessage="Select one option from the Nature Element/Process (group 1: Biological) in VISUAL">
                 <Choice value="Biotic" alias="biotic"/>
                 <Choice value="Abiotic" alias="abiotic"/>
             </Choices>
-            <Text name="nep-group-1_visual_expl_t" value="Optional comments"/>
-            <TextArea name="nep-group-1_visual_expl" toName="title"/>
+            <Text name="nep_group-1_visual_expl_t" value="Optional comments"/>
+            <TextArea name="nep_group-1_visual_expl" toName="title"/>
 
-            <Text value="Group 3: Landscape type" name="nep_group2_visual_t"/>
-            <Choices name="nep-group-2_visual" toName="title" showInline="true" required="true" choice="multiple"
+            <Text value="Group 3: Landscape type" name="nep_group-2_visual_t"/>
+            <Choices name="nep_group-2_visual" toName="title" showInline="true" required="true" choice="multiple"
                      requiredMessage="Select one option from the Nature Element/Process (group 2: Landscape type) in VISUAL">
                 <Choice value="Artificial surfaces" alias="artificial_surfaces"/>
                 <Choice value="Agricultural areas" alias="agricultural_areas"/>
@@ -1203,8 +1204,8 @@
                 <Choice value="Water bodies" alias="water_bodies"/>
             </Choices>
 
-            <Text name="nep-group-2_visual_expl_t" value="Optional comments"/>
-            <TextArea name="nep-group-2_visual_expl" toName="title"/>
+            <Text name="nep_group-2_visual_expl_t" value="Optional comments"/>
+            <TextArea name="nep_group-2_visual_expl" toName="title"/>
         </View>
 
         <!-- // Nature Elements/Processes -->
@@ -1217,32 +1218,32 @@
               whenChoiceValue="Yes">
 
             <Text value="What are types of Interactions in the TEXT?"
-                  name="inter_group0_text_t"/>
-            <Choices name="inter-group-0_text" toName="title" showInline="true" required="true"
+                  name="inter_group-0_text_t"/>
+            <Choices name="inter_group-0_text" toName="title" showInline="true" required="true"
                      requiredMessage="Select one option from the Interaction type in TEXT">
                 <Choice value="Human-human in/about nature" alias="human-human_in/about_nature"/>
                 <Choice value="Human-nature" alias="human-nature"/>
                 <Choice value="Nature-nature" alias="nature-nature"/>
                 <Choice value="Nature" alias="nature"/>
             </Choices>
-            <Text name="inter-group-0_text_expl_t" value="Optional comments"/>
-            <TextArea name="inter-group-0_text_expl" toName="title"/>
+            <Text name="inter_group-0_text_expl_t" value="Optional comments"/>
+            <TextArea name="inter_group-0_text_expl" toName="title"/>
         </View>
 
         <!-- Int VISUAL -->
         <View className="V_visual" visibleWhen="choice-selected" whenTagName="nature_visual"
               whenChoiceValue="Yes">
             <Text value="What are types of Interactions in the VISUAL?"
-                  name="inter_group0_visual_t"/>
-            <Choices name="inter-group-0_visual" toName="title" showInline="true" required="true"
+                  name="inter_group-0_visual_t"/>
+            <Choices name="inter_group-0_visual" toName="title" showInline="true" required="true"
                      requiredMessage="Select one option from the Interaction type in VISUAL">
                 <Choice value="Human-human in/about nature" alias="human-human_in/about_nature"/>
                 <Choice value="Human-nature" alias="human-nature"/>
                 <Choice value="Nature-nature" alias="nature-nature"/>
                 <Choice value="Nature" alias="nature"/>
             </Choices>
-            <Text name="inter-group-0_visual_expl_t" value="Optional comments"/>
-            <TextArea name="inter-group-0_visual_expl" toName="title"/>
+            <Text name="inter_group-0_visual_expl_t" value="Optional comments"/>
+            <TextArea name="inter_group-0_visual_expl" toName="title"/>
         </View>
 
         <Header value="Stewardship type" size="4"/>
@@ -1250,9 +1251,9 @@
         <View className="V_text" visibleWhen="choice-selected" whenTagName="nature_text"
               whenChoiceValue="Yes">
 
-            <Text value="What are Stewardship types of Interactions in the TEXT?"
-                  name="inter-group-1_text_t"/>
-            <Choices name="inter-group-1_text" toName="title" showInline="true" required="true" choice="multiple">
+            <Text value="What are the Stewardship types in the TEXT?"
+                  name="inter_group-1_text_t"/>
+            <Choices name="inter_group-1_text" toName="title" showInline="true" required="true" choice="multiple">
                 <Choice value="Preservation" alias="preservation"/>
                 <Choice value="Restoration" alias="restoration"/>
                 <Choice value="Sustainable use of resources" alias="sustainable_use_of_resources"/>
@@ -1262,21 +1263,21 @@
                 <Choice value="Informal enforcement" alias="informal_enforcement"/>
                 <Choice value="Other" alias="other"/>
             </Choices>
-            <View visibleWhen="choice-selected" whenTagName="inter-group-1_text" whenChoiceValue="other">
-                <Text name="inter-group-1_text_other_t" value="Describe the Stewardship type"/>
-                <TextArea name="inter-group-1_text_other" toName="title"/>
+            <View visibleWhen="choice-selected" whenTagName="inter_group-1_text" whenChoiceValue="other">
+                <Text name="inter_group-1_text_other_t" value="Describe the Stewardship type"/>
+                <TextArea name="inter_group-1_text_other" toName="title"/>
             </View>
 
-            <Text name="inter-group-1_text_expl_t" value="Optional comments"/>
-            <TextArea name="inter-group-1_text_expl" toName="title"/>
+            <Text name="inter_group-1_text_expl_t" value="Optional comments"/>
+            <TextArea name="inter_group-1_text_expl" toName="title"/>
         </View>
 
         <View className="V_visual" visibleWhen="choice-selected" whenTagName="nature_visual"
               whenChoiceValue="Yes">
 
-            <Text value="What are Stewardship types of Interactions in the VISUAL?"
+            <Text value="What are the Stewardship types in the VISUAL?"
                   name="inter_group-1_visual_t"/>
-            <Choices name="inter-group-1_visual" toName="title" showInline="true" required="true" choice="multiple">
+            <Choices name="inter_group-1_visual" toName="title" showInline="true" required="true" choice="multiple">
                 <Choice value="Preservation" alias="preservation"/>
                 <Choice value="Restoration" alias="restoration"/>
                 <Choice value="Sustainable use of resources" alias="sustainable_use_of_resources"/>
@@ -1286,12 +1287,12 @@
                 <Choice value="Informal enforcement" alias="informal_enforcement"/>
                 <Choice value="Other" alias="other"/>
             </Choices>
-            <View visibleWhen="choice-selected" whenTagName="inter-group-1_visual" whenChoiceValue="other">
-                <Text name="inter-group-1_visual_other_t" value="Describe the Stewardship type"/>
-                <TextArea name="inter-group-1_visual_other" toName="title"/>
+            <View visibleWhen="choice-selected" whenTagName="inter_group-1_visual" whenChoiceValue="other">
+                <Text name="inter_group-1_visual_other_t" value="Describe the Stewardship type"/>
+                <TextArea name="inter_group-1_visual_other" toName="title"/>
             </View>
-            <Text name="inter-group-1_visual_expl_t" value="Optional comments"/>
-            <TextArea name="inter-group-1_visual_expl" toName="title"/>
+            <Text name="inter_group-1_visual_expl_t" value="Optional comments"/>
+            <TextArea name="inter_group-1_visual_expl" toName="title"/>
         </View>
 
         <Header value="Disturbances" size="4"/>
@@ -1299,40 +1300,40 @@
         <View className="V_text" visibleWhen="choice-selected" whenTagName="nature_text"
               whenChoiceValue="Yes">
 
-            <Text value="What are Disturbance types of Interactions in the TEXT?"
-                  name="inter-group-2_text_t"/>
-            <Choices name="inter-group-2_text" toName="title" showInline="true" choice="multiple">
+            <Text value="What are the disturbance types in the TEXT?"
+                  name="inter_group-2_text_t"/>
+            <Choices name="inter_group-2_text" toName="title" showInline="true" choice="multiple">
                 <Choice value="Disruption" alias="disruption"/>
                 <Choice value="Pollution" alias="pollution"/>
                 <Choice value="Natural disaster" alias="natural_disaster"/>
                 <Choice value="Other" alias="other"/>
             </Choices>
-            <View visibleWhen="choice-selected" whenTagName="inter-group-2_text" whenChoiceValue="other">
-                <Text name="inter-group-2_text_other_t" value="Describe the disturbance"/>
-                <TextArea name="inter-group-2_text_other" toName="title"/>
+            <View visibleWhen="choice-selected" whenTagName="inter_group-2_text" whenChoiceValue="other">
+                <Text name="inter_group-2_text_other_t" value="Describe the disturbance"/>
+                <TextArea name="inter_group-2_text_other" toName="title"/>
             </View>
 
-            <Text name="inter-group-2_text_expl_t" value="Optional comments"/>
-            <TextArea name="inter-group-2_text_expl" toName="title"/>
+            <Text name="inter_group-2_text_expl_t" value="Optional comments"/>
+            <TextArea name="inter_group-2_text_expl" toName="title"/>
         </View>
 
         <View className="V_visual" visibleWhen="choice-selected" whenTagName="nature_visual" whenChoiceValue="Yes">
 
-            <Text value="What are Disturbance types of Interactions in the VISUAL?"
-                  name="inter-group-2_visual_t"/>
-            <Choices name="inter-group-2_visual" toName="title" showInline="true" choice="multiple">
+            <Text value="What are the disturbance types in the VISUAL?"
+                  name="inter_group-2_visual_t"/>
+            <Choices name="inter_group-2_visual" toName="title" showInline="true" choice="multiple">
                 <Choice value="Disruption" alias="disruption"/>
                 <Choice value="Pollution" alias="pollution"/>
                 <Choice value="Natural disaster" alias="natural_disaster"/>
                 <Choice value="Other" alias="other"/>
             </Choices>
-            <View visibleWhen="choice-selected" whenTagName="inter-group-2_visual" whenChoiceValue="other">
-                <Text name="inter-group-2_visual_other_t" value="Describe the disturbance"/>
-                <TextArea name="inter-group-2_visual_other" toName="title"/>
+            <View visibleWhen="choice-selected" whenTagName="inter_group-2_visual" whenChoiceValue="other">
+                <Text name="inter_group-2_visual_other_t" value="Describe the disturbance"/>
+                <TextArea name="inter_group-2_visual_other" toName="title"/>
             </View>
 
-            <Text name="inter-group-2_visual_expl_t" value="Optional comments"/>
-            <TextArea name="inter-group-2_visual_expl" toName="title"/>
+            <Text name="inter_group-2_visual_expl_t" value="Optional comments"/>
+            <TextArea name="inter_group-2_visual_expl" toName="title"/>
         </View>
         <!-- // Interactions -->
 

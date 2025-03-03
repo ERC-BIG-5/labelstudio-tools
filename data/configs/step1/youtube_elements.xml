@@ -1,0 +1,42 @@
+<View>
+    <View className="title_view">
+        <Text name="gap1" value=" "/>
+        <Text name="text_2_t" value="Video description:"/>
+        <Text name="text_2" value="$text_2" selectionEnabled="false"/>
+    </View>
+    <View>
+        <Header value="Video"/>
+        <Collapse>
+            <Panel value="Filtered video">
+                <Style>
+                    #filtered embed { filter: blur(3px) grayscale(1); }
+                </Style>
+                <View idAttr="filtered">
+                    <HyperText name="video_filtered" width="540" height="auto" value="$video_embedd" inline="true"/>
+                </View>
+            </Panel>
+            <Panel value="Original video">
+                <HyperText name="video" width="540" height="auto" value="$video_embedd" inline="true"/>
+            </Panel>
+        </Collapse>
+
+        <HyperText name="video_link" value="" inline="true" clickableLinks="true">
+            <a href="$video_url" target="_blank">YOUTUBE LINK</a>
+        </HyperText>
+        <Text name="yt_gap" value=" "/>
+        <View className="language_detection_block" style="display: flex; ">
+            <Text name="language_t" value="Detected language (only for Youtube): " selectionEnabled="false"/>
+            <Text name="language" value="$language" selectionEnabled="false"/>
+        </View>
+        <Text name="lang_correct"
+              value="Is the language of the text as detected correctly? This is only for youtube-TEXT. (default: Yes)"/>
+        <Choices name="language_correct" toName="language" showInline="true">
+            <Choice value="No"/>
+        </Choices>
+        <Text name="lang_video_same"
+              value="Does the video language (or original subtitles) correspond to the language? (default: Yes)"/>
+        <Choices name="language_video_same" toName="language" showInline="true">
+            <Choice value="No"/>
+        </Choices>
+    </View>
+</View>
