@@ -1,0 +1,545 @@
+<View>
+    <Style>.source_view .lsf-richtext__line {font-size: 20px;}</Style>
+    <View className="source_view" style="display: flex; color: orchid; font-style: italic;">
+        <Text name="source_t" value="Platform: "/>
+        <Text name="source" value="$source"/>
+        <Text name="p_id_t" value="Platform id :"/>
+        <Text name="platform_id" value="$platform_id"/>
+    </View>
+    <Style>
+        .title_view .lsf-richtext__line {font-size: 22px;}
+
+        #text_part {border-left: 2px solid cyan; padding-left: 3px }
+        .text_part_header h4 { text-decoration-line: underline;text-decoration-color:
+        cyan;text-decoration-thickness:3px}
+
+        #visual_part {border-left: 2px solid #aba3ff; padding-left: 3px }
+        .visual_part_header h4 { text-decoration-line: underline;text-decoration-color:
+        #aba3ff;text-decoration-thickness:3px}
+    </Style>
+    <View className="title_view">
+        <Header value="Text content"/>
+        <Text name="text_1_t" value="Text 1:"/>
+        <Text name="title" value="$text_1" selectionEnabled="false" id="title_text"/>
+    </View>
+    <!-- Platform elements -->
+    {{{PLATFORM_ELEMENTS}}}
+    <!-- // Platform elements -->
+    <Text name="gap2" value=" "/>
+
+    <!-- ANY Nature -->
+    <View>
+
+        <View className="V_text">
+            <Text name="nature_text_t" value="Is there nature in the TEXT content? (Default: No)"
+                  selectionEnabled="false"/>
+            <Choices name="nature_text" toName="title">
+                <Choice value="Yes"/>
+            </Choices>
+        </View>
+
+        <View className="V_visual">
+            <Text name="nature_visual_t" value="Is there nature in the VISUAL content? (Default: No)"
+                  selectionEnabled="false"/>
+            <Choices name="nature_visual" toName="title">
+                <Choice value="Yes"/>
+            </Choices>
+        </View>
+    </View>
+
+    <View>
+        <Header size="4" value="Optional checks"/>
+        <Choices name="extras" toName="title" showInline="true" choice="multiple">
+            <Choice value="Food"/>
+            <Choice value="Sport"/>
+        </Choices>
+    </View>
+    <!--  NEW TEXT -->
+    <View idAttr="text_part" visibleWhen="choice-selected" whenTagName="nature_text" whenChoiceValue="Yes">
+
+        <View className="text_part_header">
+            <Header value="TEXT part"/>
+        </View>
+        <Header value="Value Expression Types"/>
+
+        <!-- ANY VT EXPR -->
+        <View className="V_text" visibleWhen="choice-selected" whenTagName="nature_text" whenChoiceValue="Yes">
+            <Text name="val-expr_text_t"
+                  value="For the TEXT content: What is the Type of Nature Value Expression? (Default: Not codable)"/>
+            <Choices name="val-expr_text" toName="title" showInline="true">
+                <Choice value="Implicit"/>
+                <Choice value="Explicit"/>
+            </Choices>
+        </View>
+
+        <!-- RELATIONAL VALUE -->
+        <Header value="Relational Values"/>
+
+        <!-- RV TEXT -->
+        <View className="V_text" visibleWhen="choice-selected" whenTagName="val-expr_text"
+              whenChoiceValue="Explicit,Implicit">
+
+            <Text name="rel-value_text_t"
+                  value="For the TEXT content: What are the RVs expressed?"/>
+            <Choices name="rel-value_text" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+            <Text name="rel-value_text_expl_t" value="Optional comments"/>
+            <TextArea name="rel-value_text_expl" toName="title" showSubmitButton="true"/>
+
+            <!-- CONFUSION TEXT-->
+            <View>
+                {{{TEXT_RV_CONFUSION}}}
+            </View>
+        </View>
+
+        <Header value="Nature Elements/Processes"/>
+
+        <View className="V_text">
+
+            <Text value="What are the Nature Elements/Process in the TEXT?"
+                  name="nep_text_t"/>
+            <Text value="Materiality" name="nep_group-0_text_t"/>
+            <Choices name="nep_group-0_text" toName="title" showInline="true" required="true" choice="multiple"
+                     requiredMessage="Select one option from the Nature Element/Process: Materiality in TEXT">
+                <Choice value="Material" alias="material"/>
+                <Choice value="Immaterial" alias="immaterial"/>
+            </Choices>
+            <Text name="nep_group-0_text_expl_t" value="Optional comments"/>
+            <TextArea name="nep_group-0_text_expl" toName="title"/>
+
+            <Text value="Biological" name="nep_group-1_text_t"/>
+            <Choices name="nep_group-1_text" toName="title" showInline="true" required="true" choice="multiple"
+                     requiredMessage="Select one option from the Nature Element/Process: Biological in TEXT">
+                <Choice value="Biotic" alias="biotic"/>
+                <Choice value="Abiotic" alias="abiotic"/>
+            </Choices>
+            <Text name="nep_group-1_text_expl_t" value="Optional comments"/>
+            <TextArea name="nep_group-1_text_expl" toName="title"/>
+
+            <Text value="Landscape type (default: None)" name="nep_group-2_text_t"/>
+            <Choices name="nep_group-2_text" toName="title" showInline="true" required="false" choice="multiple">
+                <Choice value="Artificial surfaces" alias="artificial_surfaces"/>
+                <Choice value="Agricultural areas" alias="agricultural_areas"/>
+                <Choice value="Forest and seminatural areas" alias="forest_and_seminatural_areas"/>
+                <Choice value="Wetlands" alias="wetlands"/>
+                <Choice value="Water bodies" alias="water_bodies"/>
+                <Choice value="Other" alias="other"/>
+            </Choices>
+            <View visibleWhen="choice-selected" whenTagName="nep_group-2_text" whenChoiceValue="other">
+                <Text name="nep_group-2_text_other_t" value="Describe the Landscape type"/>
+                <TextArea name="nep_group-2_text_other" toName="title"/>
+            </View>
+
+            <Text name="nep_group-2_text_expl_t" value="Optional comments"/>
+            <TextArea name="nep_group-2_text_expl" toName="title"/>
+
+        </View>
+
+        <!-- Interactions -->
+        <Header value="Types of Interactions"/>
+        <Header value="Basic type" size="4"/>
+        <!-- Interaction TEXT -->
+        <View className="V_text">
+
+            <Text value="What are types of Interactions in the TEXT?"
+                  name="inter_group-0_text_t"/>
+            <Choices name="inter_group-0_text" toName="title" showInline="true" required="true"
+                     requiredMessage="Select one option from the Interaction type in TEXT" choice="multiple">
+                <Choice value="Human-human in/about nature" alias="human-human_in/about_nature"/>
+                <Choice value="Human-nature" alias="human-nature"/>
+                <Choice value="Nature-nature" alias="nature-nature"/>
+                <Choice value="Nature" alias="nature"/>
+            </Choices>
+            <Text name="inter_group-0_text_expl_t" value="Optional comments"/>
+            <TextArea name="inter_group-0_text_expl" toName="title"/>
+        </View>
+
+        <Header value="Stewardship type" size="4"/>
+
+        <View className="V_text">
+
+            <Text value="What are the Stewardship types in the TEXT? (default: None)"
+                  name="inter_group-1_text_t"/>
+            <Choices name="inter_group-1_text" toName="title" showInline="true" choice="multiple">
+                <Choice value="Preservation" alias="preservation"/>
+                <Choice value="Restoration" alias="restoration"/>
+                <Choice value="Sustainable use of resources" alias="sustainable_use_of_resources"/>
+                <Choice value="Advocacy" alias="advocacy"/>
+                <Choice value="Education" alias="education"/>
+                <Choice value="Monitoring" alias="monitoring"/>
+                <Choice value="Informal enforcement" alias="informal_enforcement"/>
+                <Choice value="Other" alias="other"/>
+            </Choices>
+            <View visibleWhen="choice-selected" whenTagName="inter_group-1_text" whenChoiceValue="other">
+                <Text name="inter_group-1_text_other_t" value="Describe the Stewardship type"/>
+                <TextArea name="inter_group-1_text_other" toName="title"/>
+            </View>
+
+            <Text name="inter_group-1_text_expl_t" value="Optional comments"/>
+            <TextArea name="inter_group-1_text_expl" toName="title"/>
+        </View>
+
+        <Header value="Disturbances" size="4"/>
+
+        <View className="V_text">
+
+            <Text value="What are the disturbance types in the TEXT? (default: None)"
+                  name="inter_group-2_text_t"/>
+            <Choices name="inter_group-2_text" toName="title" showInline="true" choice="multiple">
+                <Choice value="Disruption" alias="disruption"/>
+                <Choice value="Pollution" alias="pollution"/>
+                <Choice value="Natural disaster" alias="natural_disaster"/>
+                <Choice value="Other" alias="other"/>
+            </Choices>
+            <View visibleWhen="choice-selected" whenTagName="inter_group-2_text" whenChoiceValue="other">
+                <Text name="inter_group-2_text_other_t" value="Describe the disturbance"/>
+                <TextArea name="inter_group-2_text_other" toName="title"/>
+            </View>
+
+            <Text name="inter_group-2_text_expl_t" value="Optional comments"/>
+            <TextArea name="inter_group-2_text_expl" toName="title"/>
+        </View>
+
+        <!-- // Interactions -->
+
+        <!-- Sentiment -->
+        <Header value="Sentiment"/>
+        <View className="V_text">
+            <Text value="What sentiment is expressed in TEXT?" name="sentiment_text_t"/>
+            <Choices name="sentiment_text" toName="title" showInline="true" choice="multiple">
+                <Choice value="Happiness" alias="happiness"/>
+                <Choice value="Sadness" alias="sadness"/>
+                <Choice value="Fear" alias="fear"/>
+                <Choice value="Disgust" alias="disgust"/>
+                <Choice value="Anger" alias="anger"/>
+                <Choice value="Surprise" alias="surprise"/>
+                <Choice value="Other" alias="other"/>
+            </Choices>
+            <View visibleWhen="choice-selected" whenTagName="sentiment_text" whenChoiceValue="other">
+                <Text name="sentiment_text_other_t" value="Describe the sentiment"/>
+                <TextArea name="sentiment_text_other" toName="title"/>
+            </View>
+            <Text name="sentiment_text_expl_t" value="Optional comments"/>
+            <TextArea name="sentiment_text_expl" toName="title"/>
+        </View>
+
+        <!-- // Sentiment -->
+
+        <!-- Framing -->
+        <Header value="Framing"/>
+        <View className="V_text">
+            <Text value="TEXT Framing" name="framing_text_t"/>
+            <Choices name="framing_text" toName="title" showInline="true" choice="multiple">
+                <Choice value="Informative" alias="informative"/>
+                <Choice value="Emotive" alias="emotive"/>
+                <Choice value="Reflective" alias="reflective"/>
+                <Choice value="Call to action (CTA)" alias="call_to_action_(cta)"/>
+                <Choice value="Advertising" alias="advertising"/>
+                <Choice value="Warning" alias="warning"/>
+                <Choice value="Other" alias="other"/>
+            </Choices>
+            <View visibleWhen="choice-selected" whenTagName="framing_text" whenChoiceValue="other">
+                <Text name="framing_text_other_t" value="Describe the alternative Framing"/>
+                <TextArea name="framing_text_other" toName="title"/>
+            </View>
+            <Text name="framing_text_expl_t" value="Optional comments"/>
+            <TextArea name="framing_text_expl" toName="title"/>
+        </View>
+
+        <!-- // Framing -->
+
+    </View>
+    <!--  /// NEW TEXT -->
+
+    <!--  NEW VISUAL -->
+    <View idAttr="visual_part" visibleWhen="choice-selected" whenTagName="nature_visual" whenChoiceValue="Yes">
+
+        <View className="visual_part_header">
+            <Header value="VISUAL part"/>
+        </View>
+        <Header value="Value Expression Types"/>
+
+        <!-- VISUAL VT EXPR -->
+        <View className="V_visual" visibleWhen="choice-selected" whenTagName="nature_visual"
+              whenChoiceValue="Yes">
+            <Text name="val-expr_visual_t"
+                  value="For the VISUAL content: What is the Type of Nature Value Expression? (default: Not codable)"/>
+            <Choices name="val-expr_visual" toName="title" showInline="true">
+                <Choice value="Implicit"/>
+                <Choice value="Explicit"/>
+            </Choices>
+        </View>
+
+        <!-- RELATIONAL VALUE -->
+        <Header value="Relational Values"/>
+
+        <!-- RV VISUALS -->
+        <View className="V_visual" visibleWhen="choice-selected" whenTagName="val-expr_visual"
+              whenChoiceValue="Explicit,Implicit">
+            <Text name="rel-value_visual_t"
+                  value="For the VISUAL content: What are the RVs expressed?"/>
+            <Choices name="rel-value_visual" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+
+            <Text name="rel-value_visual_expl_t" value="Optional comments"/>
+            <TextArea name="rel-value_visual_expl" toName="title" showSubmitButton="true"/>
+
+            <!-- CONFUSION VISUAL-->
+            <View>
+                {{{VISUAL_RV_CONFUSION}}}
+            </View>
+
+        </View>
+
+        <!-- Nature Elements/Processes -->
+        <Header value="Nature Elements/Processes"/>
+        <View className="V_visual" visibleWhen="choice-selected" whenTagName="nature_visual"
+              whenChoiceValue="Yes">
+
+            <Text value="What are the Nature Elements/Process in the VISUAL?"
+                  name="nep_visual_t"/>
+            <Text value="Materiality" name="nep_group-0_visual_t"/>
+            <Choices name="nep_group-0_visual" toName="title" showInline="true" required="true" choice="multiple"
+                     requiredMessage="Select one option from the Nature Element/Process: Materiality in VISUAL">
+                <Choice value="Material" alias="material"/>
+                <Choice value="Immaterial" alias="immaterial"/>
+            </Choices>
+            <Text name="nep_group-0_visual_expl_t" value="Optional comments"/>
+            <TextArea name="nep_group-0_visual_expl" toName="title"/>
+
+            <Text value="Biological" name="nep_group-1_visual_t"/>
+            <Choices name="nep_group-1_visual" toName="title" showInline="true" required="true" choice="multiple"
+                     requiredMessage="Select one option from the Nature Element/Process: Biological in VISUAL">
+                <Choice value="Biotic" alias="biotic"/>
+                <Choice value="Abiotic" alias="abiotic"/>
+            </Choices>
+            <Text name="nep_group-1_visual_expl_t" value="Optional comments"/>
+            <TextArea name="nep_group-1_visual_expl" toName="title"/>
+
+            <Text value="Landscape type (default: None)" name="nep_group-2_visual_t"/>
+            <Choices name="nep_group-2_visual" toName="title" showInline="true" required="false" choice="multiple">
+                <Choice value="Artificial surfaces" alias="artificial_surfaces"/>
+                <Choice value="Agricultural areas" alias="agricultural_areas"/>
+                <Choice value="Forest and seminatural areas" alias="forest_and_seminatural_areas"/>
+                <Choice value="Wetlands" alias="wetlands"/>
+                <Choice value="Water bodies" alias="water_bodies"/>
+                <Choice value="Other" alias="other"/>
+            </Choices>
+            <View visibleWhen="choice-selected" whenTagName="nep_group-2_visual" whenChoiceValue="other">
+                <Text name="nep_group-2_visual_other_t" value="Describe the Landscape type"/>
+                <TextArea name="nep_group-2_visual_other" toName="title"/>
+            </View>
+
+            <Text name="nep_group-2_visual_expl_t" value="Optional comments"/>
+            <TextArea name="nep_group-2_visual_expl" toName="title"/>
+        </View>
+
+        <!-- Interactions -->
+        <Header value="Types of Interactions"/>
+        <Header value="Basic type" size="4"/>
+
+        <!-- Interaction VISUAL -->
+        <View className="V_visual" visibleWhen="choice-selected" whenTagName="nature_visual"
+              whenChoiceValue="Yes">
+            <Text value="What are types of Interactions in the VISUAL?"
+                  name="inter_group-0_visual_t"/>
+            <Choices name="inter_group-0_visual" toName="title" showInline="true" required="true"
+                     requiredMessage="Select one option from the Interaction type in VISUAL" choice="multiple">
+                <Choice value="Human-human in/about nature" alias="human-human_in/about_nature"/>
+                <Choice value="Human-nature" alias="human-nature"/>
+                <Choice value="Nature-nature" alias="nature-nature"/>
+                <Choice value="Nature" alias="nature"/>
+            </Choices>
+            <Text name="inter_group-0_visual_expl_t" value="Optional comments"/>
+            <TextArea name="inter_group-0_visual_expl" toName="title"/>
+        </View>
+
+        <Header value="Stewardship type" size="4"/>
+
+        <View className="V_visual" visibleWhen="choice-selected" whenTagName="nature_visual"
+              whenChoiceValue="Yes">
+
+            <Text value="What are the Stewardship types in the VISUAL? (default: None)"
+                  name="inter_group-1_visual_t"/>
+            <Choices name="inter_group-1_visual" toName="title" showInline="true" choice="multiple">
+                <Choice value="Preservation" alias="preservation"/>
+                <Choice value="Restoration" alias="restoration"/>
+                <Choice value="Sustainable use of resources" alias="sustainable_use_of_resources"/>
+                <Choice value="Advocacy" alias="advocacy"/>
+                <Choice value="Education" alias="education"/>
+                <Choice value="Monitoring" alias="monitoring"/>
+                <Choice value="Informal enforcement" alias="informal_enforcement"/>
+                <Choice value="Other" alias="other"/>
+            </Choices>
+            <View visibleWhen="choice-selected" whenTagName="inter_group-1_visual" whenChoiceValue="other">
+                <Text name="inter_group-1_visual_other_t" value="Describe the Stewardship type"/>
+                <TextArea name="inter_group-1_visual_other" toName="title"/>
+            </View>
+            <Text name="inter_group-1_visual_expl_t" value="Optional comments"/>
+            <TextArea name="inter_group-1_visual_expl" toName="title"/>
+        </View>
+
+        <Header value="Disturbances" size="4"/>
+
+        <View className="V_visual" visibleWhen="choice-selected" whenTagName="nature_visual" whenChoiceValue="Yes">
+
+            <Text value="What are the disturbance types in the VISUAL? (default: None)"
+                  name="inter_group-2_visual_t"/>
+            <Choices name="inter_group-2_visual" toName="title" showInline="true" choice="multiple">
+                <Choice value="Disruption" alias="disruption"/>
+                <Choice value="Pollution" alias="pollution"/>
+                <Choice value="Natural disaster" alias="natural_disaster"/>
+                <Choice value="Other" alias="other"/>
+            </Choices>
+            <View visibleWhen="choice-selected" whenTagName="inter_group-2_visual" whenChoiceValue="other">
+                <Text name="inter_group-2_visual_other_t" value="Describe the disturbance"/>
+                <TextArea name="inter_group-2_visual_other" toName="title"/>
+            </View>
+
+            <Text name="inter_group-2_visual_expl_t" value="Optional comments"/>
+            <TextArea name="inter_group-2_visual_expl" toName="title"/>
+        </View>
+        <!-- // Interactions -->
+
+        <!-- Sentiment -->
+        <Header value="Sentiment"/>
+
+        <View className="V_visual" visibleWhen="choice-selected" whenTagName="nature_visual">
+            <Text value="What sentiment is expressed in VISUAL?" name="sentiment_visual_t"/>
+            <Choices name="sentiment_visual" toName="title" showInline="true" choice="multiple">
+                <Choice value="Happiness" alias="happiness"/>
+                <Choice value="Sadness" alias="sadness"/>
+                <Choice value="Fear" alias="fear"/>
+                <Choice value="Disgust" alias="disgust"/>
+                <Choice value="Anger" alias="anger"/>
+                <Choice value="Surprise" alias="surprise"/>
+                <Choice value="Other" alias="other"/>
+            </Choices>
+            <View visibleWhen="choice-selected" whenTagName="sentiment_visual" whenChoiceValue="other">
+                <Text name="sentiment_visual_other_t" value="Describe the sentiment"/>
+                <TextArea name="sentiment_visual_other" toName="title"/>
+            </View>
+            <Text name="sentiment_visual_expl_t" value="Optional comments"/>
+            <TextArea name="sentiment_visual_expl" toName="title"/>
+        </View>
+        <!-- // Sentiment -->
+
+        <!-- Framing -->
+        <Header value="Framing"/>
+
+        <View className="V_visual" visibleWhen="choice-selected" whenTagName="nature_visual"
+              whenChoiceValue="Yes">
+            <Text value="VISUAL Framing" name="framing_visual_t"/>
+            <Choices name="framing_visual" toName="title" showInline="true" choice="multiple">
+                <Choice value="Informative" alias="informative"/>
+                <Choice value="Emotive" alias="emotive"/>
+                <Choice value="Reflective" alias="reflective"/>
+                <Choice value="Call to action (CTA)" alias="call_to_action_(cta)"/>
+                <Choice value="Advertising" alias="advertising"/>
+                <Choice value="Warning" alias="warning"/>
+                <Choice value="Other" alias="other"/>
+            </Choices>
+            <View visibleWhen="choice-selected" whenTagName="framing_visual" whenChoiceValue="other">
+                <Text name="framing_visual_other_t" value="Describe the alternative Framing"/>
+                <TextArea name="framing_visual_other" toName="title"/>
+            </View>
+            <Text name="framing_visual_expl_t" value="Optional comments"/>
+            <TextArea name="framing_visual_expl" toName="title"/>
+        </View>
+        <!-- // Framing -->
+
+    </View>
+    <!--  /// NEW VISUAL -->
+
+    <Header value="Do you want to mark this task for the 'coding game'? (Default: No)"/>
+    <Choices name="for_coding_game" toName="title" showInline="true">
+        <Choice value="Yes"/>
+    </Choices>
+
+    <View>
+        <Header value="User categorization"/>
+
+        <Header value="General" size="6"/>
+        <Choices name="user-type_0" toName="title" showInline="true">
+            <Choice value="Individual user" alias="individual_user"/>
+            <Choice value="Influencer" alias="influencer"/>
+            <Choice value="Media outlet" alias="media_outlet"/>
+            <Choice value="Company" alias="company"/>
+            <Choice value="NGO" alias="ngo"/>
+            <Choice value="Educational institution" alias="educational_institution"/>
+            <Choice value="Governmental institution" alias="governmental_institution"/>
+            <Choice value="Other" alias="other"/>
+        </Choices>
+        <View visibleWhen="choice-selected" whenTagName="user-type_0" whenChoiceValue="other">
+            <Text name="user-type_0_other_t" value="Describe the alternative User type"/>
+            <TextArea name="user-type_0_other" toName="title"/>
+        </View>
+
+        <Header value="Gender" size="6"/>
+        <Choices name="user-type_1" toName="title" showInline="true">
+            <Choice value="Man-performing" alias="man-performing"/>
+            <Choice value="Woman-performing" alias="woman-performing"/>
+            <Choice value="Non-binary performing" alias="non-binary_performing"/>
+        </Choices>
+
+        <Header value="Location" size="6"/>
+        <Choices name="user-type_2" toName="title" showInline="true">
+            <Choice value="Europe" alias="europe"/>
+            <Choice value="Magreb / Middle East" alias="magreb_middle_east"/>
+            <Choice value="Sub-Saharan Africa" alias="sub-saharan_africa"/>
+            <Choice value="Central-South Asia (India, Pakistan)" alias="central-south_asia_(india,_pakistan)"/>
+            <Choice value="East Asia (China, Philippines)" alias="east_asia_(china,_philippines)"/>
+            <Choice value="Latin America" alias="latin_america"/>
+            <Choice value="North America" alias="north_america"/>
+            <Choice value="Other" alias="other"/>
+        </Choices>
+        <View visibleWhen="choice-selected" whenTagName="user-type_2" whenChoiceValue="other">
+            <Text name="user-type_2_other_t" value="Describe the alternative User location"/>
+            <TextArea name="user-type_2_other" toName="title"/>
+        </View>
+
+        <Header value="Age" size="6"/>
+        <Choices name="user-type_3" toName="title" showInline="true">
+            <Choice value="Under 18" alias="under_18"/>
+            <Choice value="19-35" alias="19-35"/>
+            <Choice value="36-65" alias="36-65"/>
+            <Choice value="0ver 65" alias="0ver_65"/>
+        </Choices>
+    </View>
+</View>

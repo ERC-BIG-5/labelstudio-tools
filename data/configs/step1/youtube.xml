@@ -5,6 +5,18 @@
         <Text name="text_2" value="$text_2" selectionEnabled="false"/>
     </View>
     <View>
+        <Header value="Is there any harmful content?"/>
+        <Choices name="any_harmful" toName="title" showInline="true" choice="multiple">
+            <Choice value="Text"/>
+            <Choice value="Video"/>
+        </Choices>
+        <View visibleWhen="choice-selected" whenTagName="any_harmful"
+              whenChoiceValue="Text,Video">
+            <Text name="harmful_detail_t" value="Why is this content harmful?"/>
+            <TextArea name="harmful_detail" toName="title"/>
+        </View>
+    </View>
+    <View>
         <Header value="Video"/>
         <Collapse>
             <Panel value="Filtered video">
@@ -34,7 +46,7 @@
             <Choice value="No"/>
         </Choices>
         <Text name="lang_video_same"
-              value="Does the video language (or original subtitles) correspond to the language? (default: Yes)"/>
+              value="Does the video language (or original subtitles) correspond to the detected language? (default: Yes)"/>
         <Choices name="language_video_same" toName="language" showInline="true">
             <Choice value="No"/>
         </Choices>
