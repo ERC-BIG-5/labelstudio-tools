@@ -5,46 +5,46 @@ from pydantic import BaseModel, Field, PlainSerializer
 
 
 class ProjectModel(BaseModel):
-    id: int
+    id: Optional[int] = None
     title: str
-    description: str
-    label_config: str
-    expert_instruction: str
-    show_instruction: bool
+    description: Optional[str] = ""
+    label_config: Optional[str] = "<View></View>"
+    expert_instruction: Optional[str] = ""
+    show_instruction: Optional[bool] = False
 
-    show_skip_button: Optional[bool] = Field(default=None)
+    show_skip_button: Optional[bool] = Field(default=False)
     """
     Show a skip button in interface and allow annotators to skip the task
     """
 
-    enable_empty_annotation: Optional[bool] = Field(default=None)
+    enable_empty_annotation: Optional[bool] = Field(default=True)
     """
     Allow annotators to submit empty annotations
     """
 
-    show_annotation_history: Optional[bool] = Field(default=None)
+    show_annotation_history: Optional[bool] = Field(default=True)
     """
     Show annotation history to annotator
     """
 
     organization: Optional[int] = None
-    color: Optional[str] = None
-    maximum_annotations: Optional[int] = Field(default=None)
+    color: Optional[str] = "#FFFFFF"
+    maximum_annotations: Optional[int] = Field(default=4)
     """
     Maximum number of annotations for one task. If the number of annotations per task is equal or greater to this value, the task is completed (is_labeled=True)
     """
 
-    is_published: Optional[bool] = Field(default=None)
+    is_published: Optional[bool] = Field(default=True)
     """
     Whether or not the project is published to annotators
     """
 
-    model_version: Optional[str] = Field(default=None)
+    model_version: Optional[str] = Field(default=None, alias="model_version")
     """
     Machine learning model version
     """
 
-    is_draft: Optional[bool] = Field(default=None)
+    is_draft: Optional[bool] = Field(default=False)
     """
     Whether or not the project is in the middle of being created
     """
@@ -52,22 +52,22 @@ class ProjectModel(BaseModel):
     # TODO
     created_by: Optional[dict] = None  # UserSimple
     created_at: Optional[datetime] = None
-    min_annotations_to_start_training: Optional[int] = Field(default=None)
+    min_annotations_to_start_training: Optional[int] = Field(default=1)
     """
     Minimum number of completed tasks after which model training is started
     """
 
-    start_training_on_annotation_update: Optional[str | bool] = Field(default=None)
+    start_training_on_annotation_update: Optional[str | bool] = Field(default=False)
     """
     Start model training after any annotations are submitted or updated
     """
 
-    show_collab_predictions: Optional[bool] = Field(default=None)
+    show_collab_predictions: Optional[bool] = Field(default=False)
     """
     If set, the annotator can view model predictions
     """
 
-    num_tasks_with_annotations: Optional[int] = Field(default=None)
+    num_tasks_with_annotations: Optional[int] = Field(default=0)
     """
     Tasks with annotations count
     """
@@ -103,10 +103,10 @@ class ProjectModel(BaseModel):
     """
 
     # todo
-    sampling: Optional[dict | str] = None  # ProjectSampling
-    show_ground_truth_first: Optional[bool] = None
-    show_overlap_first: Optional[bool] = None
-    overlap_cohort_percentage: Optional[int] = None
+    sampling: Optional[dict | str] = "Uniform sampling"  # ProjectSampling
+    show_ground_truth_first: Optional[bool] = False
+    show_overlap_first: Optional[bool] = False
+    overlap_cohort_percentage: Optional[int] = 100
     task_data_login: Optional[str] = Field(default=None)
     """
     Task data credentials: login
@@ -127,7 +127,7 @@ class ProjectModel(BaseModel):
     JSON-formatted labeling configuration
     """
 
-    evaluate_predictions_automatically: Optional[bool] = Field(default=None)
+    evaluate_predictions_automatically: Optional[bool] = Field(default=False)
     """
     Retrieve and display predictions when loading a task
     """
@@ -137,8 +137,8 @@ class ProjectModel(BaseModel):
     Flag to detect is project ready for labeling
     """
     # todo
-    skip_queue: Optional[dict | str] = None  # ProjectSkipQueue
-    reveal_preannotations_interactively: Optional[bool] = Field(default=None)
+    skip_queue: Optional[dict | str] = 'REQUEUE_FOR_OTHERS'  # ProjectSkipQueue
+    reveal_preannotations_interactively: Optional[bool] = Field(default=False)
     """
     Reveal pre-annotations interactively
     """

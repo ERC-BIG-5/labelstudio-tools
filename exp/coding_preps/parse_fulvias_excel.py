@@ -50,4 +50,6 @@ for h, v in values.items():
         values[h].pop(-1)
 
 print(json.dumps(values, indent=2))
-json.dump(values, open(extra_base / "results.json", "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+fp = extra_base / "results.json"
+print(fp.as_posix())
+json.dump(values, open(fp, "w", encoding="utf-8"), indent=2, ensure_ascii=False)

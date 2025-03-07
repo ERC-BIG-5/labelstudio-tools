@@ -172,6 +172,7 @@ class LabelStudioBase:
 
         result = dl.json()
         res_path = (base_dir / str(project_id) / f"{project_id}-{datetime.now():%Y%m%d_%H%M}.json")
+        res_path.parent.mkdir(parents=True, exist_ok=True)
         print(f"dumping project annotations to {res_path}")
         json.dump(result, res_path.open("w", encoding="utf-8"))
 
@@ -199,3 +200,11 @@ class LabelStudioBase:
     def update_user(self, user: UserModel):
         resp = self._client_wrapper.httpx_client.patch(f"/api/users/{user.id}", json=user.model_dump(exclude={"email"}))
         print(resp.status_code, resp.text)
+
+    def create_project(self, data: ProjectModel):
+        resp = self._client_wrapper.httpx_client.post(f"/api/projects/", json=data.model_dump())
+        return resp
+
+    def patch_view(self, view_id: int, data: dict):
+        resp = self._client_wrapper.httpx_client.patch(f"/api/dm/views/{view_id}", json=data)
+        return resp

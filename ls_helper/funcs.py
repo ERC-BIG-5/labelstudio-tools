@@ -12,7 +12,8 @@ from ls_helper.my_labelstudio_client.models import UserModel
 from settings import SETTINGS
 
 
-def test_update_other_coding_game(project_annotations: ProjectAnnotations) -> tuple[dict[str, list[str]], list[str]]:
+def test_update_other_coding_game(project_annotations: ProjectAnnotations,
+                                  project_id: int) -> tuple[dict[str, list[str]], list[str]]:
     """
     pass in the results
     Parameters
@@ -23,14 +24,15 @@ def test_update_other_coding_game(project_annotations: ProjectAnnotations) -> tu
     -------
 
     """
-    csv_file = Path("data/info/annotations.csv")
-    coding_game_file = Path("data/info/coding_game.json")
+    csv_file = Path(f"data/info/annotations_{project_id}.csv")
+    coding_game_file = Path(f"data/info/coding_game_{project_id}.json")
 
     header = ['Nature Element/Process', 'Human-Nature Action']
 
     others = {h: [] for h in header}
 
     for_coding_game = []
+    data_for_coding_game = []
 
     for task_res in project_annotations.annotations:
         annotations = task_res.annotations
@@ -50,6 +52,7 @@ def test_update_other_coding_game(project_annotations: ProjectAnnotations) -> tu
                         p_id = task_res.data["platform_id"]
                         if p_id not in for_coding_game:
                             for_coding_game.append(p_id)
+                            data_for_coding_game.append(task_res.data)
 
     ne_list = others[header[0]]
     sa_list = others[header[1]]
@@ -67,6 +70,7 @@ def test_update_other_coding_game(project_annotations: ProjectAnnotations) -> tu
             }
             writer.writerow(row)
 
+    print(f"coding game: ->  {coding_game_file}")
     json.dump(for_coding_game, open(coding_game_file, "w", newline='', encoding='utf-8'))
 
     print(others)
@@ -108,18 +112,22 @@ def pick_and_flatten(results):
     pass
 
 
-def update_coding_game(project_id: int, view_id: int, platform_ids: list[str] = ()):
-    # TODO: how is this working, project_id should be a query param
-    resp = httpx.get(f"{SETTINGS.LS_HOSTNAME}/api/dm/views/project={project_id}", headers={
-        "Authorization": f"Token {SETTINGS.LS_API_KEY}"
-    })
+def update_coding_game(client: LabelStudioBase,
+                       project_id: int,
+                       use_stored_data_if_available: bool,
+                       view_id: int,
+                       platform_ids: list[str] = ()):
+    viwes = client.get_project_views(project_id)
 
-    current = resp.json()
-    print(current)
-
+    print(viwes)
+    view_data = [c for c in viwes if c.id == view_id]
+    if not view_data:
+        print("no such view")
+        return
+    view_data = view_data[0]
     new_items = []
     new_filters = {"conjunction": "or", "items": new_items}
-    current["data"]["filters"] = new_filters
+    view_data.data.filters = new_filters
     for p_id in platform_ids:
         # print(for_coding_game)
         new_items.append({
@@ -129,13 +137,16 @@ def update_coding_game(project_id: int, view_id: int, platform_ids: list[str] = 
             "value": p_id
         })
 
-    res = {"data": {"title": "Coding game", "filters": new_filters}}
+    res = {
+        "data": {"title": "Coding game", "filters": new_filters, "hiddenColumns": view_data.data.hiddenColumns}}
     print(res)
-    resp = httpx.patch(f"{SETTINGS.LS_HOSTNAME}/api/dm/views/{project_id}", headers={
-        "Authorization": f"Token {SETTINGS.LS_API_KEY}"
-    }, json=res)
+    resp = client.patch_view(view_id, res)
+    # resp = httpx.patch(f"{SETTINGS.LS_HOSTNAME}/api/dm/views/{view_id}", headers={
+    #     "Authorization": f"Token {SETTINGS.LS_API_KEY}"
+    # }, json=res)
     if resp.status_code != 200:
         print(f"error updating view for coding game: {resp.status_code}")
+        print(resp.json())
 
 
 def get_latest_annotation(project_id: int) -> Optional[ProjectAnnotations]:
@@ -186,6 +197,7 @@ def update_project_view(p: MyProject,
         })
         # raise NotImplemented("get the view through api")
 
+
 def update_user_nicknames(refresh_users: bool = True):
     if refresh_users:
         client = LabelStudioBase(base_url=SETTINGS.LS_HOSTNAME, api_key=SETTINGS.LS_API_KEY)
@@ -195,11 +207,12 @@ def update_user_nicknames(refresh_users: bool = True):
     nicknames_file = Path("data/user_nicknames.json")
     nicknames = json.load(nicknames_file.open(encoding="utf-8"))
     for idx, u in enumerate(users):
-        print(u.model_dump(include={"id","first_name","last_name","username","initials"}))
+        print(u.model_dump(include={"id", "first_name", "last_name", "username", "initials"}))
         if str(u.id) not in nicknames:
             nicknames[u.id] = input("Nickname: ")
 
     nicknames_file.write_text(json.dumps(nicknames, indent=2, ensure_ascii=False), encoding="utf-8")
+
 
 if __name__ == "__main__":
     data = json.load(open("data/annotations/29-20250210_1402.json"))

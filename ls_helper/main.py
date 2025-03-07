@@ -2,9 +2,8 @@ import json
 from pathlib import Path
 
 from ana_res import parse_label_config_xml, get_config_project_project_data
-from ls_helper.funcs import get_latest_annotation, test_update_other_coding_game, update_user_nicknames
+from ls_helper.funcs import get_latest_annotation, test_update_other_coding_game, update_coding_game
 from ls_helper.models import ProjectAnnotationResults, MyProject, ProjectAnnotationExtension
-from ls_helper.my_labelstudio_client.models import UserModel
 from my_labelstudio_client.client import LabelStudioBase
 from settings import SETTINGS
 
@@ -38,14 +37,14 @@ if __name__ == "__main__":
     # })
 
 
+    p_id = 33 # real yt en
     # download annotations and update the others,coding game data
-    # project_annotations = client.get_project_annotations(29)
-    # others, coding_game = test_update_other_coding_game(project_annotations)
-    # update_coding_game(platform_ids=coding_game)
-
+    project_annotations = client.get_project_annotations(33)
+    others, coding_game = test_update_other_coding_game(project_annotations, p_id)
+    update_coding_game(client, p_id, True,56, platform_ids=coding_game)
+    exit()
     # download_project_views(29)
 
-    p_id = 29
     project_annotations = get_latest_annotation(29)
 
     """

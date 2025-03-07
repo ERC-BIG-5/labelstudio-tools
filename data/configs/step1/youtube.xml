@@ -5,18 +5,6 @@
         <Text name="text_2" value="$text_2" selectionEnabled="false"/>
     </View>
     <View>
-        <Header value="Is there any harmful content?"/>
-        <Choices name="any_harmful" toName="title" showInline="true" choice="multiple">
-            <Choice value="Text"/>
-            <Choice value="Video"/>
-        </Choices>
-        <View visibleWhen="choice-selected" whenTagName="any_harmful"
-              whenChoiceValue="Text,Video">
-            <Text name="harmful_detail_t" value="Why is this content harmful?"/>
-            <TextArea name="harmful_detail" toName="title"/>
-        </View>
-    </View>
-    <View>
         <Header value="Video"/>
         <Collapse>
             <Panel value="Filtered video">
@@ -35,6 +23,19 @@
         <HyperText name="video_link" value="" inline="true" clickableLinks="true">
             <a href="$video_url" target="_blank">YOUTUBE LINK</a>
         </HyperText>
+        <View>
+            <Header value="Is there any harmful content?"/>
+            <Choices name="any_harmful" toName="title" showInline="true" choice="multiple">
+                <Choice value="Text"/>
+                <Choice value="Video"/>
+            </Choices>
+            <View visibleWhen="choice-selected" whenTagName="any_harmful"
+                  whenChoiceValue="Text,Video">
+                <Text name="harmful_detail_t" value="Why is this content harmful?"/>
+                <TextArea name="harmful_detail" toName="title"/>
+            </View>
+        </View>
+
         <Text name="yt_gap" value=" "/>
         <View className="language_detection_block" style="display: flex; ">
             <Text name="language_t" value="Detected language (only for Youtube): " selectionEnabled="false"/>

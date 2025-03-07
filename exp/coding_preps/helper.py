@@ -1,6 +1,9 @@
 import json
+import os
 from pathlib import Path
 from typing import Optional
+
+import pystache
 
 
 def create_choice_elem(option: str, alias: Optional[str] = None) -> str:
@@ -24,11 +27,14 @@ if __name__ == "__main__":
 
     print("RV options")
     rv_type_options = data["rv_type"][0]
-    rv_aliases = list(map(lambda _: _.lower().replace(" ", "_"), data["rv_type"][0]))
+    rv_aliases = list(map(lambda _: _.lower().replace(" ", "-"), data["rv_type"][0]))
 
     rv_choices = create_choice_elements(rv_type_options, rv_aliases)
-    print(rv_choices)
-
+    # XX
+    # print(rv_choices)
+    # print(json.dumps(data, indent=2))
+    """
+    
     print("NEP")
     for group in data["nep_type"]:
         type_options = group
@@ -56,40 +62,72 @@ if __name__ == "__main__":
         aliases = list(map(lambda _: _.lower().replace(" ", "_"), group))
         fr_choices = create_choice_elements(type_options, aliases)
         print(fr_choices)
+    """
 
-    print("RV confusion TEXT")
+    print("user type")
+    for group in data["user_type"]:
+        type_options = group
+        aliases = list(map(lambda _: _.lower().replace(" ", "_"), group))
+        user_choices = create_choice_elements(type_options, aliases)
+        print(user_choices)
+    # print("RV confusion TEXT")
     from string import Template
 
     template = Template("""<View visibleWhen="choice-selected" whenTagName="rel-value_text"
                   whenChoiceValue="$rv_alias">
-                    <Text value="For the TEXT content: Can the Relational Value '$rv_name' be confused with other RVs?" name="rel-value_text_conf-$rv_alias-_t"/>
-                    <Choices name="rel-value_text_conf-$rv_alias" toName="title" showInline="true" choice="multiple">
+                    <Text value="For the TEXT content: Can the Relational Value '$rv_name' be confused with other RVs?" name="rel-value_text_conf_$rv_alias-_t"/>
+                    <Choices name="rel-value_text_conf_$rv_alias" toName="title" showInline="true" choice="multiple">
                      $choices
                      </Choices>
                 </View>""")
-    for rv_name, rv_alias in zip(rv_type_options, rv_aliases):
 
+    text_rv_confusion_views = ""
+    for rv_name, rv_alias in zip(rv_type_options, rv_aliases):
         rv_type_options_ = rv_type_options[:]
         rv_type_options_.remove(rv_name)
         rv_aliases_ = rv_aliases[:]
         rv_aliases_.remove(rv_alias)
         rv_choices = create_choice_elements(rv_type_options_, rv_aliases_)
-        print(template.substitute(rv_name=rv_name, rv_alias=rv_alias, choices=rv_choices))
+        text_rv_confusion_views += template.substitute(rv_name=rv_name, rv_alias=rv_alias, choices=rv_choices)
 
-    print("RV confusion VISUAL")
+    # print(text_rv_confusion_views)
+    # exit()
+    # print("RV confusion VISUAL")
 
     template = Template("""<View visibleWhen="choice-selected" whenTagName="rel-value_visual"
                   whenChoiceValue="$rv_alias">
-                    <Text value="For the TEXT content: Can the Relational Value '$rv_name' be confused with other RVs?" name="rel-value_visual_conf-$rv_alias-_t"/>
-                    <Choices name="rel-value_visual_conf-$rv_alias" toName="title" showInline="true" choice="multiple">
+                    <Text value="For the TEXT content: Can the Relational Value '$rv_name' be confused with other RVs?" name="rel-value_visual_conf_-$rv_alias-_t"/>
+                    <Choices name="rel-value_visual_conf_$rv_alias" toName="title" showInline="true" choice="multiple">
                      $choices
                      </Choices>
                 </View>""")
-    for rv_name, rv_alias in zip(rv_type_options, rv_aliases):
 
+    visual_rv_confusion_views = b""
+    for rv_name, rv_alias in zip(rv_type_options, rv_aliases):
         rv_type_options_ = rv_type_options[:]
         rv_type_options_.remove(rv_name)
         rv_aliases_ = rv_aliases[:]
         rv_aliases_.remove(rv_alias)
         rv_choices = create_choice_elements(rv_type_options_, rv_aliases_)
-        print(template.substitute(rv_name=rv_name, rv_alias=rv_alias, choices=rv_choices))
+        visual_rv_confusion_views += template.substitute(rv_name=rv_name, rv_alias=rv_alias, choices=rv_choices).encode(
+            "utf-8")
+        # print(visual_rv_confusion_views)
+    # print(text_rv_confusion_views)
+    base_path = Path(f"{os.getcwd()}/data/configs/step1")
+    template_file = base_path / "config_template.xml"
+    template_text = template_file.read_text(encoding="utf-8")
+
+    platform_files = ["youtube.xml"]
+    for platform_file in platform_files:
+        platform_fp = base_path / platform_file
+        platform_elements = platform_fp.read_text(encoding="utf-8")
+
+        gen_text = pystache.render(template_text, {
+            'TEXT_RV_CONFUSION': text_rv_confusion_views,
+            'VISUAL_RV_CONFUSION': visual_rv_confusion_views,
+            'PLATFORM_ELEMENTS': platform_elements
+        }, encoding="utf-8")
+
+        pl_gen_file = base_path / f"output/gen_{platform_file.split('.')[0]}.xml"
+        pl_gen_file.write_text(gen_text, encoding="utf-8")
+        print(f"-> {pl_gen_file}")
