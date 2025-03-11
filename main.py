@@ -112,6 +112,7 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
 
     existing_task_files = list(host_path.glob("*.json"))
     existing_task_files = [f.name for f in existing_task_files]
+    print(existing_task_files)
     # print(host_path.absolute())
 
     resp = client.get_task_list(project=project_id)
@@ -120,7 +121,10 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
     # filter Nones
     used_task_files = [Path(t) for t in used_task_files if t]
     used_task_files = [t.name for t in used_task_files]
+    print(used_task_files)
+
     obsolete_files = set(existing_task_files) - set(used_task_files)
+
     #print([o.relative_to(host_path) for o in obsolete_files])
     print(len(obsolete_files))
 
