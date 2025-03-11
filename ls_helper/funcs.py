@@ -9,7 +9,7 @@ import jsonpath_ng
 from ls_helper.models import VariableExtension, ResultStruct, ProjectAnnotationExtension, ProjectAnnotations, MyProject
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
 from ls_helper.my_labelstudio_client.models import UserModel
-from settings import SETTINGS
+from ls_helper.settings import SETTINGS
 
 
 def test_update_other_coding_game(project_annotations: ProjectAnnotations,
@@ -148,14 +148,18 @@ def update_coding_game(client: LabelStudioBase,
         print(f"error updating view for coding game: {resp.status_code}")
         print(resp.json())
 
-
-def get_latest_annotation(project_id: int) -> Optional[ProjectAnnotations]:
+def get_latest_annotation_file(project_id: int) -> Optional[Path]:
     base_dir = Path(f"data/annotations/")
     annotation_files = list((base_dir / str(project_id)).glob("*.json"))
     if not annotation_files:
         print("no annotations found")
         return None
-    annotation_file = sorted(annotation_files)[-1]
+    return sorted(annotation_files)[-1]
+
+def get_latest_annotation(project_id: int) -> Optional[ProjectAnnotations]:
+    annotation_file = get_latest_annotation_file(project_id)
+    if not annotation_file:
+        return None
     return ProjectAnnotations(project_id=project_id,
                               annotations=json.load(annotation_file.open(encoding="utf-8")),
                               file_path=annotation_file)

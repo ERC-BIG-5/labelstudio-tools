@@ -37,7 +37,7 @@ def parse_label_config_xml(xml_string,
             value = el.get('value')
             if value and value.startswith('$'):
                 name = el.get('name')
-                if name in include_text_names or not include_text_names:
+                if not include_text_names or name in include_text_names:
                     variable_text_fields[name] = value[1:]
                     ordered_fields.append(name)
 

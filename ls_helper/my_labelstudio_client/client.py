@@ -6,9 +6,11 @@ import json
 from pathlib import Path
 from datetime import datetime
 import httpx
-
-from ls_helper.models import ProjectAnnotations
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectModel, UserModel
+
+if typing.TYPE_CHECKING:
+    from ls_helper.models import ProjectAnnotations
+
 
 
 class LabelStudioEnvironment(enum.Enum):
@@ -158,7 +160,7 @@ class LabelStudioBase:
         if resp.status_code == 200:
             return ProjectModel.model_validate(resp.json())
 
-    def get_project_annotations(self, project_id: int) -> ProjectAnnotations:
+    def get_project_annotations(self, project_id: int) -> "ProjectAnnotations":
         export_create = self._client_wrapper.httpx_client.post(f"/api/projects/{project_id}/exports", json={
             "task_filter_options": {"only_with_annotations": True}
         })
@@ -175,6 +177,8 @@ class LabelStudioBase:
         res_path.parent.mkdir(parents=True, exist_ok=True)
         print(f"dumping project annotations to {res_path}")
         json.dump(result, res_path.open("w", encoding="utf-8"))
+
+        from ls_helper.models import ProjectAnnotations
 
         return ProjectAnnotations(project_id=project_id,
                                   annotations=result,
@@ -207,4 +211,11 @@ class LabelStudioBase:
 
     def patch_view(self, view_id: int, data: dict):
         resp = self._client_wrapper.httpx_client.patch(f"/api/dm/views/{view_id}", json=data)
+        return resp
+
+    def delete_task(self, task_id: int):
+        pass
+
+    def patch_task(self, task_id: int, data: dict):
+        resp = self._client_wrapper.httpx_client.patch(f"/api/tasks/{task_id}", json=data)
         return resp

@@ -1,3 +1,4 @@
+import json
 import uuid
 from collections import Counter
 from csv import DictWriter
@@ -5,9 +6,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Literal, Any, TypedDict, Iterable
 
-from pydantic import BaseModel, Field, ConfigDict, model_validator, field_validator
+import orjson
+from pydantic import BaseModel, Field, ConfigDict, model_validator, field_validator, RootModel
 
 from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel
+from ls_helper.settings import SETTINGS
 
 
 def find_name_fixes(orig_keys: Iterable[str],
@@ -439,14 +442,15 @@ class MyProject(BaseModel):
             # annotation
             row_final: dict[str, str | int] = {"num_coders": task.num_coders,
                                                "cancellations": task.num_cancellations,
-                                               "users": ", ".join(map(str,task.users))}
+                                               "users": ", ".join(map(str, task.users))}
             try:
                 row_final |= task.data_str(with_defaults)
             except Exception as e:
                 print(e)
 
             for input_name, input_value in self.annotation_structure.inputs.items():
-                row_final[input_name] = task.relevant_input_data[input_value]
+                # todo, crashed, when direct access. task.data is checked against, config
+                row_final[input_name] = task.relevant_input_data.get(input_value)
 
             rows.append(row_final)
 
@@ -459,3 +463,95 @@ class MyProject(BaseModel):
         writer.writerows(rows)
 
     model_config = ConfigDict(validate_assignment=True)
+
+
+"""
+
+
+
+class ProjectPlatformOverview(BaseModel):
+    en: PlatformLanguageOverview = Field(default_factory=PlatformLanguageOverview)
+    es: PlatformLanguageOverview = Field(default_factory=PlatformLanguageOverview)
+
+
+
+class ProjectOverview(BaseModel):
+    
+    youtube: ProjectPlatformOverview = Field(default_factory=ProjectPlatformOverview)
+    twitter: ProjectPlatformOverview = Field(default_factory=ProjectPlatformOverview)
+    tiktok: ProjectPlatformOverview = Field(default_factory=ProjectPlatformOverview)
+    instagram: ProjectPlatformOverview = Field(default_factory=ProjectPlatformOverview)
+    facebook: ProjectPlatformOverview = Field(default_factory=ProjectPlatformOverview)
+
+
+"""
+
+
+class PlatformLanguageOverview(BaseModel):
+    id: Optional[int] = None
+    coding_game_view_id: Optional[int] = None
+
+
+class ProjectPlatformOverview(RootModel):
+    root: dict[str, PlatformLanguageOverview]
+
+    @staticmethod
+    def languages() -> list[str]:
+        return ["en", "es"]
+
+    def __iter__(self):
+        return iter(self.root.items())
+
+    def __getitem__(self, item):
+        return self.root[item]
+
+    @staticmethod
+    def users() -> "UserInfo":
+        pp = Path(SETTINGS.BASE_DATA_DIR / "users.json")
+        if not pp.exists():
+            users= UserInfo(**{})
+            json.dump(users.model_dump(),pp.open("w"),indent=2)
+            return users
+        else:
+            return UserInfo.model_validate(json.load(pp.open()))
+
+
+class ProjectOverview(RootModel):
+    root: dict[str, ProjectPlatformOverview]
+
+    @staticmethod
+    def platforms() -> list[str]:
+        return ["youtube", "twitter", "tiktok", "instagram", "facebook"]
+
+    def __iter__(self):
+        for k,v in  iter(self.root.items()):
+            yield k,v.root
+
+    def __getitem__(self, item):
+        return self.root[item].root
+
+    @staticmethod
+    def project_data_path(platform: str, language: str) -> Path:
+        return SETTINGS.projects_dir / platform / f"{language}.json"
+
+    @staticmethod
+    def projects() -> "ProjectOverview":
+        pp = Path(SETTINGS.BASE_DATA_DIR / "projects.json")
+        if not pp.exists():
+            projects = ProjectOverview()
+            json.dump(projects.model_dump(),pp.open("w"),indent=2)
+            return projects
+        else:
+            return ProjectOverview.model_validate(json.load(pp.open()))
+
+    @staticmethod
+    def project_data(platform: str,language: str) -> Optional[dict]:
+        pp = ProjectOverview.project_data_path(platform, language)
+        if not pp.exists():
+            return None
+        return orjson.loads(pp.open().read())
+
+class UserInfo(BaseModel):
+    users: dict[int, str]
+
+
