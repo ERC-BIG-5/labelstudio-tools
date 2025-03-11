@@ -69,23 +69,68 @@ def annotation_lead_times(project_id: Annotated[int, typer.Option()],
 def total_over_time(project_id: Annotated[int, typer.Option()],
                     accepted_ann_age: Annotated[
                         int, typer.Option(help="Download annotations if older than x hours")] = 6):
-    df = annotation_total_over_time(get_recent_annotations(project_id,accepted_ann_age))
+    df = annotation_total_over_time(get_recent_annotations(project_id, accepted_ann_age))
     temp_file = plot_cumulative_annotations(df)
 
     open_image_simple(temp_file.name)
     temp_file.close()
 
 
+@app.command()
+def clean_project_task_files(project_id: Annotated[int, typer.Option()],
+                             title: Optional[str] = None, ):
+    pass
+    # 1. get project_sync folder
+    # curl http://localhost:8080/api/storages/localfiles/ \
+    #      -H "Authorization: Token  <api_key>"
+    # query-Param: project
+    # 2. get project tasks
+    # remove all files that are not in a task
+    client = ls_client()
+
+    resp = client.list_import_storages(project_id)
+    local_storages = resp.json()
+
+    if len(local_storages) == 0:
+        print("No storages found")
+        return
+    if len(local_storages) > 1:
+        if not title:
+            print("Multiple storages found.provide the 'title'")
+            return
+        lc = [lc for lc in local_storages if lc["title"] == title]
+        if len(lc) == 0:
+            print(f"No storages found with title: {title}")
+            return
+        lc = lc[0]
+    else:
+        lc = local_storages[0]
+    path = pathlib.Path(lc["path"])
+
+    rel_path = path.relative_to(SETTINGS.IN_CONTAINER_LOCAL_STORAGE_BASE)
+    host_path = SETTINGS.HOST_STORAGE_BASE / rel_path
+
+    existing_task_files = list(host_path.glob("/*.json"))
+
+    # print(host_path.absolute())
+
+    resp = client.get_task_list(project=project_id)
+    tasks = resp.json()["tasks"]
+    used_task_files = [task.get("storage_filename") for task in tasks]
+    # filter Nones
+    used_task_files = [t for t in used_task_files if t]
+    obsolete_files = set(existing_task_files) - set(used_task_files)
+    print(obsolete_files)
+
+
 # console = Console()
 
 if __name__ == "__main__":
     # status(33)
-    # client = ls_client()
     # p = client.get_project(31)
     # print(p)
     # res = client.patch_project(31, {"is_draft": True, "is_published": True})
     # print(res)
-    #ProjectMgmt.update_projects()
-    print(ProjectMgmt.get_annotations("youtube","en"))
-    pass
-
+    # ProjectMgmt.update_projects()
+    # print(ProjectMgmt.get_annotations("youtube","en"))
+    clean_project_task_files(33)

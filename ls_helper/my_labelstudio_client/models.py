@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import Optional, Any, TypedDict, Literal, Annotated
 
-from pydantic import BaseModel, Field, PlainSerializer
+from pydantic import BaseModel, Field, PlainSerializer, ConfigDict
 
 
 class ProjectModel(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
     id: Optional[int] = None
     title: str
     description: Optional[str] = ""

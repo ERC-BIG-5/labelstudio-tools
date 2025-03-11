@@ -31,10 +31,10 @@ if __name__ == "__main__":
     # json.dump(json.loads(orjson.dumps(res.model_dump())),open("data/project.json","w"), indent=2)
 
     # patch project
-    # res = client.patch_project(29, {
-    #     "maximum_annotations": 4,
-    #     "sampling": "Uniform sampling"
-    # })
+    res = client.patch_project(33, {
+        "maximum_annotations": 2,
+        # "sampling": "Uniform sampling"
+    })
 
 
     p_id = 33 # real yt en

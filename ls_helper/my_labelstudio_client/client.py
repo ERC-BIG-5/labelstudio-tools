@@ -6,11 +6,12 @@ import json
 from pathlib import Path
 from datetime import datetime
 import httpx
+from httpx import Response
+
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectModel, UserModel
 
 if typing.TYPE_CHECKING:
     from ls_helper.models import ProjectAnnotations
-
 
 
 class LabelStudioEnvironment(enum.Enum):
@@ -213,9 +214,46 @@ class LabelStudioBase:
         resp = self._client_wrapper.httpx_client.patch(f"/api/dm/views/{view_id}", json=data)
         return resp
 
+    def get_task_list(self,
+                      *,
+                      page: Optional[int] = None,
+                      page_size: Optional[int] = 2000,
+                      project: Optional[int] = None,
+                      view: Optional[int] = None,
+                      resolve_url: Optional[bool] = False,
+                      fields: Optional[typing.Literal["all", "task_only"]] = "all",
+                      review: Optional[bool] = None,
+                      include: Optional[str] = None,
+                      query: Optional[str] = None) -> Response:
+        # https://api.labelstud.io/api-reference/api-reference/tasks/list
+        params = {}
+        if page is not None:
+            params["page"] = page
+        if page_size is not None:
+            params["page_size"] = page_size
+        if project is not None:
+            params["project"] = project
+        if view is not None:
+            params["view"] = view
+        if resolve_url is not None:
+            params["resolve_url"] = resolve_url
+        if fields is not None:
+            params["fields"] = fields
+        if review is not None:
+            params["review"] = review
+        if include is not None:
+            params["include"] = include
+        if query is not None:
+            params["query"] = query
+        return self._client_wrapper.httpx_client.get("/api/tasks", params=params, timeout=60)
+
     def delete_task(self, task_id: int):
         pass
 
     def patch_task(self, task_id: int, data: dict):
         resp = self._client_wrapper.httpx_client.patch(f"/api/tasks/{task_id}", json=data)
+        return resp
+
+    def list_import_storages(self, project: Optional[int] = None) -> Response:
+        resp = self._client_wrapper.httpx_client.get("api/storages/localfiles/", params={"project": project})
         return resp

@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     LS_API_KEY: str
     BASE_DATA_DIR: Optional[Path] = Field(Path("data/ls_data"))
 
+    IN_CONTAINER_LOCAL_STORAGE_BASE: Optional[Path] = Field(None)
+    HOST_STORAGE_BASE: Optional[Path] = Field(None)
+
     __client : Optional[LabelStudioBase] = None
 
 
