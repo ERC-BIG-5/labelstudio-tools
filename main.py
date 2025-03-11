@@ -121,6 +121,7 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
     used_task_files = [t for t in used_task_files if t]
     obsolete_files = set(existing_task_files) - set(used_task_files)
     print([o.relative_to(host_path) for o in obsolete_files])
+    print(len(obsolete_files))
 
 
 # console = Console()
