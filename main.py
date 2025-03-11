@@ -110,7 +110,7 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
     rel_path = path.relative_to(SETTINGS.IN_CONTAINER_LOCAL_STORAGE_BASE)
     host_path = SETTINGS.HOST_STORAGE_BASE / rel_path
 
-    existing_task_files = list(host_path.glob("/*.json"))
+    existing_task_files = list(host_path.glob("*.json"))
 
     # print(host_path.absolute())
 
