@@ -113,6 +113,7 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
     existing_task_files = list(host_path.glob("*.json"))
     existing_task_files = [f.name for f in existing_task_files]
     print(existing_task_files)
+    print("**************")
     # print(host_path.absolute())
 
     resp = client.get_task_list(project=project_id)
