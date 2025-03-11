@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 from typing import Annotated, Optional
 
@@ -127,6 +128,7 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
     obsolete_files = set(existing_task_files) - set(used_task_files)
 
     #print([o.relative_to(host_path) for o in obsolete_files])
+    json.dump(obsolete_files, Path("t.json").open("w"))
     print(len(obsolete_files))
 
 
