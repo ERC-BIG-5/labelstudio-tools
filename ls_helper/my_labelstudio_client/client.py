@@ -9,6 +9,7 @@ import httpx
 from httpx import Response
 
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectModel, UserModel
+from ls_helper.settings import SETTINGS
 
 if typing.TYPE_CHECKING:
     from ls_helper.models import ProjectAnnotations
@@ -170,11 +171,9 @@ class LabelStudioBase:
 
         dl = self._client_wrapper.httpx_client.get(f"api/projects/{project_id}/exports/{export_id}/download")
 
-        base_dir = Path(f"data/annotations/")
-        base_dir.mkdir(parents=True, exist_ok=True)
-
         result = dl.json()
-        res_path = (base_dir / str(project_id) / f"{project_id}-{datetime.now():%Y%m%d_%H%M}.json")
+
+        res_path = (SETTINGS.annotations_dir / str(project_id) / f"{datetime.now():%Y%m%d_%H%M}.json")
         res_path.parent.mkdir(parents=True, exist_ok=True)
         print(f"dumping project annotations to {res_path}")
         json.dump(result, res_path.open("w", encoding="utf-8"))
@@ -182,8 +181,7 @@ class LabelStudioBase:
         from ls_helper.models import ProjectAnnotations
 
         return ProjectAnnotations(project_id=project_id,
-                                  annotations=result,
-                                  file_path=res_path)
+                                  annotations=result)
 
     def get_project_views(self, project_id: int) -> list[ProjectViewModel]:
         resp = self._client_wrapper.httpx_client.get(f"api/dm/views/?project={project_id}")

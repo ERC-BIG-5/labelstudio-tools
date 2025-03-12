@@ -160,7 +160,7 @@ class ProjectAnnotationExtension(BaseModel):
 class ProjectAnnotations(BaseModel):
     project_id: int
     annotations: list["TaskResultModel"]
-    file_path: Path
+    file_path: Optional[Path] = None
 
 
 # modelling LS structure
@@ -469,6 +469,16 @@ class PlatformLanguageOverview(BaseModel):
     id: Optional[int] = None
     coding_game_view_id: Optional[int] = None
 
+    def get_view_file(self) -> Optional[Path]:
+        return SETTINGS.view_dir / f"{self.id}.json"
+
+    def get_views(self) -> Optional[list[ProjectViewModel]]:
+        view_file = self.get_view_file()
+        if not view_file.exists():
+            return None
+        data = json.load(view_file.open())
+        return [ProjectViewModel.model_validate(v) for v in data]
+
 
 class ProjectPlatformOverview(RootModel):
     root: dict[str, PlatformLanguageOverview]
@@ -540,7 +550,8 @@ class ProjectOverview(RootModel):
         if isinstance(p_access, int):
             for platform, lang_p in self.root.items():
                 for lang, p_data in lang_p.root.items():
-                    return p_data
+                    if p_data.id == p_access:
+                        return p_data
         elif isinstance(p_access, tuple):
             platform, language = p_access
             return self[platform][language]
@@ -548,14 +559,12 @@ class ProjectOverview(RootModel):
     def get_view_file(self, p_access: ProjectAccess) -> Optional[Path]:
         project = self.get_project(p_access)
         if project:
-            return SETTINGS.view_dir / f"{project.id}.json"
+            return project.get_view_file()
 
     def get_views(self, p_access: ProjectAccess) -> Optional[list[ProjectViewModel]]:
-        view_file = self.get_view_file(p_access)
-        if not view_file.exists():
-            return None
-        data = json.load(view_file.open())
-        return [ProjectViewModel.model_validate(v) for v in data]
+        project = self.get_project(p_access)
+        if project:
+            return project.get_views()
 
 
 class UserInfo(BaseModel):

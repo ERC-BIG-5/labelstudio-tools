@@ -15,6 +15,7 @@ from ls_helper.settings import SETTINGS
 def test_update_other_coding_game(project_annotations: ProjectAnnotations,
                                   project_id: int) -> tuple[dict[str, list[str]], list[str]]:
     """
+    TODO THIS FUNC NEEDS TO GO
     pass in the results
     Parameters
     ----------
@@ -177,7 +178,7 @@ def build_view_with_filter_p_ids(
 
 
 def get_latest_annotation_file(project_id: int) -> Optional[Path]:
-    base_dir = Path(f"data/annotations/")
+    base_dir = SETTINGS.annotations_dir
     annotation_files = list((base_dir / str(project_id)).glob("*.json"))
     if not annotation_files:
         print("no annotations found")

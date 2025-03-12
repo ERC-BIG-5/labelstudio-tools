@@ -7,10 +7,11 @@ from typing import Annotated, Optional
 
 import typer
 
+from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.annotation_timing import annotation_timing, plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
 from ls_helper.funcs import get_latest_annotation, get_latest_annotation_file, build_view_with_filter_p_ids
-from ls_helper.models import ProjectAnnotations, ProjectOverview
+from ls_helper.models import ProjectAnnotations, ProjectOverview, MyProject
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
 from ls_helper.my_labelstudio_client.models import ProjectViewModel
 from ls_helper.settings import SETTINGS
@@ -30,16 +31,14 @@ def open_image_simple(image_path):
 
 def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[ProjectAnnotations]:
     latest_file = get_latest_annotation_file(project_id)
-    stem = latest_file.stem
-    date_part = stem.split("-")[1]
+    if latest_file is not None:
+        file_dt = datetime.strptime(latest_file.stem, "%Y%m%d_%H%M")
+        # print(file_dt, datetime.now(), datetime.now() - file_dt)
+        if datetime.now() - file_dt < timedelta(hours=accepted_age):
+            return get_latest_annotation(project_id)
 
-    file_dt = datetime.strptime(date_part, "%Y%m%d_%H%M")
-    # print(file_dt, datetime.now(), datetime.now() - file_dt)
-    if datetime.now() - file_dt > timedelta(hours=accepted_age):
-        print("downloading annotations")
-        return ls_client().get_project_annotations(project_id)
-    else:
-        return get_latest_annotation(project_id)
+    print("downloading annotations")
+    return ls_client().get_project_annotations(project_id)
 
 
 @app.command(short_help="Plot the completed tasks over time")
@@ -67,6 +66,28 @@ def annotation_lead_times(project_id: Annotated[int, typer.Option()],
     temp_file.close()
 
 
+@app.command(short_help="Annotation basic results")
+def annotations_results(platform: Annotated[str, typer.Option()],
+                        language: Annotated[str, typer.Option()],
+                        accepted_ann_age: Annotated[
+                            int, typer.Option(help="Download annotations if older than x hours")] = 6):
+    project_data = ProjectOverview.project_data(platform, language)
+    project_id = project_data["id"]
+
+    conf = parse_label_config_xml(project_data["label_config"],
+                                  project_id=project_id,
+                                  include_text=True)
+
+    annotations = get_recent_annotations(project_id, accepted_ann_age)
+
+    mp = MyProject(project_data=project_data, annotation_structure=conf,
+                   raw_annotation_result=annotations)
+    mp.calculate_results()
+    dest = SETTINGS.annotations_results_dir / f"{str(project_id)}.csv"
+    mp.results2csv(dest, with_defaults=False)
+    print(f"annotation results -> {dest}")
+
+
 @app.command(short_help="Plot the total completed tasks over day")
 def total_over_time(project_id: Annotated[int, typer.Option()],
                     accepted_ann_age: Annotated[
@@ -78,14 +99,18 @@ def total_over_time(project_id: Annotated[int, typer.Option()],
     temp_file.close()
 
 
-@app.command()
+@app.command(short_help="delete the json files from the local storage folder, from tasks that habe been deleted")
 def clean_project_task_files(project_id: Annotated[int, typer.Option()],
                              title: Annotated[Optional[str], typer.Option()] = None,
                              just_check: Annotated[bool, typer.Option()] = False):
-    pass
     # 1. get project_sync folder
     # 2. get project tasks
     # remove all files that are not in a task
+    """
+    ON THE VM:
+    sudo env PYTHONPATH=.  /home/ubuntu/projects/big5/platform_clients/.venv/bin/typer main.py run clean-project-task-files ...
+    """
+
     client = ls_client()
 
     resp = client.list_import_storages(project_id)
@@ -183,17 +208,51 @@ def set_view_items(platform: Annotated[str, typer.Option()],
     print("View successfully updated")
 
 
-if __name__ == "__main__":
-    # status(33)
-    # p = client.get_project(31)
-    # print(p)
-    # res = client.patch_project(31, {"is_draft": True, "is_published": True})
-    # print(res)
-    # ProjectMgmt.update_projects()
-    # print(ProjectMgmt.get_annotations("youtube","en"))
-    ## TODO
-    clean_project_task_files(33)
-    ##
+@app.command()
+def update_coding_game(platform: str, language: str):
+    po = ProjectOverview.projects().get_project((platform, language))
+    view_id = po.coding_game_view_id
+    if not view_id:
+        print("No views found for coding game")
+        return
 
-    set_view_items("youtube", "en", "Old-Sentiment/Framing",
-                   Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/temp/yt_en_problematic_tasks.json"))
+    views = po.get_views()
+    if not views:
+        print("No views found for project. Call 'download_project_views' first")
+        return
+    view_ = [v for v in views if v.id == view_id]
+    if not view_:
+        print(f"No coding game view found. Candidates: {[(v.data.title, v.id) for v in views]}")
+        return
+    view_ = view_[0]
+
+    project_annotations = get_recent_annotations(po.id, 0)
+
+    for_coding_game = []
+
+    for task_res in project_annotations.annotations:
+        annotations = task_res.annotations
+        for annotation in annotations:
+            for result in annotation.result:
+                if result.from_name == "for_coding_game":
+                    if result.value.choices[0] == "Yes":
+                        p_id = task_res.data["platform_id"]
+                        if p_id not in for_coding_game:
+                            for_coding_game.append(p_id)
+
+    build_view_with_filter_p_ids(SETTINGS.client, view_, for_coding_game)
+    print("Coding game successfully updated")
+
+if __name__ == "__main__":
+    # clean ...ON VM
+    # clean_project_task_files(33)
+    # DONE
+    # set_view_items("youtube", "en", "Old-Sentiment/Framing",
+    #                Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/temp/yt_en_problematic_tasks.json"))
+
+    # JUPP
+    # annotations_results("youtube", "en", 2)
+    # CODING GAME
+    download_project_views("youtube", "en")
+    download_project_views("youtube","es")
+    update_coding_game("youtube", "es")

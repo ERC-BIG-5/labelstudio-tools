@@ -30,36 +30,19 @@ class ProjectMgmt:
                         orjson.dumps(ls_project_data.model_dump(), option=orjson.OPT_INDENT_2).decode("utf-8"),
                         encoding="utf-8")
 
-    @staticmethod
-    def get_annotations(platform: str, language: str):
-        project_data = ProjectOverview.project_data(platform, language)
-        project_id = project_data["id"]
-
-        conf = parse_label_config_xml(project_data["label_config"],
-                                      project_id=project_id,
-                                      include_text=True)
-
-        annotations = SETTINGS.client.get_project_annotations(project_id)
-
-        mp = MyProject(project_data=project_data, annotation_structure=conf,
-                       raw_annotation_result=annotations)
-        mp.calculate_results()
-        mp.results2csv(Path("t.csv"), with_defaults=False)
-        return mp
-
-        """
-        mp = MyProject(project_data=project_data,
-                       annotation_structure=conf,
-                       raw_annotation_result=project_annotations,
-                       project_views=project_views,
-                       data_extensions=
-                       ProjectAnnotationExtension.model_validate(json.load(open(f"data/fixes/{p_id}.json"))))
-
-        mp.calculate_results()
-
-        # mp.apply_extension(False)
-        # mp.results2csv(Path("t-raw.csv"))
-        mp.apply_extension(True)
-        mp.results2csv(Path("t.csv"), with_defaults=False)
-        
-        """
+    # @staticmethod
+    # def get_annotations(platform: str, language: str):
+    #     project_data = ProjectOverview.project_data(platform, language)
+    #     project_id = project_data["id"]
+    #
+    #     conf = parse_label_config_xml(project_data["label_config"],
+    #                                   project_id=project_id,
+    #                                   include_text=True)
+    #
+    #     annotations = SETTINGS.client.get_project_annotations(project_id)
+    #
+    #     mp = MyProject(project_data=project_data, annotation_structure=conf,
+    #                    raw_annotation_result=annotations)
+    #     mp.calculate_results()
+    #     mp.results2csv(Path("t.csv"), with_defaults=False)
+    #     return mp
