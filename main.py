@@ -114,7 +114,7 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
     # print(existing_task_files)
     # print("**************")
     # print(host_path.absolute())
-
+    print("getting task  list...")
     resp = client.get_task_list(project=project_id)
     tasks = resp.json()["tasks"]
     used_task_files = [task.get("storage_filename") for task in tasks]
@@ -127,7 +127,7 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
 
     # print([o.relative_to(host_path) for o in obsolete_files])
     json.dump(list(obsolete_files), Path("t.json").open("w"))
-    print(len(obsolete_files))
+    # print(len(obsolete_files))
 
     backup_dir = SETTINGS.DELETED_TASK_FILES_BACKUP_BASE_DIR
     if backup_dir:
