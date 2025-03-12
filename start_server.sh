@@ -1,2 +1,2 @@
 . ./prepare.sh
-uvicorn server:app
+uvicorn server:app --port 8888

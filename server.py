@@ -4,8 +4,7 @@ from starlette.staticfiles import StaticFiles
 
 from main import update_coding_game
 
-app = FastAPI()
-update_coding_game
+app = FastAPI(root_path="/INFO")
 app.mount("/static", StaticFiles(directory="data/server_static"), name="static")
 
 
