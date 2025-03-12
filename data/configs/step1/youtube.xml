@@ -6,6 +6,23 @@
     </View>
     <View>
         <Header value="Video"/>
+        <Header value="NEW FORMAT" size="6"/>
+        <Collapse>
+            <Panel value="Filtered video">
+                <Style>
+                    #filtered canvas { filter: blur(3px) grayscale(1); }
+                </Style>
+                <View idAttr="filtered">
+                    <Video name="video_local_filtered" value="$video_local"/>
+                </View>
+            </Panel>
+            <Panel value="Original video">
+                <View>
+                    <Video name="video_local" value="$video_local"/>
+                </View>
+            </Panel>
+        </Collapse>
+        <Header value="OLD FORMAT" size="6"/>
         <Collapse>
             <Panel value="Filtered video">
                 <Style>
