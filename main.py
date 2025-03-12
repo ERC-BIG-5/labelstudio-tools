@@ -129,7 +129,9 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
     # print([o.relative_to(host_path) for o in obsolete_files])
     # json.dump(list(obsolete_files), Path("t.json").open("w"))
     if just_check:
-        print(f"{len(obsolete_files)} will be moved")
+        print(f"{len(obsolete_files)} would be moved")
+        return
+    print(f"{len(obsolete_files)} will be moved")
 
     backup_dir = SETTINGS.DELETED_TASK_FILES_BACKUP_BASE_DIR
     backup_final_dir = backup_dir / str(project_id)
