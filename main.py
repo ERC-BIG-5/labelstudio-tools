@@ -80,7 +80,8 @@ def total_over_time(project_id: Annotated[int, typer.Option()],
 
 @app.command()
 def clean_project_task_files(project_id: Annotated[int, typer.Option()],
-                             title: Optional[str] = None, ):
+                             title: Annotated[Optional[str], typer.Option()] = None,
+                             just_check: Annotated[bool, typer.Option()] = False):
     pass
     # 1. get project_sync folder
     # 2. get project tasks
@@ -126,15 +127,18 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
     obsolete_files = set(existing_task_files) - set(used_task_files)
 
     # print([o.relative_to(host_path) for o in obsolete_files])
-    json.dump(list(obsolete_files), Path("t.json").open("w"))
-    # print(len(obsolete_files))
+    # json.dump(list(obsolete_files), Path("t.json").open("w"))
+    if just_check:
+        print(f"{len(obsolete_files)} will be moved")
 
     backup_dir = SETTINGS.DELETED_TASK_FILES_BACKUP_BASE_DIR
-    if backup_dir:
-        for f in obsolete_files:
-            src = host_path / f
-            print(src.exists())
-            # shutil.move()
+    backup_final_dir = backup_dir / str(project_id)
+    backup_final_dir.mkdir(parents=True, exist_ok=True)
+    for f in obsolete_files:
+        src = host_path / f
+        # print(src.exists())
+        shutil.move(src, backup_final_dir / f)
+
 
 @app.command()
 def download_project_views(platform: Annotated[str, typer.Option()], language: Annotated[str, typer.Option()]) -> list[
@@ -158,7 +162,7 @@ def set_view_items(platform: Annotated[str, typer.Option()],
     if not views:
         print("No views found")
         return
-    _view:ProjectViewModel = None
+    _view: ProjectViewModel = None
     for view in views:
         if view.data.title == view_title:
             _view = view
@@ -173,8 +177,9 @@ def set_view_items(platform: Annotated[str, typer.Option()],
         return
     project_ids = json.load(project_id_file.open())
     assert isinstance(project_ids, list)
-    build_view_with_filter_p_ids(SETTINGS.client,_view,project_ids)
+    build_view_with_filter_p_ids(SETTINGS.client, _view, project_ids)
     print("View successfully updated")
+
 
 if __name__ == "__main__":
     # status(33)
@@ -188,6 +193,5 @@ if __name__ == "__main__":
     clean_project_task_files(33)
     ##
 
-
-    set_view_items("youtube","en", "Old-Sentiment/Framing",
+    set_view_items("youtube", "en", "Old-Sentiment/Framing",
                    Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/temp/yt_en_problematic_tasks.json"))
