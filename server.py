@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
 
@@ -15,5 +15,9 @@ def index():
 
 @app.get("/update-coding-game")
 def _update_coding_game(platform: str, language: str):
-    project_id, view_id = update_coding_game(platform, language)
-    return project_id, view_id
+    res = update_coding_game(platform, language)
+    if res:
+        project_id, view_id = res
+        return project_id, view_id
+    else:
+        raise HTTPException(status_code=404)
