@@ -305,8 +305,7 @@
             <Text value="What are the Nature Elements/Process in the TEXT?"
                   name="nep_text_t"/>
             <Text value="Materiality" name="nep_group-0_text_t"/>
-            <Choices name="nep_group-0_text" toName="title" showInline="true" required="false" choice="multiple"
-                     requiredMessage="Select one option from the Nature Element/Process: Materiality in TEXT">
+            <Choices name="nep_group-0_text" toName="title" showInline="true" required="false" choice="multiple">
                 <Choice value="Material" alias="material"/>
                 <Choice value="Immaterial" alias="immaterial"/>
             </Choices>
@@ -314,8 +313,7 @@
             <TextArea name="nep_group-0_text_expl" toName="title"/>
 
             <Text value="Biological" name="nep_group-1_text_t"/>
-            <Choices name="nep_group-1_text" toName="title" showInline="true" required="false" choice="multiple"
-                     requiredMessage="Select one option from the Nature Element/Process: Biological in TEXT">
+            <Choices name="nep_group-1_text" toName="title" showInline="true" required="false" choice="multiple">
                 <Choice value="Biotic" alias="biotic"/>
                 <Choice value="Abiotic" alias="abiotic"/>
             </Choices>
@@ -349,8 +347,7 @@
 
             <Text value="What are types of Interactions in the TEXT?"
                   name="inter_group-0_text_t"/>
-            <Choices name="inter_group-0_text" toName="title" showInline="true" required="false"
-                     requiredMessage="Select one option from the Interaction type in TEXT" choice="multiple">
+            <Choices name="inter_group-0_text" toName="title" showInline="true" required="false" choice="multiple">
                 <Choice value="Human-human in/about nature" alias="human-human_in/about_nature"/>
                 <Choice value="Human-nature" alias="human-nature"/>
                 <Choice value="Nature-nature" alias="nature-nature"/>
@@ -416,7 +413,8 @@
         <!-- Framing -->
         <View className="hidden">
             <Header value="Framing"/>
-            <Text value="Framing of the post - Only when there is text content (default: None) PLEASE UNCHECK THIS AND FILL OUT THE GENERAL FRAMING PART" name="framing_text_t"/>
+            <Text value="Framing of the post - Only when there is text content (default: None) PLEASE UNCHECK THIS AND FILL OUT THE GENERAL FRAMING PART"
+                  name="framing_text_t"/>
             <Choices name="framing_text" toName="title" showInline="true" choice="multiple">
                 <Choice value="Informative" alias="informative"/>
                 <Choice value="Emotive" alias="emotive"/>
@@ -436,7 +434,8 @@
         <!-- Sentiment -->
         <View className="hidden">
             <Header value="Sentiment"/>
-            <Text value="What sentiment is expressed in TEXT? (default: None) PLEASE UNCHECK THIS AND FILL OUT THE GENERAL SENTIMENT PART" name="sentiment_text_t"/>
+            <Text value="What sentiment is expressed in TEXT? (default: None) PLEASE UNCHECK THIS AND FILL OUT THE GENERAL SENTIMENT PART"
+                  name="sentiment_text_t"/>
             <Choices name="sentiment_text" toName="title" showInline="true" choice="multiple">
                 <Choice value="Happiness" alias="happiness"/>
                 <Choice value="Sadness" alias="sadness"/>
@@ -633,8 +632,7 @@
             <Text value="What are the Nature Elements/Process in the VISUAL?"
                   name="nep_visual_t"/>
             <Text value="Materiality" name="nep_group-0_visual_t"/>
-            <Choices name="nep_group-0_visual" toName="title" showInline="true" required="false" choice="multiple"
-                     requiredMessage="Select one option from the Nature Element/Process: Materiality in VISUAL">
+            <Choices name="nep_group-0_visual" toName="title" showInline="true" required="false" choice="multiple">
                 <Choice value="Material" alias="material"/>
                 <Choice value="Immaterial" alias="immaterial"/>
             </Choices>
@@ -642,8 +640,7 @@
             <TextArea name="nep_group-0_visual_expl" toName="title"/>
 
             <Text value="Biological" name="nep_group-1_visual_t"/>
-            <Choices name="nep_group-1_visual" toName="title" showInline="true" required="false" choice="multiple"
-                     requiredMessage="Select one option from the Nature Element/Process: Biological in VISUAL">
+            <Choices name="nep_group-1_visual" toName="title" showInline="true" required="false" choice="multiple">
                 <Choice value="Biotic" alias="biotic"/>
                 <Choice value="Abiotic" alias="abiotic"/>
             </Choices>
@@ -677,8 +674,7 @@
               whenChoiceValue="Yes">
             <Text value="What are types of Interactions in the VISUAL?"
                   name="inter_group-0_visual_t"/>
-            <Choices name="inter_group-0_visual" toName="title" showInline="true" required="false"
-                     requiredMessage="Select one option from the Interaction type in VISUAL" choice="multiple">
+            <Choices name="inter_group-0_visual" toName="title" showInline="true" required="false" choice="multiple">
                 <Choice value="Human-human in/about nature" alias="human-human_in/about_nature"/>
                 <Choice value="Human-nature" alias="human-nature"/>
                 <Choice value="Nature-nature" alias="nature-nature"/>
@@ -743,7 +739,8 @@
         <!-- Sentiment -->
         <View className="hidden" visibleWhen="choice-selected" whenTagName="nature_visual">
             <Header value="Sentiment"/>
-            <Text value="What sentiment is expressed in VISUAL? (default: None) PLEASE UNCHECK THIS AND FILL OUT THE GENERAL SENTIMENT PART" name="sentiment_visual_t"/>
+            <Text value="What sentiment is expressed in VISUAL? (default: None) PLEASE UNCHECK THIS AND FILL OUT THE GENERAL SENTIMENT PART"
+                  name="sentiment_visual_t"/>
             <Choices name="sentiment_visual" toName="title" showInline="true" choice="multiple">
                 <Choice value="Happiness" alias="happiness"/>
                 <Choice value="Sadness" alias="sadness"/>
