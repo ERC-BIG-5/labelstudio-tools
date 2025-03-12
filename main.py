@@ -209,7 +209,12 @@ def set_view_items(platform: Annotated[str, typer.Option()],
 
 
 @app.command()
-def update_coding_game(platform: str, language: str):
+def update_coding_game(platform: str, language: str) -> Optional[tuple[int,int]]:
+    """
+    if successful sends back project_id, view_id
+
+    """
+
     po = ProjectOverview.projects().get_project((platform, language))
     view_id = po.coding_game_view_id
     if not view_id:
@@ -242,6 +247,44 @@ def update_coding_game(platform: str, language: str):
 
     build_view_with_filter_p_ids(SETTINGS.client, view_, for_coding_game)
     print("Coding game successfully updated")
+    return po.id, view_id
+
+@app.command()
+def agreements(platform: Annotated[str, typer.Option()],
+                   language: Annotated[str, typer.Option()]):
+    project_data = ProjectOverview.project_data(platform, language)
+    project_id = project_data["id"]
+
+
+    conf = parse_label_config_xml(project_data["label_config"],
+                                  project_id=project_id,
+                                  include_text=True)
+
+    annotations = get_recent_annotations(project_id, 2)
+
+    mp = MyProject(project_data=project_data, annotation_structure=conf,
+                   raw_annotation_result=annotations)
+    results = mp.calculate_results()
+
+    check_col = ['nature_visual']
+    all_rel = []
+    for task in results.annotation_results[:10]:
+        if task.num_coders < 2:
+            continue
+        res = task.data()
+        all_rel.append( {c: res.get(c) for c in check_col})
+        # print(res)
+    print(all_rel)
+    from irrCAC.raw import CAC
+
+    from irrCAC.datasets import dist_4cat
+
+    # data = dist_4cat()
+    # print(data)
+
+    # cac_4raters = CAC(data)
+    # cac_4raters.gwet()
+    # print(results)
 
 if __name__ == "__main__":
     # clean ...ON VM
@@ -253,6 +296,7 @@ if __name__ == "__main__":
     # JUPP
     # annotations_results("youtube", "en", 2)
     # CODING GAME
-    download_project_views("youtube", "en")
-    download_project_views("youtube","es")
-    update_coding_game("youtube", "es")
+    # download_project_views("youtube", "en")
+    # download_project_views("youtube","es")
+    # update_coding_game("youtube", "es")
+    agreements("youtube","en")

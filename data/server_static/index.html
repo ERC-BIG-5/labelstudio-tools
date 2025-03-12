@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<head>
+    <title>Big5 functions</title>
+</head>
+<body>
+<h1>Hello Big5y</h1>
+<label for="projectSelect">Select Platform / language</label>
+<select id="projectSelect">
+    <option value="youtube-en">YouTube English</option>
+    <option value="youtube-es">YouTube Spanish</option>
+</select>
+<button id="updateCodingGame" onclick="updateCodingGame()">Update Coding Game</button>
+
+<script>
+
+
+    function updateCodingGame() {
+        const selectedValue = document.getElementById("projectSelect").value;
+        const [platform, language] = selectedValue.split("-");
+        confirmed = confirm(`Confirm Coding game update for ${platform} ${language}`)
+        console.log(confirmed)
+        if(!confirmed){
+            return
+        }
+        // Make the API request to the endpoint
+        fetch(`update-coding-game?platform=${platform}&language=${language}`)
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('Network response was not ok');
+            })
+            .then(data => {
+                console.log("Response:", data);
+                // const url = `https://big5.cssh.bsc.es/projects/${data[0]}/data?tab=${data[1]}`
+                // let htmlString = `<p>Coding game updated successfully!</p><a href='${url}'>Go to project</a>`;
+                // let tempElement = document.createElement("div");
+                // tempElement.innerHTML = htmlString;
+                // alert(tempElement.innerHTML);
+                alert("Coding game updated successfully!");
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert("Error updating coding game: " + error.message);
+            });
+    }
+</script>
+</body>
+</html>

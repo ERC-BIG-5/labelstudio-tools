@@ -379,7 +379,7 @@ class MyProject(BaseModel):
     def project_id(self) -> int:
         return self.annotation_structure.project_id
 
-    def calculate_results(self):
+    def calculate_results(self) -> ProjectAnnotationResults:
         if not self.raw_annotation_result:
             print("No raw_annotation_result")
         task_annotation_results = []
