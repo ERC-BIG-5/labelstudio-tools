@@ -223,8 +223,10 @@ def update_coding_game(platform: str, language: str) -> Optional[tuple[int,int]]
 
     views = po.get_views()
     if not views:
-        print("No views found for project. Call 'download_project_views' first")
-        return
+        download_project_views(platform, language)
+        views = po.get_views()
+        # print("No views found for project. Call 'download_project_views' first")
+        # return
     view_ = [v for v in views if v.id == view_id]
     if not view_:
         print(f"No coding game view found. Candidates: {[(v.data.title, v.id) for v in views]}")
