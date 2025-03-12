@@ -19,8 +19,9 @@ class Settings(BaseSettings):
     IN_CONTAINER_LOCAL_STORAGE_BASE: Optional[Path] = Field(None)
     HOST_STORAGE_BASE: Optional[Path] = Field(None)
 
-    __client : Optional[LabelStudioBase] = None
+    DELETED_TASK_FILES_BACKUP_BASE_DIR: Optional[Path] = Field(None)
 
+    __client: Optional[LabelStudioBase] = None
 
     @model_validator(mode="after")
     def validate_paths(self, info: ValidationInfo) -> "Settings":
@@ -30,7 +31,6 @@ class Settings(BaseSettings):
             (self.BASE_DATA_DIR / sd).mkdir(parents=True, exist_ok=True)
 
         return self
-
 
     @property
     def client(self) -> LabelStudioBase:
@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     @property
     def view_dir(self) -> Path:
         return self.BASE_DATA_DIR / "view"
+
 
 SETTINGS = Settings()
 

@@ -1,4 +1,5 @@
 import json
+import shutil
 import webbrowser
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -82,9 +83,6 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
                              title: Optional[str] = None, ):
     pass
     # 1. get project_sync folder
-    # curl http://localhost:8080/api/storages/localfiles/ \
-    #      -H "Authorization: Token  <api_key>"
-    # query-Param: project
     # 2. get project tasks
     # remove all files that are not in a task
     client = ls_client()
@@ -131,6 +129,12 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
     json.dump(list(obsolete_files), Path("t.json").open("w"))
     print(len(obsolete_files))
 
+    backup_dir = SETTINGS.DELETED_TASK_FILES_BACKUP_BASE_DIR
+    if backup_dir:
+        for f in obsolete_files:
+            src = host_path / f
+            print(src.exists())
+            # shutil.move()
 
 @app.command()
 def download_project_views(platform: Annotated[str, typer.Option()], language: Annotated[str, typer.Option()]) -> list[
