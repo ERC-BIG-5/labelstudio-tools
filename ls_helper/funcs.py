@@ -8,7 +8,7 @@ import jsonpath_ng
 
 from ls_helper.models import VariableExtension, ResultStruct, ProjectAnnotationExtension, ProjectAnnotations, MyProject
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
-from ls_helper.my_labelstudio_client.models import UserModel
+from ls_helper.my_labelstudio_client.models import UserModel, ProjectViewModel
 from ls_helper.settings import SETTINGS
 
 
@@ -117,6 +117,7 @@ def update_coding_game(client: LabelStudioBase,
                        use_stored_data_if_available: bool,
                        view_id: int,
                        platform_ids: list[str] = ()):
+    # TODO @deprecated, use func below
     viwes = client.get_project_views(project_id)
 
     print(viwes)
@@ -148,6 +149,33 @@ def update_coding_game(client: LabelStudioBase,
         print(f"error updating view for coding game: {resp.status_code}")
         print(resp.json())
 
+
+def build_view_with_filter_p_ids(
+        client: LabelStudioBase,
+        view: ProjectViewModel,
+        platform_ids: list[str]):
+    new_items = []
+    new_filters = {"conjunction": "or", "items": new_items}
+    view.data.filters = new_filters
+    for p_id in platform_ids:
+        # print(for_coding_game)
+        new_items.append({
+            "filter": "filter:tasks:data.platform_id",
+            "operator": "equal",
+            "type": "String",
+            "value": p_id
+        })
+
+    res = {
+        "data": {"title": view.data.title, "filters": new_filters, "hiddenColumns": view.data.hiddenColumns}}
+
+    # print(res)
+    resp = client.patch_view(view.id, res)
+    if resp.status_code != 200:
+        print(f"error updating view for coding game: {resp.status_code}")
+        print(resp.json())
+
+
 def get_latest_annotation_file(project_id: int) -> Optional[Path]:
     base_dir = Path(f"data/annotations/")
     annotation_files = list((base_dir / str(project_id)).glob("*.json"))
@@ -155,6 +183,7 @@ def get_latest_annotation_file(project_id: int) -> Optional[Path]:
         print("no annotations found")
         return None
     return sorted(annotation_files)[-1]
+
 
 def get_latest_annotation(project_id: int) -> Optional[ProjectAnnotations]:
     annotation_file = get_latest_annotation_file(project_id)

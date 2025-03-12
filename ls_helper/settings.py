@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
 
     @model_validator(mode="after")
-    def validate_paths(self, info: ValidationInfo) -> dict:
+    def validate_paths(self, info: ValidationInfo) -> "Settings":
         self.BASE_DATA_DIR.mkdir(parents=True, exist_ok=True)
         sub_dirs = {"project", "fixes", "annotations", "view"}
         for sd in sub_dirs:
@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     @property
     def projects_dir(self) -> Path:
         return self.BASE_DATA_DIR / "project"
+
+    @property
+    def view_dir(self) -> Path:
+        return self.BASE_DATA_DIR / "view"
 
 SETTINGS = Settings()
 

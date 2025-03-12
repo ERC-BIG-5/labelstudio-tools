@@ -1,17 +1,17 @@
 import json
+import webbrowser
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
-import webbrowser
-from pathlib import Path
 
 from ls_helper.annotation_timing import annotation_timing, plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
-from ls_helper.funcs import get_latest_annotation, get_latest_annotation_file
-from ls_helper.models import ProjectAnnotations
+from ls_helper.funcs import get_latest_annotation, get_latest_annotation_file, build_view_with_filter_p_ids
+from ls_helper.models import ProjectAnnotations, ProjectOverview
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
-from ls_helper.project_mgmt import ProjectMgmt
+from ls_helper.my_labelstudio_client.models import ProjectViewModel
 from ls_helper.settings import SETTINGS
 
 app = typer.Typer(name="Labelstudio helper")
@@ -23,7 +23,7 @@ def ls_client() -> LabelStudioBase:
 
 def open_image_simple(image_path):
     # Convert to absolute path and URI format
-    file_path = pathlib.Path(image_path).absolute().as_uri()
+    file_path = Path(image_path).absolute().as_uri()
     webbrowser.open(file_path)
 
 
@@ -113,8 +113,8 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
 
     existing_task_files = list(host_path.glob("*.json"))
     existing_task_files = [f.name for f in existing_task_files]
-    print(existing_task_files)
-    print("**************")
+    # print(existing_task_files)
+    # print("**************")
     # print(host_path.absolute())
 
     resp = client.get_task_list(project=project_id)
@@ -123,16 +123,54 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
     # filter Nones
     used_task_files = [Path(t) for t in used_task_files if t]
     used_task_files = [t.name for t in used_task_files]
-    print(used_task_files)
+    # print(used_task_files)
 
     obsolete_files = set(existing_task_files) - set(used_task_files)
 
-    #print([o.relative_to(host_path) for o in obsolete_files])
+    # print([o.relative_to(host_path) for o in obsolete_files])
     json.dump(list(obsolete_files), Path("t.json").open("w"))
     print(len(obsolete_files))
 
 
-# console = Console()
+@app.command()
+def download_project_views(platform: Annotated[str, typer.Option()], language: Annotated[str, typer.Option()]) -> list[
+    ProjectViewModel]:
+    client = ls_client()
+    po = ProjectOverview.projects()
+    project_id = po.get_project_id(platform, language)
+    views = client.get_project_views(project_id)
+    dest = po.get_view_file(project_id)
+    dest.write_text(json.dumps([v.model_dump() for v in views]))
+    return views
+
+
+@app.command()
+def set_view_items(platform: Annotated[str, typer.Option()],
+                   language: Annotated[str, typer.Option()],
+                   view_title: Annotated[str, typer.Option()],
+                   project_id_file: Annotated[Path, typer.Option()]):
+    po = ProjectOverview.projects()
+    views = po.get_views((platform, language))
+    if not views:
+        print("No views found")
+        return
+    _view:ProjectViewModel = None
+    for view in views:
+        if view.data.title == view_title:
+            _view = view
+            break
+    if not _view:
+        views_titles = [v.data.title for v in views]
+        print(f"No views found: '{view_title}', candidates: {views_titles}")
+        return
+    # check the file:
+    if not project_id_file.exists():
+        print(f"file not found: {project_id_file}")
+        return
+    project_ids = json.load(project_id_file.open())
+    assert isinstance(project_ids, list)
+    build_view_with_filter_p_ids(SETTINGS.client,_view,project_ids)
+    print("View successfully updated")
 
 if __name__ == "__main__":
     # status(33)
@@ -142,4 +180,10 @@ if __name__ == "__main__":
     # print(res)
     # ProjectMgmt.update_projects()
     # print(ProjectMgmt.get_annotations("youtube","en"))
+    ## TODO
     clean_project_task_files(33)
+    ##
+
+
+    set_view_items("youtube","en", "Old-Sentiment/Framing",
+                   Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/temp/yt_en_problematic_tasks.json"))

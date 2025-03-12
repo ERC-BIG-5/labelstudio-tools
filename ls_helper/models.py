@@ -465,28 +465,6 @@ class MyProject(BaseModel):
     model_config = ConfigDict(validate_assignment=True)
 
 
-"""
-
-
-
-class ProjectPlatformOverview(BaseModel):
-    en: PlatformLanguageOverview = Field(default_factory=PlatformLanguageOverview)
-    es: PlatformLanguageOverview = Field(default_factory=PlatformLanguageOverview)
-
-
-
-class ProjectOverview(BaseModel):
-    
-    youtube: ProjectPlatformOverview = Field(default_factory=ProjectPlatformOverview)
-    twitter: ProjectPlatformOverview = Field(default_factory=ProjectPlatformOverview)
-    tiktok: ProjectPlatformOverview = Field(default_factory=ProjectPlatformOverview)
-    instagram: ProjectPlatformOverview = Field(default_factory=ProjectPlatformOverview)
-    facebook: ProjectPlatformOverview = Field(default_factory=ProjectPlatformOverview)
-
-
-"""
-
-
 class PlatformLanguageOverview(BaseModel):
     id: Optional[int] = None
     coding_game_view_id: Optional[int] = None
@@ -509,11 +487,14 @@ class ProjectPlatformOverview(RootModel):
     def users() -> "UserInfo":
         pp = Path(SETTINGS.BASE_DATA_DIR / "users.json")
         if not pp.exists():
-            users= UserInfo(**{})
-            json.dump(users.model_dump(),pp.open("w"),indent=2)
+            users = UserInfo(**{})
+            json.dump(users.model_dump(), pp.open("w"), indent=2)
             return users
         else:
             return UserInfo.model_validate(json.load(pp.open()))
+
+
+ProjectAccess = int | tuple[str, str]
 
 
 class ProjectOverview(RootModel):
@@ -524,8 +505,8 @@ class ProjectOverview(RootModel):
         return ["youtube", "twitter", "tiktok", "instagram", "facebook"]
 
     def __iter__(self):
-        for k,v in  iter(self.root.items()):
-            yield k,v.root
+        for k, v in iter(self.root.items()):
+            yield k, v.root
 
     def __getitem__(self, item):
         return self.root[item].root
@@ -539,19 +520,43 @@ class ProjectOverview(RootModel):
         pp = Path(SETTINGS.BASE_DATA_DIR / "projects.json")
         if not pp.exists():
             projects = ProjectOverview()
-            json.dump(projects.model_dump(),pp.open("w"),indent=2)
+            json.dump(projects.model_dump(), pp.open("w"), indent=2)
             return projects
         else:
             return ProjectOverview.model_validate(json.load(pp.open()))
 
     @staticmethod
-    def project_data(platform: str,language: str) -> Optional[dict]:
+    def project_data(platform: str, language: str) -> Optional[dict]:
         pp = ProjectOverview.project_data_path(platform, language)
         if not pp.exists():
             return None
         return orjson.loads(pp.open().read())
 
+    @staticmethod
+    def get_project_id(platform: str, language: str) -> Optional[int]:
+        return ProjectOverview.projects()[platform][language].id
+
+    def get_project(self, p_access: ProjectAccess) -> Optional[PlatformLanguageOverview]:
+        if isinstance(p_access, int):
+            for platform, lang_p in self.root.items():
+                for lang, p_data in lang_p.root.items():
+                    return p_data
+        elif isinstance(p_access, tuple):
+            platform, language = p_access
+            return self[platform][language]
+
+    def get_view_file(self, p_access: ProjectAccess) -> Optional[Path]:
+        project = self.get_project(p_access)
+        if project:
+            return SETTINGS.view_dir / f"{project.id}.json"
+
+    def get_views(self, p_access: ProjectAccess) -> Optional[list[ProjectViewModel]]:
+        view_file = self.get_view_file(p_access)
+        if not view_file.exists():
+            return None
+        data = json.load(view_file.open())
+        return [ProjectViewModel.model_validate(v) for v in data]
+
+
 class UserInfo(BaseModel):
     users: dict[int, str]
-
-
