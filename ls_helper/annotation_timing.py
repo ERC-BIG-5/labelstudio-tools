@@ -44,7 +44,7 @@ def annotation_total_over_time(annotation_data : ProjectAnnotations, min_annotat
     result_df['cumulative_total'] = result_df['count'].cumsum()
     return result_df
 
-def plot_date_distribution(df: pd.DataFrame, title: str = "Objects per Day",
+def plot_date_distribution(df: pd.DataFrame, title: str = "Completed tasks per Day",
                            y_col: str = "count",
                            xlabel: str = "Date", ylabel: str = "Count"):
     """

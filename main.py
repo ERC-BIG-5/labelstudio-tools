@@ -11,7 +11,7 @@ from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.annotation_timing import annotation_timing, plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
 from ls_helper.funcs import get_latest_annotation, get_latest_annotation_file, build_view_with_filter_p_ids
-from ls_helper.models import ProjectAnnotations, ProjectOverview, MyProject
+from ls_helper.models import ProjectAnnotations, ProjectOverview, MyProject, ProjectAccess
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
 from ls_helper.my_labelstudio_client.models import ProjectViewModel
 from ls_helper.settings import SETTINGS
@@ -42,9 +42,11 @@ def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[Proje
 
 
 @app.command(short_help="Plot the completed tasks over time")
-def status(project_id: Annotated[int, typer.Option()],
+def status(platform: Annotated[str, typer.Argument()],
+           language: Annotated[str, typer.Argument()],
            accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 6):
-    project_annotations = get_recent_annotations(project_id, accepted_ann_age)
+    po = ProjectOverview.projects().get_project((platform,language))
+    project_annotations = get_recent_annotations(po.id, accepted_ann_age)
 
     df = annotation_timing(project_annotations)
     temp_file = plot_date_distribution(df)
@@ -209,7 +211,7 @@ def set_view_items(platform: Annotated[str, typer.Option()],
 
 
 @app.command()
-def update_coding_game(platform: str, language: str) -> Optional[tuple[int,int]]:
+def update_coding_game(platform: str, language: str) -> Optional[tuple[int, int]]:
     """
     if successful sends back project_id, view_id
 
@@ -251,12 +253,12 @@ def update_coding_game(platform: str, language: str) -> Optional[tuple[int,int]]
     print("Coding game successfully updated")
     return po.id, view_id
 
+
 @app.command()
 def agreements(platform: Annotated[str, typer.Option()],
-                   language: Annotated[str, typer.Option()]):
+               language: Annotated[str, typer.Option()]):
     project_data = ProjectOverview.project_data(platform, language)
     project_id = project_data["id"]
-
 
     conf = parse_label_config_xml(project_data["label_config"],
                                   project_id=project_id,
@@ -270,23 +272,29 @@ def agreements(platform: Annotated[str, typer.Option()],
 
     check_col = ['nature_visual']
     all_rel = []
-    for task in results.annotation_results[:10]:
+    for task in results.annotation_results:
         if task.num_coders < 2:
             continue
         res = task.data()
-        all_rel.append( {c: res.get(c) for c in check_col})
+        vals = {c: (res.get(c) or [])[-2:] for c in check_col}
+        # vals = vals[-2:]
+        for i in range(max(0, 2 - len(vals["nature_visual"]))):
+            vals["nature_visual"].append("No")
+        all_rel.append(vals)
+        vals["nature_visual"] = [{"Yes": 1, "No": 0}[v] for v in vals["nature_visual"]]
         # print(res)
     print(all_rel)
     from irrCAC.raw import CAC
 
     from irrCAC.datasets import dist_4cat
 
-    # data = dist_4cat()
-    # print(data)
-
-    # cac_4raters = CAC(data)
-    # cac_4raters.gwet()
+    import pandas as pd
+    df = pd.DataFrame([r["nature_visual"] for r in all_rel])
+    print(df)
+    cac_4raters = CAC(df)
+    print(cac_4raters.gwet())
     # print(results)
+
 
 if __name__ == "__main__":
     # clean ...ON VM
@@ -301,4 +309,4 @@ if __name__ == "__main__":
     # download_project_views("youtube", "en")
     # download_project_views("youtube","es")
     # update_coding_game("youtube", "es")
-    agreements("youtube","en")
+    agreements("youtube", "en")
