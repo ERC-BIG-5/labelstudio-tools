@@ -1,7 +1,10 @@
 import json
+import logging
 import shutil
+import sys
 import webbrowser
 from datetime import datetime, timedelta
+from logging import getLogger
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -14,9 +17,10 @@ from ls_helper.funcs import get_latest_annotation, get_latest_annotation_file, b
 from ls_helper.models import ProjectAnnotations, ProjectOverview, MyProject, ProjectAccess
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
 from ls_helper.my_labelstudio_client.models import ProjectViewModel
-from ls_helper.settings import SETTINGS
+from ls_helper.settings import SETTINGS, ls_logger
 
 app = typer.Typer(name="Labelstudio helper")
+
 
 
 def ls_client() -> LabelStudioBase:
@@ -35,6 +39,7 @@ def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[Proje
         file_dt = datetime.strptime(latest_file.stem, "%Y%m%d_%H%M")
         # print(file_dt, datetime.now(), datetime.now() - file_dt)
         if datetime.now() - file_dt < timedelta(hours=accepted_age):
+            ls_logger.info("Get recent, gets latest annotation")
             return get_latest_annotation(project_id)
 
     print("downloading annotations")
@@ -169,6 +174,9 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
         # print(src.exists())
         shutil.move(src, backup_final_dir / f)
 
+
+@app.command()
+def download_project_data(): ...
 
 @app.command()
 def download_project_views(platform: Annotated[str, typer.Option()], language: Annotated[str, typer.Option()]) -> list[

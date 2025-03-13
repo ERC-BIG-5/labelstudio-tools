@@ -1,3 +1,6 @@
+import logging
+import sys
+from logging import getLogger
 from pathlib import Path
 from typing import Optional
 
@@ -58,5 +61,8 @@ class Settings(BaseSettings):
 
 SETTINGS = Settings()
 
-if __name__ == "__main__":
-    print(SETTINGS.projects.youtube.en.id)
+ls_logger = getLogger("ls-helper")
+ls_logger.setLevel(logging.DEBUG)
+ls_logger.addHandler(logging.StreamHandler(sys.stdout))
+ls_logger.propagate = False
+
