@@ -72,7 +72,7 @@ def annotation_lead_times(project_id: Annotated[int, typer.Option()],
 def annotations_results(platform: Annotated[str, typer.Option()],
                         language: Annotated[str, typer.Option()],
                         accepted_ann_age: Annotated[
-                            int, typer.Option(help="Download annotations if older than x hours")] = 6):
+                            int, typer.Option(help="Download annotations if older than x hours")] = 6) -> tuple[Path,str]:
     project_data = ProjectOverview.project_data(platform, language)
     project_id = project_data["id"]
 
@@ -88,6 +88,7 @@ def annotations_results(platform: Annotated[str, typer.Option()],
     dest = SETTINGS.annotations_results_dir / f"{str(project_id)}.csv"
     mp.results2csv(dest, with_defaults=False)
     print(f"annotation results -> {dest}")
+    return dest, annotations.file_path.stem
 
 
 @app.command(short_help="Plot the total completed tasks over day")

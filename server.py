@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
 
-from main import update_coding_game
+from main import update_coding_game, annotations_results
 
 app = FastAPI(root_path="/DATA")
 app.mount("/static", StaticFiles(directory="data/server_static"), name="static")
@@ -21,3 +21,15 @@ def _update_coding_game(platform: str, language: str):
         return project_id, view_id
     else:
         raise HTTPException(status_code=404)
+
+
+@app.get("/annotations-results")
+def _annotations_results(platform: str, language: str, annotation_age: int = 2):
+    file_path, annot_orig = annotations_results(platform, language, annotation_age)
+    fn = f"{file_path.stem}_{annot_orig}.csv"
+    return FileResponse(
+        path=file_path,
+        filename=fn,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={fn}"}
+    )
