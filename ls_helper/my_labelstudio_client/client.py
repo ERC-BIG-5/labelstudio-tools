@@ -181,7 +181,8 @@ class LabelStudioBase:
         from ls_helper.models import ProjectAnnotations
 
         return ProjectAnnotations(project_id=project_id,
-                                  annotations=result)
+                                  annotations=result,
+                                  file_path=res_path)
 
     def get_project_views(self, project_id: int) -> list[ProjectViewModel]:
         resp = self._client_wrapper.httpx_client.get(f"api/dm/views/?project={project_id}")
