@@ -92,7 +92,7 @@ def annotations_results(platform: Annotated[str, typer.Option()],
                    data_extensions=data_extensions,
                    raw_annotation_result=annotations)
     mp.calculate_results()
-    # mp.apply_extension(fillin_defaults=True)
+    mp.apply_extension(fillin_defaults=True)
     dest = SETTINGS.annotations_results_dir / f"{str(project_id)}.csv"
     mp.results2csv(dest, with_defaults=True)
     print(f"annotation results -> {dest}")
@@ -333,6 +333,19 @@ def generate_result_fixes_template(platform: Annotated[str, typer.Option()],
     print(f"file -> {dest.as_posix()}")
 
 
+@app.command(short_help="Just needs to be run once, for each new LS project")
+def setup_project_settings(platform: Annotated[str, typer.Option()],
+                                   language: Annotated[str, typer.Option()]):
+
+    project_data = ProjectOverview.project_data(platform, language)
+    project_id = project_data["id"]
+    res = ls_client().patch_project(project_id, {
+        "maximum_annotations": 2,
+        "sampling": "Uniform sampling"
+    })
+    if res.status_code != 200:
+        print("error updaing project settings")
+
 if __name__ == "__main__":
     # clean ...ON VM
     # clean_project_task_files(33)
@@ -348,3 +361,5 @@ if __name__ == "__main__":
     # update_coding_game("youtube", "es")
     # agreements("youtube", "en")
     # generate_result_fixes_template("youtube","en")
+
+    # setup_project_settings()

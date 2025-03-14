@@ -53,7 +53,7 @@ class ResultStruct(BaseModel):
     free_text: list[str]
     inputs: dict[str, str] = Field(description="Map from el.name > el.value")
 
-    def apply_extension(self, data_extensions: "ProjectAnnotationExtension"):
+    def apply_extension(self, data_extensions: "ProjectAnnotationExtension", allow_non_existing_defaults: bool = True):
 
         ordered_name_fixes = find_name_fixes(self.ordered_fields, data_extensions)
         for old, new in ordered_name_fixes:
@@ -82,7 +82,7 @@ class ResultStruct(BaseModel):
                     all_new_choices[new_choices.name] = new_choices
                 split_items.append((k, all_new_choices))
             else:
-                if ext and ext.default:
+                if ext and ext.default and not allow_non_existing_defaults:
                     if v.choice == "single":
                         if not isinstance(ext.default, str):
                             raise ValueError(f"Choice {k} has default value {ext.default}")

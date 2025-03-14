@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 from typing import Optional
+from xml import etree
 
 import pystache
 
@@ -19,6 +20,29 @@ def create_choice_elements(options: list[str], aliases: Optional[list[str]] = No
             res.append(create_choice_elem(o, a))
         return "".join(res)
     return "".join(list(map(create_choice_elem, options)))
+
+def remove_hidden_parts(xml_file: Path):
+    """
+    Removes all elements with a specific class attribute from an XML file using lxml.
+
+    """
+    # Parse the XML file
+    tree = etree.parse(xml_file)
+    root = tree.getroot()
+
+    # Find all elements with the specified class
+    # This will find elements where class attribute exactly matches the class_name
+    elements = root.xpath(f'//*[@className="hidden"]')
+
+    # print(len(elements))
+    # Remove all found elements from their parents
+    for element in elements:
+        parent = element.getparent()
+        if parent is not None:  # Check if element has a parent
+            parent.remove(element)
+
+    tree.write(xml_file, pretty_print=True, encoding='utf-8', xml_declaration=False)
+
 
 
 if __name__ == "__main__":
@@ -117,17 +141,27 @@ if __name__ == "__main__":
     template_file = base_path / "config_template.xml"
     template_text = template_file.read_text(encoding="utf-8")
 
-    platform_files = ["youtube.xml"]
+    platform_files = ["youtube.xml", "twitter.xml"]
     for platform_file in platform_files:
         platform_fp = base_path / platform_file
         platform_elements = platform_fp.read_text(encoding="utf-8")
 
+        platform_user_file = f"{Path(platform_file).stem}_user.xml"
+        platform_user_fp = base_path / platform_user_file
+        if platform_user_fp.exists():
+            plaform_user_elements = platform_user_fp.read_text(encoding="utf-8")
+        else:
+            plaform_user_elements = ""
+
         gen_text = pystache.render(template_text, {
             'TEXT_RV_CONFUSION': text_rv_confusion_views,
             'VISUAL_RV_CONFUSION': visual_rv_confusion_views,
-            'PLATFORM_ELEMENTS': platform_elements
+            'PLATFORM_ELEMENTS': platform_elements,
+            'PLATFORM_USER_ELEMENTS': plaform_user_elements
         }, encoding="utf-8")
 
         pl_gen_file = base_path / f"output/gen_{platform_file.split('.')[0]}.xml"
         pl_gen_file.write_text(gen_text, encoding="utf-8")
+        if platform_file != "youtube.xml":
+            remove_hidden_parts(pl_gen_file)
         print(f"-> {pl_gen_file}")
