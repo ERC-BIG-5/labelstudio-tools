@@ -1,19 +1,50 @@
 <!DOCTYPE html>
 <head>
     <title>Big5 functions</title>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <style>
+        /*.btn {*/
+        /*    @apply bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded;*/
+        /*}*/
+
+        button {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        select {
+            background-color: #ffffff;
+            color: black;
+            padding: 0.5rem 0.5rem;
+            border: black 2px solid;
+            border-radius: 0.25rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #2563eb;
+        }
+    </style>
 </head>
-<body>
-<h1>Hello Big5y</h1>
+<body class="p-3">
+<h1 class="text-3xl font-bold underline my-4">Hello Big5</h1>
 <label for="projectSelect">Select Platform / language</label>
-<select id="projectSelect">
+<select id="projectSelect" class="mx-2">
     <option value="youtube-en">YouTube English</option>
     <!--<option value="youtube-es">YouTube Spanish</option> -->
 </select>
-
-<button id="updateCodingGame" onclick="updateCodingGame()">Update Coding Game</button>
-<button id="getAnnotationTable" onclick="getAnnotationTable()">Get Annotation table (annotations until 1h)</button>
+<div class="my-3">
+    <button class="btn mx-2" id="updateCodingGame" onclick="updateCodingGame()">Update Coding Game</button>
+    <button class="btn mx-2" id="getAnnotationTable" onclick="getAnnotationTable()">Get Annotation table (annotations
+        until 1h)
+    </button>
+</div>
 <script>
-
 
     function updateCodingGame() {
         const selectedValue = document.getElementById("projectSelect").value;
@@ -48,7 +79,7 @@
     function getAnnotationTable() {
         const selectedValue = document.getElementById("projectSelect").value;
         const [platform, language] = selectedValue.split("-");
-        confirmed = confirm(`Confirm Coding game update for ${platform} ${language}`)
+        confirmed = confirm(`Downloading annotation results for ${platform} ${language}`)
         if (!confirmed) {
             return
         }
