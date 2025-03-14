@@ -7,10 +7,11 @@
 <label for="projectSelect">Select Platform / language</label>
 <select id="projectSelect">
     <option value="youtube-en">YouTube English</option>
-    <option value="youtube-es">YouTube Spanish</option>
+    <!--<option value="youtube-es">YouTube Spanish</option> -->
 </select>
-<button id="updateCodingGame" onclick="updateCodingGame()">Update Coding Game</button>
 
+<button id="updateCodingGame" onclick="updateCodingGame()">Update Coding Game</button>
+<button id="getAnnotationTable" onclick="getAnnotationTable()">Get Annotation table (annotations until 1h)</button>
 <script>
 
 
@@ -18,8 +19,7 @@
         const selectedValue = document.getElementById("projectSelect").value;
         const [platform, language] = selectedValue.split("-");
         confirmed = confirm(`Confirm Coding game update for ${platform} ${language}`)
-        console.log(confirmed)
-        if(!confirmed){
+        if (!confirmed) {
             return
         }
         // Make the API request to the endpoint
@@ -43,6 +43,18 @@
                 console.error("Error:", error);
                 alert("Error updating coding game: " + error.message);
             });
+    }
+
+    function getAnnotationTable() {
+        const selectedValue = document.getElementById("projectSelect").value;
+        const [platform, language] = selectedValue.split("-");
+        confirmed = confirm(`Confirm Coding game update for ${platform} ${language}`)
+        if (!confirmed) {
+            return
+        }
+        url = `annotations-results?platform=${platform}&language=${language}&annotation_age=1`
+
+        window.open(url, '_blank');
     }
 </script>
 </body>

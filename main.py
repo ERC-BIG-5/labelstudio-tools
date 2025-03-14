@@ -1,10 +1,7 @@
 import json
-import logging
 import shutil
-import sys
 import webbrowser
 from datetime import datetime, timedelta
-from logging import getLogger
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -14,13 +11,12 @@ from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.annotation_timing import annotation_timing, plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
 from ls_helper.funcs import get_latest_annotation, get_latest_annotation_file, build_view_with_filter_p_ids
-from ls_helper.models import ProjectAnnotations, ProjectOverview, MyProject, ProjectAccess
+from ls_helper.models import ProjectAnnotations, ProjectOverview, MyProject, ProjectAnnotationExtension
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
 from ls_helper.my_labelstudio_client.models import ProjectViewModel
 from ls_helper.settings import SETTINGS, ls_logger
 
 app = typer.Typer(name="Labelstudio helper")
-
 
 
 def ls_client() -> LabelStudioBase:
@@ -50,7 +46,7 @@ def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[Proje
 def status(platform: Annotated[str, typer.Argument()],
            language: Annotated[str, typer.Argument()],
            accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 6):
-    po = ProjectOverview.projects().get_project((platform,language))
+    po = ProjectOverview.projects().get_project((platform, language))
     project_annotations = get_recent_annotations(po.id, accepted_ann_age)
 
     df = annotation_timing(project_annotations)
@@ -77,7 +73,8 @@ def annotation_lead_times(project_id: Annotated[int, typer.Option()],
 def annotations_results(platform: Annotated[str, typer.Option()],
                         language: Annotated[str, typer.Option()],
                         accepted_ann_age: Annotated[
-                            int, typer.Option(help="Download annotations if older than x hours")] = 6) -> tuple[Path,str]:
+                            int, typer.Option(help="Download annotations if older than x hours")] = 6) -> tuple[
+    Path, str]:
     project_data = ProjectOverview.project_data(platform, language)
     project_id = project_data["id"]
 
@@ -87,19 +84,28 @@ def annotations_results(platform: Annotated[str, typer.Option()],
 
     annotations = get_recent_annotations(project_id, accepted_ann_age)
 
-    mp = MyProject(project_data=project_data, annotation_structure=conf,
+    data_extensions = None
+    if (fi := SETTINGS.BASE_DATA_DIR / f"fixes/{project_id}.json").exists():
+        data_extensions = ProjectAnnotationExtension.model_validate(json.load(fi.open()))
+    mp = MyProject(project_data=project_data,
+                   annotation_structure=conf,
+                   data_extensions=data_extensions,
                    raw_annotation_result=annotations)
     mp.calculate_results()
+    # mp.apply_extension(fillin_defaults=True)
     dest = SETTINGS.annotations_results_dir / f"{str(project_id)}.csv"
-    mp.results2csv(dest, with_defaults=False)
+    mp.results2csv(dest, with_defaults=True)
     print(f"annotation results -> {dest}")
     return dest, annotations.file_path.stem
 
 
 @app.command(short_help="Plot the total completed tasks over day")
-def total_over_time(project_id: Annotated[int, typer.Option()],
+def total_over_time(platform: Annotated[str, typer.Argument()],
+                    language: Annotated[str, typer.Argument()],
                     accepted_ann_age: Annotated[
                         int, typer.Option(help="Download annotations if older than x hours")] = 6):
+    project_data = ProjectOverview.project_data(platform, language)
+    project_id = project_data["id"]
     df = annotation_total_over_time(get_recent_annotations(project_id, accepted_ann_age))
     temp_file = plot_cumulative_annotations(df)
 
@@ -177,6 +183,7 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
 
 @app.command()
 def download_project_data(): ...
+
 
 @app.command()
 def download_project_views(platform: Annotated[str, typer.Option()], language: Annotated[str, typer.Option()]) -> list[
@@ -275,34 +282,55 @@ def agreements(platform: Annotated[str, typer.Option()],
 
     annotations = get_recent_annotations(project_id, 2)
 
-    mp = MyProject(project_data=project_data, annotation_structure=conf,
+    data_extensions = None
+    if (fi := SETTINGS.BASE_DATA_DIR / f"fixes/{project_id}.json").exists():
+        data_extensions = ProjectAnnotationExtension.model_validate(json.load(fi.open()))
+    mp = MyProject(project_data=project_data,
+                   annotation_structure=conf,
+                   data_extensions=data_extensions,
                    raw_annotation_result=annotations)
+    mp.apply_extension(fillin_defaults=True)
     results = mp.calculate_results()
+    print(results)
 
-    check_col = ['nature_visual']
-    all_rel = []
-    for task in results.annotation_results:
-        if task.num_coders < 2:
-            continue
-        res = task.data()
-        vals = {c: (res.get(c) or [])[-2:] for c in check_col}
-        # vals = vals[-2:]
-        for i in range(max(0, 2 - len(vals["nature_visual"]))):
-            vals["nature_visual"].append("No")
-        all_rel.append(vals)
-        vals["nature_visual"] = [{"Yes": 1, "No": 0}[v] for v in vals["nature_visual"]]
-        # print(res)
-    print(all_rel)
-    from irrCAC.raw import CAC
+    # check_col = ['nature_visual']
+    # all_rel = []
+    # for task in results.annotation_results:
+    #     if task.num_coders < 2:
+    #         continue
+    #     res = task.data()
+    #     vals = {c: (res.get(c) or [])[-2:] for c in check_col}
+    #     # vals = vals[-2:]
+    #     for i in range(max(0, 2 - len(vals["nature_visual"]))):
+    #         vals["nature_visual"].append("No")
+    #     all_rel.append(vals)
+    #     vals["nature_visual"] = [{"Yes": 1, "No": 0}[v] for v in vals["nature_visual"]]
+    #     # print(res)
+    # print(all_rel)
+    # from irrCAC.raw import CAC
 
-    from irrCAC.datasets import dist_4cat
-
-    import pandas as pd
-    df = pd.DataFrame([r["nature_visual"] for r in all_rel])
-    print(df)
-    cac_4raters = CAC(df)
-    print(cac_4raters.gwet())
+    # import pandas as pd
+    # df = pd.DataFrame([r["nature_visual"] for r in all_rel])
+    # print(df)
+    # cac_4raters = CAC(df)
+    # print(cac_4raters.gwet())
     # print(results)
+
+
+@app.command()
+def generate_result_fixes_template(platform: Annotated[str, typer.Option()],
+                                   language: Annotated[str, typer.Option()]):
+    project_data = ProjectOverview.project_data(platform, language)
+    project_id = project_data["id"]
+
+    conf = parse_label_config_xml(project_data["label_config"],
+                                  project_id=project_id,
+                                  include_text=True)
+    from ls_helper.funcs import generate_result_fixes_template as gen_fixes_template
+    res_template = gen_fixes_template(project_id, conf)
+    dest = Path(f"data/temp/result_fix_template_{platform}-{language}_{project_id}.json")
+    dest.write_text(res_template.model_dump_json())
+    print(f"file -> {dest.as_posix()}")
 
 
 if __name__ == "__main__":
@@ -313,9 +341,10 @@ if __name__ == "__main__":
     #                Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/temp/yt_en_problematic_tasks.json"))
 
     # JUPP
-    # annotations_results("youtube", "en", 2)
+    annotations_results("youtube", "en", 2)
     # CODING GAME
     # download_project_views("youtube", "en")
     # download_project_views("youtube","es")
     # update_coding_game("youtube", "es")
-    agreements("youtube", "en")
+    # agreements("youtube", "en")
+    # generate_result_fixes_template("youtube","en")
