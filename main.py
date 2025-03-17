@@ -190,8 +190,7 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
 @app.command()
 def download_project_data(
         platform: Annotated[str, typer.Argument()],
-        language: Annotated[str, typer.Argument()],
-        project_id: Annotated[int, typer.Argument()],
+        language: Annotated[str, typer.Argument()]
 ):
     project_data = ls_client().get_project(project_id)
     if not project_data:
