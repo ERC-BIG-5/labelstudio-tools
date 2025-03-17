@@ -44,6 +44,9 @@
     <button class="btn mx-2" id="getAnnotationTable" onclick="getAnnotationTable()">Get Annotation table (annotations
         until 1h)
     </button>
+        <button class="btn mx-2" id="getAgreementsTable" onclick="getAgreementsTable()">Get Agreements table (annotations
+        until 1h)
+    </button>
 </div>
 <script>
 
@@ -81,11 +84,17 @@
         const selectedValue = document.getElementById("projectSelect").value;
         const [platform, language] = selectedValue.split("-");
         confirmed = confirm(`Downloading annotation results for ${platform} ${language}`)
-        if (!confirmed) {
+        if (!confirmed)
             return
-        }
         url = `annotations-results?platform=${platform}&language=${language}&annotation_age=1`
+        window.open(url, '_blank');
+    }
 
+    function getAgreementsTable() {
+        const selectedValue = document.getElementById("projectSelect").value;
+        const [platform, language] = selectedValue.split("-");
+        confirmed = confirm(`Downloading agreement results for ${platform} ${language}`)
+        url = `agreements?platform=${platform}&language=${language}&annotation_age=1`
         window.open(url, '_blank');
     }
 </script>

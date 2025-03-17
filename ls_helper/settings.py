@@ -9,8 +9,6 @@ from pydantic_core.core_schema import ValidationInfo
 from pydantic_settings import BaseSettings
 
 
-
-
 class Settings(BaseSettings):
     class Config:
         env_file = ".env"
@@ -29,7 +27,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_paths(self, info: ValidationInfo) -> "Settings":
         self.BASE_DATA_DIR.mkdir(parents=True, exist_ok=True)
-        sub_dirs = {"project", "fixes", "annotations", "view", "annotations_results"}
+        sub_dirs = {"project", "fixes", "annotations", "view", "agreements", "annotations_results"}
         for sd in sub_dirs:
             (self.BASE_DATA_DIR / sd).mkdir(parents=True, exist_ok=True)
 
@@ -58,6 +56,9 @@ class Settings(BaseSettings):
     def annotations_results_dir(self) -> Path:
         return self.BASE_DATA_DIR / "annotations_results"
 
+    @property
+    def agreements_dir(self):
+        return self.BASE_DATA_DIR / "agreements"
 
 SETTINGS = Settings()
 
@@ -65,4 +66,3 @@ ls_logger = getLogger("ls-helper")
 ls_logger.setLevel(logging.DEBUG)
 ls_logger.addHandler(logging.StreamHandler(sys.stdout))
 ls_logger.propagate = False
-
