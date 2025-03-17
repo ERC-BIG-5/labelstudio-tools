@@ -192,6 +192,8 @@ def download_project_data(
         platform: Annotated[str, typer.Argument()],
         language: Annotated[str, typer.Argument()]
 ):
+    project_info = ProjectOverview.project_data(platform, language)
+    project_id = project_info["id"]
     project_data = ls_client().get_project(project_id)
     if not project_data:
         raise ValueError(f"No project found: {project_id}")
