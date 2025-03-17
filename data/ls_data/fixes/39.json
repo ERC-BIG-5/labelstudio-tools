@@ -1,0 +1,714 @@
+{
+  "project_id": 39,
+  "fixes": {
+    "platform_id": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "title": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "username": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "displayname": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "description": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "any_harmful": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "harmful_detail": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "media_relevant": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nature_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nature_visual": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "extras": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "val-expr_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_personal-identity": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_cultural-identity": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_social-responsibility": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_social-cohesion": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_social-memory": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_social-relations": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_sense-of-place": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_sense-of-agency": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_spirituality": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_stewardship-principle": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_stewardship-eudaimonia": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_literacy": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_livelihoods": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_well-being": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_aesthetics": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_reciprocity": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_good-life": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_text_conf_kinship": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-0_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-0_text_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-1_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-1_text_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-2_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-2x_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-2_text_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-2_text_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-0_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-0_text_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-0_text_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-1_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-1_text_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-1_text_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-2_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-2_text_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-2_text_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "val-expr_visual": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_personal-identity": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_cultural-identity": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_social-responsibility": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_social-cohesion": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_social-memory": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_social-relations": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_sense-of-place": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_sense-of-agency": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_spirituality": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_stewardship-principle": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_stewardship-eudaimonia": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_literacy": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_livelihoods": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_well-being": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_aesthetics": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_reciprocity": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_good-life": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "rel-value_visual_conf_kinship": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-0_visual": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-0_visual_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-1_visual": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-1_visual_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-2_visual": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-2x_visual": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-2_visual_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "nep_group-2_visual_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-0_visual": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-0_visual_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-0_visual_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-1_visual": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-1_visual_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-1_visual_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-2_visual": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-2_visual_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "inter_group-2_visual_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "framing": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "framing_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "framing_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "sentiment": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "sentiment_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "sentiment_expl": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "for_coding_game": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "coding-game_reason": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "user-type_0": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "user-type_0_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "user-type_1": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "user-type_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "user-type_2_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    },
+    "user-type_3": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "split_annotation": null
+    }
+  },
+  "fix_reverse_map": {
+    "platform_id": "platform_id",
+    "title": "title",
+    "username": "username",
+    "displayname": "displayname",
+    "description": "description",
+    "any_harmful": "any_harmful",
+    "harmful_detail": "harmful_detail",
+    "media_relevant": "media_relevant",
+    "nature_text": "nature_text",
+    "nature_visual": "nature_visual",
+    "extras": "extras",
+    "val-expr_text": "val-expr_text",
+    "rel-value_text": "rel-value_text",
+    "rel-value_text_expl": "rel-value_text_expl",
+    "rel-value_text_conf_personal-identity": "rel-value_text_conf_personal-identity",
+    "rel-value_text_conf_cultural-identity": "rel-value_text_conf_cultural-identity",
+    "rel-value_text_conf_social-responsibility": "rel-value_text_conf_social-responsibility",
+    "rel-value_text_conf_social-cohesion": "rel-value_text_conf_social-cohesion",
+    "rel-value_text_conf_social-memory": "rel-value_text_conf_social-memory",
+    "rel-value_text_conf_social-relations": "rel-value_text_conf_social-relations",
+    "rel-value_text_conf_sense-of-place": "rel-value_text_conf_sense-of-place",
+    "rel-value_text_conf_sense-of-agency": "rel-value_text_conf_sense-of-agency",
+    "rel-value_text_conf_spirituality": "rel-value_text_conf_spirituality",
+    "rel-value_text_conf_stewardship-principle": "rel-value_text_conf_stewardship-principle",
+    "rel-value_text_conf_stewardship-eudaimonia": "rel-value_text_conf_stewardship-eudaimonia",
+    "rel-value_text_conf_literacy": "rel-value_text_conf_literacy",
+    "rel-value_text_conf_livelihoods": "rel-value_text_conf_livelihoods",
+    "rel-value_text_conf_well-being": "rel-value_text_conf_well-being",
+    "rel-value_text_conf_aesthetics": "rel-value_text_conf_aesthetics",
+    "rel-value_text_conf_reciprocity": "rel-value_text_conf_reciprocity",
+    "rel-value_text_conf_good-life": "rel-value_text_conf_good-life",
+    "rel-value_text_conf_kinship": "rel-value_text_conf_kinship",
+    "nep_group-0_text": "nep_group-0_text",
+    "nep_group-0_text_expl": "nep_group-0_text_expl",
+    "nep_group-1_text": "nep_group-1_text",
+    "nep_group-1_text_expl": "nep_group-1_text_expl",
+    "nep_group-2_text": "nep_group-2_text",
+    "nep_group-2x_text": "nep_group-2x_text",
+    "nep_group-2_text_other": "nep_group-2_text_other",
+    "nep_group-2_text_expl": "nep_group-2_text_expl",
+    "inter_group-0_text": "inter_group-0_text",
+    "inter_group-0_text_other": "inter_group-0_text_other",
+    "inter_group-0_text_expl": "inter_group-0_text_expl",
+    "inter_group-1_text": "inter_group-1_text",
+    "inter_group-1_text_other": "inter_group-1_text_other",
+    "inter_group-1_text_expl": "inter_group-1_text_expl",
+    "inter_group-2_text": "inter_group-2_text",
+    "inter_group-2_text_other": "inter_group-2_text_other",
+    "inter_group-2_text_expl": "inter_group-2_text_expl",
+    "val-expr_visual": "val-expr_visual",
+    "rel-value_visual": "rel-value_visual",
+    "rel-value_visual_expl": "rel-value_visual_expl",
+    "rel-value_visual_conf_personal-identity": "rel-value_visual_conf_personal-identity",
+    "rel-value_visual_conf_cultural-identity": "rel-value_visual_conf_cultural-identity",
+    "rel-value_visual_conf_social-responsibility": "rel-value_visual_conf_social-responsibility",
+    "rel-value_visual_conf_social-cohesion": "rel-value_visual_conf_social-cohesion",
+    "rel-value_visual_conf_social-memory": "rel-value_visual_conf_social-memory",
+    "rel-value_visual_conf_social-relations": "rel-value_visual_conf_social-relations",
+    "rel-value_visual_conf_sense-of-place": "rel-value_visual_conf_sense-of-place",
+    "rel-value_visual_conf_sense-of-agency": "rel-value_visual_conf_sense-of-agency",
+    "rel-value_visual_conf_spirituality": "rel-value_visual_conf_spirituality",
+    "rel-value_visual_conf_stewardship-principle": "rel-value_visual_conf_stewardship-principle",
+    "rel-value_visual_conf_stewardship-eudaimonia": "rel-value_visual_conf_stewardship-eudaimonia",
+    "rel-value_visual_conf_literacy": "rel-value_visual_conf_literacy",
+    "rel-value_visual_conf_livelihoods": "rel-value_visual_conf_livelihoods",
+    "rel-value_visual_conf_well-being": "rel-value_visual_conf_well-being",
+    "rel-value_visual_conf_aesthetics": "rel-value_visual_conf_aesthetics",
+    "rel-value_visual_conf_reciprocity": "rel-value_visual_conf_reciprocity",
+    "rel-value_visual_conf_good-life": "rel-value_visual_conf_good-life",
+    "rel-value_visual_conf_kinship": "rel-value_visual_conf_kinship",
+    "nep_group-0_visual": "nep_group-0_visual",
+    "nep_group-0_visual_expl": "nep_group-0_visual_expl",
+    "nep_group-1_visual": "nep_group-1_visual",
+    "nep_group-1_visual_expl": "nep_group-1_visual_expl",
+    "nep_group-2_visual": "nep_group-2_visual",
+    "nep_group-2x_visual": "nep_group-2x_visual",
+    "nep_group-2_visual_other": "nep_group-2_visual_other",
+    "nep_group-2_visual_expl": "nep_group-2_visual_expl",
+    "inter_group-0_visual": "inter_group-0_visual",
+    "inter_group-0_visual_other": "inter_group-0_visual_other",
+    "inter_group-0_visual_expl": "inter_group-0_visual_expl",
+    "inter_group-1_visual": "inter_group-1_visual",
+    "inter_group-1_visual_other": "inter_group-1_visual_other",
+    "inter_group-1_visual_expl": "inter_group-1_visual_expl",
+    "inter_group-2_visual": "inter_group-2_visual",
+    "inter_group-2_visual_other": "inter_group-2_visual_other",
+    "inter_group-2_visual_expl": "inter_group-2_visual_expl",
+    "framing": "framing",
+    "framing_other": "framing_other",
+    "framing_expl": "framing_expl",
+    "sentiment": "sentiment",
+    "sentiment_other": "sentiment_other",
+    "sentiment_expl": "sentiment_expl",
+    "for_coding_game": "for_coding_game",
+    "coding-game_reason": "coding-game_reason",
+    "user-type_0": "user-type_0",
+    "user-type_0_other": "user-type_0_other",
+    "user-type_1": "user-type_1",
+    "user-type_2": "user-type_2",
+    "user-type_2_other": "user-type_2_other",
+    "user-type_3": "user-type_3"
+  }
+}

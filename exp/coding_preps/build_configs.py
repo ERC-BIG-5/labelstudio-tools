@@ -1,9 +1,10 @@
+import copy
 import json
 import os
 from pathlib import Path
 from typing import Optional
-from xml import etree
-
+from lxml import etree
+from string import Template
 import pystache
 
 
@@ -20,6 +21,7 @@ def create_choice_elements(options: list[str], aliases: Optional[list[str]] = No
             res.append(create_choice_elem(o, a))
         return "".join(res)
     return "".join(list(map(create_choice_elem, options)))
+
 
 def remove_hidden_parts(xml_file: Path):
     """
@@ -43,6 +45,80 @@ def remove_hidden_parts(xml_file: Path):
 
     tree.write(xml_file, pretty_print=True, encoding='utf-8', xml_declaration=False)
 
+
+def twitter_visual_mod(xml_file: Path):
+    tree = etree.parse(xml_file)
+    root = tree.getroot()
+
+    # Find all elements with the specified class
+    # This will find elements where class attribute exactly matches the class_name
+    elements = root.xpath(f'.//*[@idAttr="visual_part"]')
+    # print(len(elements))
+    assert len(elements) == 1
+    element = elements[0]
+    element.set('className', 'hidden')
+
+    new_template = Template("""
+    <View idAttr="visual_part" visibleWhen="choice-selected" whenTagName="nature_visual" whenChoiceValue="Yes">
+    <Collapse>
+        $PANELS
+     </Collapse>
+    </View>
+    """)
+
+    make_single_select = [ "nep_group-0_visual", "nep_group-1_visual", "nep_group-2_visual",
+                          "nep_group-2x_visual", "inter_group-0_visual", "inter_group-1_visual","inter_group-2_visual"]
+    fix_whenTagName = ['val-expr_visual','rel-value_visual', 'nep_group-2_visual', 'inter_group-0_visual', 'inter_group-1_visual', 'inter_group-2_visual']
+
+    panels = []
+    for i in range(4):
+        img_node = copy.deepcopy(element)
+        #del img_node.attrib["visibleWhen"]
+        img_node.set("whenTagName","media_relevant")
+        img_node.set("whenChoiceValue",f"Image {i+1}")
+        del img_node.attrib["className"]
+        name_elements_dict = {el.get('name'): el for el in img_node.xpath('.//*[@name]')}
+        # print(name_elements_dict.keys())
+        panel = etree.Element('Panel')
+        panel.set("value", f"Image: {i + 1}")
+        for name, elem in name_elements_dict.items():
+            assert "_visual" in name
+            elem.set('name', name.replace("_visual", f"_visual-{i}"))
+            if name in make_single_select:
+                assert elem.get("choice") == "multiple", f"{name} has {elem.get('choice')}"
+                elem.set("choice","single")
+
+        #
+        fix_whenTagName_elems  =  img_node.xpath('.//*[@whenTagName]')
+        # print(len(fix_whenTagName_elems))
+        for elem in fix_whenTagName_elems:
+            whenTagName = elem.get('whenTagName')
+            assert "_visual" in whenTagName
+            # print(name)
+            if whenTagName not in fix_whenTagName: # ignore: 'nature_visual'
+                continue
+            elem.set('whenTagName', whenTagName.replace("_visual", f"_visual-{i}"))
+        #
+
+        header = img_node.xpath('./*[@className="visual_part_header"]')
+        assert len(header) == 1
+        header[0].getparent().remove(header[0])
+        # assert len(header) == 1
+        panel.append(img_node)
+        panels.append(panel)
+
+    new_visual = new_template.substitute(PANELS="".join([etree.tostring(p, encoding="unicode") for p in panels]))
+    # print(new_visual)
+    new_visual_elem = etree.fromstring(new_visual)
+    # element.getparent().replace(element, new_visual_elem)
+    element.addnext(new_visual_elem)
+    element.set('className', 'hidden2')
+    # for i, s_elem in enumerate(element.getparent().getchildren()):
+    #     if element == s_elem:
+    #         s_elem.getparent().replace(s_elem, new_visual_elem)
+    #         break
+
+    tree.write(xml_file, pretty_print=True, encoding='utf-8', xml_declaration=False)
 
 
 if __name__ == "__main__":
@@ -95,7 +171,6 @@ if __name__ == "__main__":
         user_choices = create_choice_elements(type_options, aliases)
         print(user_choices)
     # print("RV confusion TEXT")
-    from string import Template
 
     template = Template("""<View visibleWhen="choice-selected" whenTagName="rel-value_text"
                   whenChoiceValue="$rv_alias">
@@ -165,3 +240,6 @@ if __name__ == "__main__":
         if platform_file != "youtube.xml":
             remove_hidden_parts(pl_gen_file)
         print(f"-> {pl_gen_file}")
+
+        if platform_file == "twitter.xml":
+            twitter_visual_mod(pl_gen_file)

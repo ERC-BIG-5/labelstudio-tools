@@ -438,6 +438,7 @@ class MyProject(BaseModel):
     def apply_extension(self, fillin_defaults: bool = True) -> None:
         if not self.data_extensions:
             print("no data extension set/applied")
+            return
 
         # apply it to the struct...
         if not self._extension_applied:
@@ -450,13 +451,15 @@ class MyProject(BaseModel):
 
         self._extension_applied = True
 
-    def results2csv(self, dest: Path, with_defaults: bool = True):
+    def results2csv(self, dest: Path, with_defaults: bool = True, min_coders:int = 1):
         if not with_defaults:
             print("warning, result2csv with_defaults is disabled")
         extra_cols = ["num_coders", "users", "cancellations"]
         rows = []
         # task
         for task in self.calc_annotation_result.annotation_results:
+            if task.num_coders < min_coders:
+                continue
             # annotation
             row_final: dict[str, str | int] = {"num_coders": task.num_coders,
                                                "cancellations": task.num_cancellations,

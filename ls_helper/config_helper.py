@@ -98,7 +98,8 @@ def complete_config(xml_file: Path):
 
 if __name__ == "__main__":
     project_p = os.getcwd()
-    step1_t = Path(f"{project_p}/data/configs/step1/output/gen_youtube.xml")
+    step1_t = Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/configs/step1/output/gen_twitter.xml")
+    # step1_t = Path(f"{project_p}/data//home/rsoleyma/projects/MyLabelstudioHelper/data/configs/step1/output/gen_twitter.xml")
     duplicates = find_duplicates(step1_t)
     print(f"{duplicates=}")
     # complete_config((Path("/home/rsoleyma/projects/platforms-clients/data/labelstudio_configs/final1_t/config.xml")))
@@ -115,10 +116,10 @@ if __name__ == "__main__":
     # print(json.dumps(list(zip(all_names,all_names_s)), indent=2))
 
     # print(all_names_s)
-    fout = Path(f"{project_p}/data/extra/name_checker.csv")
-    writer = csv.writer(fout.open("w", encoding="utf-8"))
-    for s in all_names_s:
-        # print(",".join(s))
-        writer.writerow(s)
-
-    print(f"-> {fout}")
+    # fout = Path(f"{project_p}/data/extra/name_checker.csv")
+    # writer = csv.writer(fout.open("w", encoding="utf-8"))
+    # for s in all_names_s:
+    #     # print(",".join(s))
+    #     writer.writerow(s)
+    #
+    # print(f"-> {fout}")

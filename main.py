@@ -75,12 +75,13 @@ def annotation_lead_times(project_id: Annotated[int, typer.Option()],
 def annotations_results(platform: Annotated[str, typer.Option()],
                         language: Annotated[str, typer.Option()],
                         accepted_ann_age: Annotated[
-                            int, typer.Option(help="Download annotations if older than x hours")] = 6) -> tuple[
+                            int, typer.Option(help="Download annotations if older than x hours")] = 6,
+                        min_coders: Annotated[int, typer.Option()] = 2) -> tuple[
     Path, str]:
     project_data = ProjectOverview.project_data(platform, language)
     if not project_data:
         print(ProjectOverview.projects())
-        raise ValueError("No project data for {platform}/{language}")
+        raise ValueError(f"No project data for {platform}/{language}")
     project_id = project_data["id"]
 
     conf = parse_label_config_xml(project_data["label_config"],
@@ -99,7 +100,7 @@ def annotations_results(platform: Annotated[str, typer.Option()],
     mp.calculate_results()
     mp.apply_extension(fillin_defaults=True)
     dest = SETTINGS.annotations_results_dir / f"{str(project_id)}.csv"
-    mp.results2csv(dest, with_defaults=True)
+    mp.results2csv(dest, with_defaults=True, min_coders=min_coders)
     print(f"annotation results -> {dest}")
     return dest, annotations.file_path.stem
 
@@ -187,7 +188,19 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
 
 
 @app.command()
-def download_project_data(): ...
+def download_project_data(
+        platform: Annotated[str, typer.Argument()],
+        language: Annotated[str, typer.Argument()],
+        project_id: Annotated[int, typer.Argument()],
+):
+    project_data = ls_client().get_project(project_id)
+    if not project_data:
+        raise ValueError(f"No project found: {project_id}")
+    else:
+        _dir = SETTINGS.projects_dir / platform
+        _dir.mkdir(parents=True, exist_ok=True)
+        dest = _dir / f"{language}.json"
+        dest.write_text(project_data.model_dump_json())
 
 
 @app.command()
@@ -323,16 +336,23 @@ def agreements(platform: Annotated[str, typer.Option()],
             default = data_extensions.fixes[col].default
             if default and default not in options:
                 options.append(default)
+            mp.annotation_structure.choices[col]
             ## todo: this would take only the first, for multiple choice
             vals[col] = [options.index(v[0]) for v in vals[col]]
         all_rel.append(vals)
 
     # print(all_rel)
-
     for col in check_col:
         print(col)
-        df = pd.DataFrame([r[col] for r in all_rel])
+        col_data = [r[col] for r in all_rel]
+        if all(not d for d in col_data):
+            print(f"No data for : {col}")
+            continue
+        df = pd.DataFrame(col_data)
         # print(df)
+        # if df.empty:
+        #     print(f"No data for : {col}")
+        #     continue
         cac_4raters = CAC(df)
         gwet_res = cac_4raters.gwet()
         # print(gwet_res)
@@ -341,8 +361,8 @@ def agreements(platform: Annotated[str, typer.Option()],
 
 
 @app.command()
-def generate_result_fixes_template(platform: Annotated[str, typer.Option()],
-                                   language: Annotated[str, typer.Option()]):
+def generate_result_fixes_template(platform: Annotated[str, typer.Argument()],
+                                   language: Annotated[str, typer.Argument()]):
     project_data = ProjectOverview.project_data(platform, language)
     project_id = project_data["id"]
 
@@ -377,7 +397,7 @@ if __name__ == "__main__":
     #                Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/temp/yt_en_problematic_tasks.json"))
 
     # JUPP
-    # annotations_results("youtube", "en", 2)
+    annotations_results("youtube", "en", 2)
     # CODING GAME
     # download_project_views("youtube", "en")
     # download_project_views("youtube","es")

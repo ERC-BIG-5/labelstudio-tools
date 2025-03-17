@@ -24,6 +24,7 @@
 
         /*.hidden {display: none;} */
         .hidden {border: 2px red solid;}
+        .hidden2 {display: none;}
     </Style>
     <View className="title_view">
         <Header value="Text content"/>
