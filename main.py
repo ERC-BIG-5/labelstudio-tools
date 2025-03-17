@@ -78,6 +78,9 @@ def annotations_results(platform: Annotated[str, typer.Option()],
                             int, typer.Option(help="Download annotations if older than x hours")] = 6) -> tuple[
     Path, str]:
     project_data = ProjectOverview.project_data(platform, language)
+    if not project_data:
+        print(ProjectOverview.projects())
+        raise ValueError("No project data for {platform}/{language}")
     project_id = project_data["id"]
 
     conf = parse_label_config_xml(project_data["label_config"],
