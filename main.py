@@ -298,7 +298,7 @@ def agreements(platform: Annotated[str, typer.Option()],
                accepted_ann_age: Annotated[
                    int, typer.Option(help="Download annotations if older than x hours")] = 2,
                min_num_coders: Annotated[int, typer.Option()] = 2
-               ):
+               ) -> Path:
     project_data = ProjectOverview.project_data(platform, language)
     project_id = project_data["id"]
 
@@ -328,8 +328,8 @@ def agreements(platform: Annotated[str, typer.Option()],
     all_rel = []
 
     struct_ch = mp.annotation_structure.choices
-    csv_filename = f"agreements_{platform}_{language}_{annotations.file_path.stem}.csv"
-    pid_filename = f"platform_ids_{platform}_{language}_{annotations.file_path.stem}.json"
+    csv_filepath = SETTINGS.agreements_dir / f"agreements_{platform}_{language}_{annotations.file_path.stem}.csv"
+    pid_filepath = SETTINGS.agreements_dir / f"platform_ids_{platform}_{language}_{annotations.file_path.stem}.json"
     fieldnames = ["column", "choice_type", "coefficient", "filtered_count", "positive_match", "filtered_coefficient"]
 
     options_dict = {}
@@ -337,7 +337,7 @@ def agreements(platform: Annotated[str, typer.Option()],
     def _choice_type(col) -> str:
         return "single" if struct_ch[col].choice == "single" else "multiple"
 
-    print(len(results.annotation_results))
+    # print(len(results.annotation_results))
     # for each col (final col), store the platform_ids of filtered/positive/conflict(=filtered-positive)
     platform_ids = []
     for task in results.annotation_results:
@@ -375,8 +375,8 @@ def agreements(platform: Annotated[str, typer.Option()],
 
         all_rel.append(vals)
 
-    csvfile = open(csv_filename, 'w', newline='')
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    fout = csv_filepath.open('w', newline='')
+    writer = csv.DictWriter(fout, fieldnames=fieldnames)
     writer.writeheader()
 
     pids = {}
@@ -399,7 +399,6 @@ def agreements(platform: Annotated[str, typer.Option()],
                 option_cols.append(option_col_data)
 
             cols = option_cols
-
 
         for col_name, col_ in zip(cols_names, cols):
             # print(col_name, len(col_))
@@ -467,9 +466,11 @@ def agreements(platform: Annotated[str, typer.Option()],
             # print(gwet_res)
             # print(gwet_res["est"]["coefficient_value"])
             writer.writerow(csv_row)
-            Path(pid_filename).write_text(json.dumps(pids))
+            pid_filepath.write_text(json.dumps(pids))
 
-    csvfile.close()
+    fout.close()
+    return csv_filepath
+
 
 @app.command()
 def generate_result_fixes_template(platform: Annotated[str, typer.Argument()],
