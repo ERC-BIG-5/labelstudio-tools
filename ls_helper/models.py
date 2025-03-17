@@ -171,6 +171,9 @@ class ChoicesValue(BaseModel):
     def str_value(self) -> str:
         return str(",".join(self.choices))
 
+    @property
+    def direct_value(self) -> list[str]:
+        return self.choices
 
 # modelling LS structure
 class TextValue(BaseModel):
@@ -180,6 +183,9 @@ class TextValue(BaseModel):
     def str_value(self) -> str:
         return str(",".join(self.text))
 
+    @property
+    def direct_value(self) -> list[str]:
+        return self.text
 
 # modelling LS structure
 class AnnotationResult(BaseModel):
@@ -193,6 +199,10 @@ class AnnotationResult(BaseModel):
     @property
     def str_value(self) -> str:
         return self.value.str_value
+
+    @property
+    def direct_value(self) -> list[str]:
+        return self.value.direct_value
 
 
 class TaskAnnotationModel(BaseModel):
@@ -246,7 +256,7 @@ class TaskAnnotationItem(BaseModel):
     name: str
     type_: Literal["single", "multiple", "text"] = Field(None, alias="type")
     num_coders: int
-    values: list[str] | list[list[str]] = Field(default_factory=list)
+    values: list[list[str]] = Field(default_factory=list)
     users: list[int | str] = Field(default_factory=list)
     _pre_defaults_added: list[str] | list[list[str]]
 
@@ -267,7 +277,8 @@ class TaskAnnotationItem(BaseModel):
         # if with_user:
         #     comb = [f"{v} ({u})" for v, u in zip(self.values, self.users)]
         #     return "; ".join(comb)
-        return "; ".join(self.values)
+        coder_join = [", ".join(cv) for cv in self.values]
+        return "; ".join(coder_join)
         # else:
         #     return "; ".join(self._pre_defaults_added)
 
@@ -301,19 +312,26 @@ class TaskAnnotResults(BaseModel):
             else:
                 if fix.split_annotation:
                     split_items.append((item_name, fix.apply_split(value, fillin_defaults)))
-                else:
-                    # print(item_name, fix)
-                    if fillin_defaults:
-                        if value.type_ == "single":
-                            # fill it up with default value
-                            if len(value.values) != value.num_coders and fix.default:
-                                assert isinstance(fix.default, str), "default must be a str"
-                                value.values.extend([fix.default] * (value.num_coders - len(value.values)))
-                                pass
-                        elif value.type_ == "multiple":
-                            if len(value.values) != value.num_coders and fix.default:
-                                assert isinstance(fix.default, list), "default must be a list"
-                                value.values.extend([fix.default] * (value.num_coders - len(value.values)))
+                    continue
+                # print(item_name, fix)
+                if fillin_defaults:
+                    if value.type_ == "single":
+                        # fill it up with default value
+                        if len(value.values) != value.num_coders and fix.default:
+                            assert isinstance(fix.default, str), "default must be a str"
+                            value.values.extend([[fix.default] * (value.num_coders - len(value.values))])
+                    elif value.type_ == "multiple":
+                        if len(value.values) != value.num_coders and fix.default:
+                            # assert isinstance(fix.default, list), "default must be a list"
+                            value.values.extend([[fix.default] * (value.num_coders - len(value.values))])
+        # those that are missing in the row:
+        for additional in set(annotation_extension.fixes) - set(self.items):
+            fix = annotation_extension.fixes[additional]
+            new_name = getattr(fix, "name_fix")
+            if not new_name:
+                new_name = additional
+            if fix.default:
+                self.items[new_name] = TaskAnnotationItem(name=new_name,values=[[fix.default]] * self.num_coders, num_coders=self.num_coders)
 
         for split_old_item_name, new_items in split_items:
             del self.items[split_old_item_name]
@@ -403,9 +421,9 @@ class MyProject(BaseModel):
                             print(f"choice not in result-struct: {col}")
                         else:
                             if choices_c.choice == "single":
-                                task_calc_results.add(col, ann_res.str_value, user_id, choices_c)
+                                task_calc_results.add(col, ann_res.direct_value, user_id, choices_c)
                             else:
-                                task_calc_results.add(col, ann_res.str_value, user_id, choices_c)
+                                task_calc_results.add(col, ann_res.direct_value, user_id, choices_c)
                     else:  # text
                         pass
                 task_calc_results.set_all_to_pre_default()

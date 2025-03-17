@@ -1,0 +1,19 @@
+<View>
+    <Style>
+        .source_view { display: flex; color: green; font-style: italic; }
+    </Style>
+    <View>
+        <View className="source_view">
+            <Text name="username_t" value="Username:"/>
+            <Text name="username" value="$username"/>
+        </View>
+        <View className="source_view">
+            <Text name="displayname_t" value="Display name:"/>
+            <Text name="displayname" value="$display_name"/>
+        </View>
+        <View className="source_view">
+            <Text name="description_t" value="Description:"/>
+            <Text name="description" value="$description"/>
+        </View>
+    </View>
+</View>

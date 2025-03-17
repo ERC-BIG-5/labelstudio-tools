@@ -1,3 +1,47 @@
 <View>
+    <Header value="Images"/>
+    <View style="display: flex; flex-wrap: wrap;">
+        <View>
+            <Text value="Image 1" name="media_1_l"/>
+            <Image width="640px" valueList="$img_1" name="img_1" zoomControl="false"/>
+        </View>
+        <View>
+            <Text value="Image 2" name="media_2_l"/>
+            <Image width="640px" valueList="$img_2" name="img_2" zoomControl="false"/>
+        </View>
+        <View>
+            <Text value="Image 3" name="media_3_l"/>
+            <Image width="640px" valueList="$img_3" name="img_3" zoomControl="false"/>
+        </View>
+        <View>
+            <Text value="Image 4" name="media_4_l"/>
+            <Image width="640px" valueList="$img_4" name="img_4" zoomControl="false"/>
+        </View>
+    </View>
 
+    <View>
+        <Header value="Is there any harmful content?"/>
+        <Choices name="any_harmful" toName="title" showInline="true" choice="multiple">
+            <Choice value="Text"/>
+            <Choice value="Image 1"/>
+            <Choice value="Image 2"/>
+            <Choice value="Image 3"/>
+            <Choice value="Image 4"/>
+        </Choices>
+        <View visibleWhen="choice-selected" whenTagName="any_harmful"
+              whenChoiceValue="Text,Image 1,Image 2,Image 3,Image 4">
+            <Text name="harmful_detail_t" value="Why is this content harmful?"/>
+            <TextArea name="harmful_detail" toName="title"/>
+        </View>
+    </View>
+
+    <View>
+        <Text name="rel_media" value="Select relevant Images" selectionEnabled="false"/>
+        <Choices name="media_relevant" toName="title" choice="multiple" showInline="true">
+            <Choice value="Image 1"/>
+            <Choice value="Image 2"/>
+            <Choice value="Image 3"/>
+            <Choice value="Image 4"/>
+        </Choices>
+    </View>
 </View>

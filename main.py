@@ -5,7 +5,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Optional
 
+import pandas as pd
 import typer
+from irrCAC.raw import CAC
 
 from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.annotation_timing import annotation_timing, plot_date_distribution, annotation_total_over_time, \
@@ -272,7 +274,11 @@ def update_coding_game(platform: str, language: str) -> Optional[tuple[int, int]
 
 @app.command()
 def agreements(platform: Annotated[str, typer.Option()],
-               language: Annotated[str, typer.Option()]):
+               language: Annotated[str, typer.Option()],
+               accepted_ann_age: Annotated[
+                   int, typer.Option(help="Download annotations if older than x hours")] = 2,
+               min_num_coders: Annotated[int, typer.Option()] = 2
+               ):
     project_data = ProjectOverview.project_data(platform, language)
     project_id = project_data["id"]
 
@@ -280,7 +286,7 @@ def agreements(platform: Annotated[str, typer.Option()],
                                   project_id=project_id,
                                   include_text=True)
 
-    annotations = get_recent_annotations(project_id, 2)
+    annotations = get_recent_annotations(project_id, accepted_ann_age)
 
     data_extensions = None
     if (fi := SETTINGS.BASE_DATA_DIR / f"fixes/{project_id}.json").exists():
@@ -289,31 +295,45 @@ def agreements(platform: Annotated[str, typer.Option()],
                    annotation_structure=conf,
                    data_extensions=data_extensions,
                    raw_annotation_result=annotations)
-    mp.apply_extension(fillin_defaults=True)
     results = mp.calculate_results()
-    print(results)
+    mp.apply_extension(fillin_defaults=True)
+    # print(results)
 
-    # check_col = ['nature_visual']
-    # all_rel = []
-    # for task in results.annotation_results:
-    #     if task.num_coders < 2:
-    #         continue
-    #     res = task.data()
-    #     vals = {c: (res.get(c) or [])[-2:] for c in check_col}
-    #     # vals = vals[-2:]
-    #     for i in range(max(0, 2 - len(vals["nature_visual"]))):
-    #         vals["nature_visual"].append("No")
-    #     all_rel.append(vals)
-    #     vals["nature_visual"] = [{"Yes": 1, "No": 0}[v] for v in vals["nature_visual"]]
-    #     # print(res)
+    check_col = ["any_harmful", "nature_text", "nature_visual", "val-expr_text", "val-expr_visual"]
+    conflict = ["nature_text", "nature_visual", "val-expr_text", "val-expr_visual", "rel-value_text",
+                "rel-value_visual",
+                "nep_materiality_text", "nep_biological_text", "landscape-type_text",
+                "basic-interaction_text",
+                "nep_materiality_visual", "nep_biological_visual", "landscape-type_visual",
+                "basic-interaction_visual"]
+    all_rel = []
+    # mp.annotation_structure.choices['nature_visual']
+    for task in results.annotation_results:
+        if task.num_coders < min_num_coders:
+            continue
+        res = task.data()
+        vals = {c: (res.get(c) or [])[:min_num_coders] for c in check_col}
+
+        for col in check_col:
+            options = mp.annotation_structure.choices[col].options
+            options = [c.alias if c.alias else c.value for c in options]
+            default = data_extensions.fixes[col].default
+            if default and default not in options:
+                options.append(default)
+            ## todo: this would take only the first, for multiple choice
+            vals[col] = [options.index(v[0]) for v in vals[col]]
+        all_rel.append(vals)
+
     # print(all_rel)
-    # from irrCAC.raw import CAC
 
-    # import pandas as pd
-    # df = pd.DataFrame([r["nature_visual"] for r in all_rel])
-    # print(df)
-    # cac_4raters = CAC(df)
-    # print(cac_4raters.gwet())
+    for col in check_col:
+        print(col)
+        df = pd.DataFrame([r[col] for r in all_rel])
+        # print(df)
+        cac_4raters = CAC(df)
+        gwet_res = cac_4raters.gwet()
+        # print(gwet_res)
+        print(gwet_res["est"]["coefficient_value"])
     # print(results)
 
 
@@ -335,8 +355,7 @@ def generate_result_fixes_template(platform: Annotated[str, typer.Option()],
 
 @app.command(short_help="Just needs to be run once, for each new LS project")
 def setup_project_settings(platform: Annotated[str, typer.Option()],
-                                   language: Annotated[str, typer.Option()]):
-
+                           language: Annotated[str, typer.Option()]):
     project_data = ProjectOverview.project_data(platform, language)
     project_id = project_data["id"]
     res = ls_client().patch_project(project_id, {
@@ -346,6 +365,7 @@ def setup_project_settings(platform: Annotated[str, typer.Option()],
     if res.status_code != 200:
         print("error updaing project settings")
 
+
 if __name__ == "__main__":
     # clean ...ON VM
     # clean_project_task_files(33)
@@ -354,12 +374,12 @@ if __name__ == "__main__":
     #                Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/temp/yt_en_problematic_tasks.json"))
 
     # JUPP
-    annotations_results("youtube", "en", 2)
+    # annotations_results("youtube", "en", 2)
     # CODING GAME
     # download_project_views("youtube", "en")
     # download_project_views("youtube","es")
     # update_coding_game("youtube", "es")
-    # agreements("youtube", "en")
+    agreements("youtube", "en")
     # generate_result_fixes_template("youtube","en")
 
     # setup_project_settings()

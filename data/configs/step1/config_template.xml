@@ -1,8 +1,8 @@
 <View>
     <Style>.source_view .lsf-richtext__line {font-size: 20px;}</Style>
     <View className="source_view" style="display: flex; color: orchid; font-style: italic;">
-        <Text name="source_t" value="Platform: "/>
-        <Text name="source" value="$source"/>
+        <!--        <Text name="source_t" value="Platform: "/>-->
+        <!--        <Text name="source" value="$source"/>-->
         <Text name="p_id_t" value="Platform id :"/>
         <Text name="platform_id" value="$platform_id"/>
     </View>
@@ -150,6 +150,17 @@
                 <Choice value="Water bodies" alias="water_bodies"/>
                 <Choice value="Other" alias="other"/>
             </Choices>
+
+            <View visibleWhen="choice-selected" whenTagName="nep_group-2_text"
+                  whenChoiceValue="forest_and_seminatural_areas">
+                <Text value="Landcover type (default: None)" name="nep_group-2x_text_t"/>
+                <Choices name="nep_group-2x_text" toName="title" showInline="true" required="false" choice="multiple">
+                    <Choice value="Mountain" alias="mountain"/>
+                    <Choice value="Desert" alias="desert"/>
+                    <Choice value="Ice-snowscape" alias="ice-snowscape"/>
+                </Choices>
+            </View>
+
             <View visibleWhen="choice-selected" whenTagName="nep_group-2_text" whenChoiceValue="other">
                 <Text name="nep_group-2_text_other_t" value="Describe the Landscape type"/>
                 <TextArea name="nep_group-2_text_other" toName="title"/>
@@ -369,6 +380,17 @@
                 <Choice value="Water bodies" alias="water_bodies"/>
                 <Choice value="Other" alias="other"/>
             </Choices>
+
+            <View visibleWhen="choice-selected" whenTagName="nep_group-2_visual"
+                  whenChoiceValue="forest_and_seminatural_areas">
+                <Text value="Landcover type (default: None)" name="nep_group-2x_visual_t"/>
+                <Choices name="nep_group-2x_visual" toName="title" showInline="true" required="false" choice="multiple">
+                    <Choice value="Mountain" alias="mountain"/>
+                    <Choice value="Desert" alias="desert"/>
+                    <Choice value="Ice-snowscape" alias="ice-snowscape"/>
+                </Choices>
+            </View>
+
             <View visibleWhen="choice-selected" whenTagName="nep_group-2_visual" whenChoiceValue="other">
                 <Text name="nep_group-2_visual_other_t" value="Describe the Landscape type"/>
                 <TextArea name="nep_group-2_visual_other" toName="title"/>
@@ -551,11 +573,17 @@
     <Choices name="for_coding_game" toName="title" showInline="true">
         <Choice value="Yes"/>
     </Choices>
+    <View visibleWhen="choice-selected" whenTagName="for_coding_game" whenChoiceValue="Yes">
+        <Text name="coding-game_reason_t" value="Explain, why you want this task for the coding game"/>
+        <TextArea name="coding-game_reason" toName="title"/>
+    </View>
 
 
     <!-- User categorization -->
     <View>
         <Header value="User categorization (Optional)"/>
+
+        {{{PLATFORM_USER_ELEMENTS}}}
 
         <Header value="General (default: unknown)" size="6"/>
         <Choices name="user-type_0" toName="title" showInline="true">
