@@ -1,6 +1,7 @@
 import csv
 import json
 import warnings
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd
@@ -60,7 +61,7 @@ def calc_agreements(
         project_data: ProjectModel,
         conf: ResultStruct,
         annotations: ProjectAnnotations,
-        agreement_columns: Optional[list[str]] = None):
+        agreement_columns: Optional[list[str]] = None) -> tuple[Path, Path]:
     project_id = project_data["id"]
     data_extensions = None
     if (fi := SETTINGS.BASE_DATA_DIR / f"fixes/{project_id}.json").exists():
@@ -245,4 +246,4 @@ def calc_agreements(
 
     fout.close()
     print(f"agreements -> {csv_filepath.as_posix()}")
-    return csv_filepath
+    return csv_filepath, pid_filepath
