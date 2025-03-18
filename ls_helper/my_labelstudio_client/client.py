@@ -157,10 +157,12 @@ class LabelStudioBase:
         if resp.status_code == 200:
             return ProjectModel.model_validate(resp.json())
 
-    def patch_project(self, project_id: int, data: dict):
+    def patch_project(self, project_id: int, data: dict) -> Optional[ProjectModel]:
         resp = self._client_wrapper.httpx_client.patch(f"/api/projects/{project_id}", json=data)
         if resp.status_code == 200:
             return ProjectModel.model_validate(resp.json())
+        else:
+            print(resp.status_code, resp.json())
 
     def get_project_annotations(self, project_id: int) -> "ProjectAnnotations":
         export_create = self._client_wrapper.httpx_client.post(f"/api/projects/{project_id}/exports", json={
@@ -196,7 +198,7 @@ class LabelStudioBase:
                       ensure_ascii=False, indent=2)
         return users
 
-    def get_user(self, user_id: int) -> UserModel:
+    def get_user(self, user_id: int) -> Optional[UserModel]:
         resp = self._client_wrapper.httpx_client.get(f"api/users/{user_id}")
         if resp.status_code == 200:
             return UserModel.model_validate(resp.json())
@@ -255,4 +257,8 @@ class LabelStudioBase:
 
     def list_import_storages(self, project: Optional[int] = None) -> Response:
         resp = self._client_wrapper.httpx_client.get("api/storages/localfiles/", params={"project": project})
+        return resp
+
+    def validate_project_labeling_config(self, p_id: int, label_config: str):
+        resp = self._client_wrapper.httpx_client.post(f"/api/projects/{p_id}/validate/", json={"label_config": label_config})
         return resp
