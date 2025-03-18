@@ -26,6 +26,12 @@
             cursor: pointer;
         }
 
+        a {
+            text-decoration-line: underline;
+            text-decoration-color: #3b82f6;
+            color: #3b82f6;
+        }
+
         button:hover {
             background-color: #2563eb;
         }
@@ -44,16 +50,17 @@
     <button class="btn mx-2" id="getAnnotationTable" onclick="getAnnotationTable()">Get Annotation table (annotations
         until 1h)
     </button>
-        <button class="btn mx-2" id="getAgreementsTable" onclick="getAgreementsTable()">Get Agreements table (annotations
+    <button class="btn mx-2" id="getAgreementsTable" onclick="getAgreementsTable()">Get Agreements table (annotations
         until 1h)
     </button>
 </div>
+<div id="additional"></div>
 <script>
 
     function updateCodingGame() {
         const selectedValue = document.getElementById("projectSelect").value;
         const [platform, language] = selectedValue.split("-");
-        confirmed = confirm(`Confirm Coding game update for ${platform} ${language}`)
+        const confirmed = confirm(`Confirm Coding game update for ${platform} ${language}`)
         if (!confirmed) {
             return
         }
@@ -83,7 +90,7 @@
     function getAnnotationTable() {
         const selectedValue = document.getElementById("projectSelect").value;
         const [platform, language] = selectedValue.split("-");
-        confirmed = confirm(`Downloading annotation results for ${platform} ${language}`)
+        const confirmed = confirm(`Downloading annotation results for ${platform} ${language}`)
         if (!confirmed)
             return
         url = `annotations-results?platform=${platform}&language=${language}&annotation_age=1`
@@ -93,9 +100,31 @@
     function getAgreementsTable() {
         const selectedValue = document.getElementById("projectSelect").value;
         const [platform, language] = selectedValue.split("-");
-        confirmed = confirm(`Downloading agreement results for ${platform} ${language}`)
-        url = `agreements?platform=${platform}&language=${language}&annotation_age=1`
-        window.open(url, '_blank');
+        const confirmed = confirm(`Downloading agreement results for ${platform} ${language}`)
+        if (!confirmed) {
+            return
+        }
+
+        fetch(`agreements?platform=${platform}&language=${language}&annotation_age=1`)
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('Network response was not ok');
+            })
+            .then(data => {
+                console.log("Response:", data);
+
+                url = data.agreements
+                window.open(url, '_blank');
+                document.getElementById("additional").innerHTML = `<a href="${data.pids}">Platform id results file</a>`
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert("Error updating coding game: " + error.message);
+            });
+
+
     }
 </script>
 </body>

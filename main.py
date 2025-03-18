@@ -324,7 +324,7 @@ def agreements(platform: Annotated[str, typer.Option()],
                accepted_ann_age: Annotated[
                    int, typer.Option(help="Download annotations if older than x hours")] = 2,
                min_num_coders: Annotated[int, typer.Option()] = 2
-               ) -> Path:
+               ) -> dict[str,Path]:
     project_data = ProjectOverview.project_data(platform, language)
     project_id = project_data["id"]
 
@@ -333,7 +333,8 @@ def agreements(platform: Annotated[str, typer.Option()],
                                   include_text=True)
 
     annotations = get_recent_annotations(project_id, accepted_ann_age)
-    return calc_agreements(platform, language, min_num_coders, project_data, conf, annotations)
+    agreements_table_path, pid_data_file = calc_agreements(platform, language, min_num_coders, project_data, conf, annotations)
+    return {"agreements":agreements_table_path, "pids":pid_data_file}
 
 
 @app.command()
