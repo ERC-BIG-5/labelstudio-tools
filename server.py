@@ -5,7 +5,9 @@ from starlette.staticfiles import StaticFiles
 from main import update_coding_game, annotations_results, agreements
 
 app = FastAPI(root_path="/DATA")
+
 app.mount("/static", StaticFiles(directory="data/server_static"), name="static")
+app.mount("/data", StaticFiles(directory="data/ls_data"), name="data")
 
 
 @app.get("/")
@@ -33,6 +35,7 @@ def _annotations_results(platform: str, language: str, annotation_age: int = 2):
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={fn}"}
     )
+
 
 @app.get("/agreements")
 def _agreements(platform: str, language: str, annotation_age: int = 2):
