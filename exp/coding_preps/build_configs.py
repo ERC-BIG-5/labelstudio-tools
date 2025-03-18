@@ -66,16 +66,17 @@ def twitter_visual_mod(xml_file: Path):
     </View>
     """)
 
-    make_single_select = [ "nep_group-0_visual", "nep_group-1_visual", "nep_group-2_visual",
-                          "nep_group-2x_visual", "inter_group-0_visual", "inter_group-1_visual","inter_group-2_visual"]
-    fix_whenTagName = ['val-expr_visual','rel-value_visual', 'nep_group-2_visual', 'inter_group-0_visual', 'inter_group-1_visual', 'inter_group-2_visual']
+    make_single_select = ["nep_group-0_visual", "nep_group-1_visual", "nep_group-2_visual",
+                          "nep_group-2x_visual", "inter_group-0_visual", "inter_group-1_visual", "inter_group-2_visual"]
+    fix_whenTagName = ['val-expr_visual', 'rel-value_visual', 'nep_group-2_visual', 'inter_group-0_visual',
+                       'inter_group-1_visual', 'inter_group-2_visual']
 
     panels = []
     for i in range(4):
         img_node = copy.deepcopy(element)
-        #del img_node.attrib["visibleWhen"]
-        img_node.set("whenTagName","media_relevant")
-        img_node.set("whenChoiceValue",f"Image {i+1}")
+        # del img_node.attrib["visibleWhen"]
+        img_node.set("whenTagName", "media_relevant")
+        img_node.set("whenChoiceValue", f"Image {i + 1}")
         del img_node.attrib["className"]
         name_elements_dict = {el.get('name'): el for el in img_node.xpath('.//*[@name]')}
         # print(name_elements_dict.keys())
@@ -86,16 +87,16 @@ def twitter_visual_mod(xml_file: Path):
             elem.set('name', name.replace("_visual", f"_visual-{i}"))
             if name in make_single_select:
                 assert elem.get("choice") == "multiple", f"{name} has {elem.get('choice')}"
-                elem.set("choice","single")
+                elem.set("choice", "single")
 
         #
-        fix_whenTagName_elems  =  img_node.xpath('.//*[@whenTagName]')
+        fix_whenTagName_elems = img_node.xpath('.//*[@whenTagName]')
         # print(len(fix_whenTagName_elems))
         for elem in fix_whenTagName_elems:
             whenTagName = elem.get('whenTagName')
             assert "_visual" in whenTagName
             # print(name)
-            if whenTagName not in fix_whenTagName: # ignore: 'nature_visual'
+            if whenTagName not in fix_whenTagName:  # ignore: 'nature_visual'
                 continue
             elem.set('whenTagName', whenTagName.replace("_visual", f"_visual-{i}"))
         #
@@ -121,11 +122,11 @@ def twitter_visual_mod(xml_file: Path):
     tree.write(xml_file, pretty_print=True, encoding='utf-8', xml_declaration=False)
 
 
-if __name__ == "__main__":
+def build_configs() -> dict[str, Path]:
     csv_results_data = Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/extra/results.json")
     data = json.load(csv_results_data.open(encoding="utf-8"))
 
-    print("RV options")
+    # print("RV options")
     rv_type_options = data["rv_type"][0]
     rv_aliases = list(map(lambda _: _.lower().replace(" ", "-"), data["rv_type"][0]))
 
@@ -134,7 +135,7 @@ if __name__ == "__main__":
     # print(rv_choices)
     # print(json.dumps(data, indent=2))
     """
-    
+
     print("NEP")
     for group in data["nep_type"]:
         type_options = group
@@ -164,12 +165,12 @@ if __name__ == "__main__":
         print(fr_choices)
     """
 
-    print("user type")
-    for group in data["user_type"]:
-        type_options = group
-        aliases = list(map(lambda _: _.lower().replace(" ", "_"), group))
-        user_choices = create_choice_elements(type_options, aliases)
-        print(user_choices)
+    # print("user type")
+    # for group in data["user_type"]:
+    #     type_options = group
+    #     aliases = list(map(lambda _: _.lower().replace(" ", "_"), group))
+    #     user_choices = create_choice_elements(type_options, aliases)
+    #     print(user_choices)
     # print("RV confusion TEXT")
 
     template = Template("""<View visibleWhen="choice-selected" whenTagName="rel-value_text"
@@ -216,7 +217,9 @@ if __name__ == "__main__":
     template_file = base_path / "config_template.xml"
     template_text = template_file.read_text(encoding="utf-8")
 
-    platform_files = ["youtube.xml", "twitter.xml"]
+    platform_files = ["youtube.xml", "twitter.xml", "test.xml"]
+    result_dict = {}
+
     for platform_file in platform_files:
         platform_fp = base_path / platform_file
         platform_elements = platform_fp.read_text(encoding="utf-8")
@@ -243,3 +246,10 @@ if __name__ == "__main__":
 
         if platform_file == "twitter.xml":
             twitter_visual_mod(pl_gen_file)
+
+        result_dict[Path(platform_file).stem] = pl_gen_file
+
+    return result_dict
+
+if __name__ == "__main__":
+    build_configs()
