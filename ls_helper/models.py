@@ -410,12 +410,19 @@ class MyProject(BaseModel):
         for task in self.raw_annotation_result.annotations:
             # annotation
             # this should be a model, from which we can also calc the
-            users = [ann.completed_by for ann in task.annotations]
+            if task.data["platform_id"] == "1641215658611421185":
+                pass
+            cancel_mask = [ann.was_cancelled for ann in task.annotations]
+            users = [ann.completed_by for idx, ann in enumerate(task.annotations) if not cancel_mask[idx]]
+
             task_calc_results = TaskAnnotResults(num_coders=len(users), relevant_input_data=task.data,
                                                  num_cancellations=task.cancelled_annotations,
                                                  users=users)
 
             for ann in task.annotations:
+
+                if ann.was_cancelled:
+                    continue
                 user_id = ann.completed_by
                 for ann_res in ann.result:
                     col = ann_res.from_name
@@ -435,6 +442,8 @@ class MyProject(BaseModel):
 
             task_annotation_results.append(task_calc_results)
 
+            if task.data["platform_id"] == "1641215658611421185":
+                pass
         self.calc_annotation_result = ProjectAnnotationResults(
             project_id=self.project_id,
             annotation_results=task_annotation_results)

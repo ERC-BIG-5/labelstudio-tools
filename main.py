@@ -454,8 +454,8 @@ if __name__ == "__main__":
 
     # JUPP
     #annotations_results("youtube", "en", 2)
-    #annotations_results("twitter", "en", 2)
-    agreements("youtube", "en", 2)
+    annotations_results("twitter", "en", 2)
+    agreements("twitter", "en", 2)
     # CODING GAME
     # download_project_views("youtube", "en")
     # download_project_views("youtube", "en")
