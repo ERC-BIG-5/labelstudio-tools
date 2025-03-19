@@ -7,6 +7,7 @@ from typing import Optional
 import pandas as pd
 from irrCAC.raw import CAC
 
+from ls_helper.annotations import get_platform_fixes
 from ls_helper.models import ResultStruct, ProjectAnnotations, MyProject, ProjectAnnotationExtension
 from ls_helper.my_labelstudio_client.models import ProjectModel
 from ls_helper.settings import SETTINGS
@@ -63,9 +64,8 @@ def calc_agreements(
         annotations: ProjectAnnotations,
         agreement_columns: Optional[list[str]] = None) -> tuple[Path, Path]:
     project_id = project_data["id"]
-    data_extensions = None
-    if (fi := SETTINGS.BASE_DATA_DIR / f"fixes/{project_id}.json").exists():
-        data_extensions = ProjectAnnotationExtension.model_validate(json.load(fi.open()))
+
+    data_extensions = get_platform_fixes(project_id)
     mp = MyProject(project_data=project_data,
                    annotation_structure=conf,
                    data_extensions=data_extensions,

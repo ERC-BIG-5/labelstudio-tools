@@ -441,7 +441,9 @@ def agreements(platform: Annotated[str, typer.Option()],
 
 if __name__ == "__main__":
     pass
-    agreements("twitter", "en")
+    # crashes... FIX
+    #agreements("youtube", "en")
+
     # download_project_data("youtube", "en")
 
     # clean ...ON VM
@@ -451,7 +453,9 @@ if __name__ == "__main__":
     #                Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/temp/yt_en_problematic_tasks.json"))
 
     # JUPP
-    # annotations_results("youtube", "en", 2)
+    #annotations_results("youtube", "en", 2)
+    #annotations_results("twitter", "en", 2)
+    agreements("youtube", "en", 2)
     # CODING GAME
     # download_project_views("youtube", "en")
     # download_project_views("youtube", "en")

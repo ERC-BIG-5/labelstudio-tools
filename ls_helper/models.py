@@ -431,6 +431,9 @@ class MyProject(BaseModel):
                                 task_calc_results.add(col, ann_res.direct_value, user_id, choices_c)
                     else:  # text
                         pass
+                    if col == "nep_group-2_visual_other":
+                        task_calc_results.add(col, ann_res.direct_value, user_id, choices_c)
+                    task_calc_results
                 task_calc_results.set_all_to_pre_default()
 
             task_annotation_results.append(task_calc_results)
