@@ -210,7 +210,8 @@ def analyze_rater_pairs(ratings, rater_names=None, categories=None):
 
 # Example usage
 if __name__ == "__main__":
-    # Example data: 10 items rated by 4 raters on a scale from 1-5
+    # Example 1: Complete data (all raters rate all items)
+    print("Example 1: Complete dataset")
     np.random.seed(42)
 
     # Create some data with varying levels of agreement
@@ -232,21 +233,63 @@ if __name__ == "__main__":
     all_ratings = np.clip(all_ratings, 1, 5)
 
     # Convert to DataFrame
-    df_ratings = pd.DataFrame(
+    df_complete = pd.DataFrame(
         all_ratings,
         columns=["Expert A", "Expert B", "Expert C", "Novice"]
     )
 
-    # Analyze the data
-    results = analyze_rater_pairs(df_ratings, categories=[1, 2, 3, 4, 5])
+    print(df_complete.head())
+
+    # Example 2: Sparse data (each item rated by only two raters)
+    print("\nExample 2: Sparse dataset (each item rated by only two raters)")
+
+    # Create a sparse rating matrix where each item is rated by exactly two raters
+    np.random.seed(123)
+    num_items = 20
+    num_raters = 4
+    rater_names = ["Expert A", "Expert B", "Expert C", "Novice"]
+
+    # Initialize with NaN
+    sparse_ratings = np.full((num_items, num_raters), np.nan)
+
+    # For each item, randomly select 2 raters
+    for i in range(num_items):
+        # Choose 2 raters randomly for this item
+        raters_for_item = np.random.choice(num_raters, 2, replace=False)
+
+        # Assign ratings (1-5) for the selected raters
+        base_value = np.random.randint(1, 6)
+
+        for j in raters_for_item:
+            if j == 0 or j == 1:  # Expert A and B tend to agree (low noise)
+                sparse_ratings[i, j] = min(max(base_value + np.random.randint(-1, 2), 1), 5)
+            elif j == 2:  # Expert C moderate agreement (medium noise)
+                sparse_ratings[i, j] = min(max(base_value + np.random.randint(-2, 3), 1), 5)
+            else:  # Novice (high noise)
+                sparse_ratings[i, j] = np.random.randint(1, 6)
+
+    # Convert to DataFrame
+    df_sparse = pd.DataFrame(sparse_ratings, columns=rater_names)
+
+    print(df_sparse.head(10))
+    print("\nRating counts per rater:")
+    print(df_sparse.count())
+
+    # Analyze the sparse data
+    results_sparse = analyze_rater_pairs(df_sparse, categories=[1, 2, 3, 4, 5])
 
     # Print results
-    print(f"Light's Kappa: {results['lights_kappa']:.3f}")
-    print(f"Interpretation: {results['interpretation']}")
+    print("\nLight's Kappa: {:.3f}".format(results_sparse['lights_kappa']))
+    print(f"Interpretation: {results_sparse['interpretation']}")
     print("\nPairwise Cohen's Kappa values:")
-    for pair, kappa in results['sorted_pairs']:
-        print(f"  {pair}: {kappa:.3f} - {interpret_kappa(kappa)}")
+    for pair, kappa in results_sparse['sorted_pairs']:
+        if not np.isnan(kappa):
+            print(f"  {pair}: {kappa:.3f} - {interpret_kappa(kappa)}")
+        else:
+            print(f"  {pair}: NaN - Insufficient overlapping ratings")
 
     # Plot heatmap
-    plot_kappa_heatmap(results['kappa_matrix'])
+    plot_kappa_heatmap(results_sparse['kappa_matrix'])
+    plt.title("Light's Kappa with Sparse Ratings")
     plt.show()
+    print(results_sparse)
