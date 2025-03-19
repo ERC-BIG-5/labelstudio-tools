@@ -70,9 +70,18 @@ class Settings(BaseSettings):
     def plots_dir(self):
         return self.BASE_DATA_DIR / "plots"
 
+    @property
+    def fixes_dir(self):
+        return self.BASE_DATA_DIR / "fixes"
+
+    @property
+    def unifix_file_path(self):
+        return self.fixes_dir / "unifixes.json"
+
 SETTINGS = Settings()
 
 ls_logger = getLogger("ls-helper")
 ls_logger.setLevel(logging.DEBUG)
 ls_logger.addHandler(logging.StreamHandler(sys.stdout))
 ls_logger.propagate = False
+

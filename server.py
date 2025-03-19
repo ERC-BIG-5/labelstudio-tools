@@ -47,11 +47,3 @@ def _agreements(platform: str, language: str, annotation_age: int = 2):
     for k, p in file_paths_dict.items():
         file_paths_dict[k] = Path("data") / p.relative_to("data/ls_data")
     return file_paths_dict
-    """
-    return FileResponse(
-        path=file_path,
-        filename=file_path.name,
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={file_path.name}"}
-    )
-    """

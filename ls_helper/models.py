@@ -120,6 +120,7 @@ class VariableExtension(BaseModel):
     description: Optional[str] = None
     default: Optional[str | list[str]] = None
     split_annotation: Optional[list[VariableSplit]] = None
+    deprecated: Optional[bool] = None
 
     def apply_split(self, value: "TaskAnnotationItem", fillin_defaults: bool = True) -> dict[str, "TaskAnnotationItem"]:
         result_values: dict[str, TaskAnnotationItem] = {}
@@ -142,7 +143,8 @@ class VariableExtension(BaseModel):
 class ProjectAnnotationExtension(BaseModel):
     project_id: int
     fixes: dict[str, VariableExtension]
-    fix_reverse_map: dict[str, str] = Field(description="fixes[k].name_fix = fixes[k]", default_factory=dict)
+    fix_reverse_map: dict[str, str] = Field(description="fixes[k].name_fix = fixes[k]", default_factory=dict,
+                                            exclude=True)
 
     def model_post_init(self, __context: Any) -> None:
         for k, v in self.fixes.items():
@@ -175,6 +177,7 @@ class ChoicesValue(BaseModel):
     def direct_value(self) -> list[str]:
         return self.choices
 
+
 # modelling LS structure
 class TextValue(BaseModel):
     text: list[str]
@@ -186,6 +189,7 @@ class TextValue(BaseModel):
     @property
     def direct_value(self) -> list[str]:
         return self.text
+
 
 # modelling LS structure
 class AnnotationResult(BaseModel):
@@ -331,7 +335,8 @@ class TaskAnnotResults(BaseModel):
             if not new_name:
                 new_name = additional
             if fix.default:
-                self.items[new_name] = TaskAnnotationItem(name=new_name,values=[[fix.default]] * self.num_coders, num_coders=self.num_coders)
+                self.items[new_name] = TaskAnnotationItem(name=new_name, values=[[fix.default]] * self.num_coders,
+                                                          num_coders=self.num_coders)
 
         for split_old_item_name, new_items in split_items:
             del self.items[split_old_item_name]
@@ -451,7 +456,7 @@ class MyProject(BaseModel):
 
         self._extension_applied = True
 
-    def results2csv(self, dest: Path, with_defaults: bool = True, min_coders:int = 1):
+    def results2csv(self, dest: Path, with_defaults: bool = True, min_coders: int = 1):
         if not with_defaults:
             print("warning, result2csv with_defaults is disabled")
         extra_cols = ["num_coders", "users", "cancellations"]
@@ -490,11 +495,8 @@ class PlatformLanguageOverview(BaseModel):
     id: Optional[int] = None
     coding_game_view_id: Optional[int] = None
 
-    def get_view_file(self) -> Optional[Path]:
-        return SETTINGS.view_dir / f"{self.id}.json"
-
     def get_views(self) -> Optional[list[ProjectViewModel]]:
-        view_file = self.get_view_file()
+        view_file = SETTINGS.view_dir / f"{self.id}.json"
         if not view_file.exists():
             return None
         data = json.load(view_file.open())
@@ -550,7 +552,7 @@ class ProjectOverview(RootModel):
     def projects() -> "ProjectOverview":
         pp = Path(SETTINGS.BASE_DATA_DIR / "projects.json")
         if not pp.exists():
-            projects = ProjectOverview()
+            projects = ProjectOverview(json.load(Path("data/projects_template.json").open()))
             json.dump(projects.model_dump(), pp.open("w"), indent=2)
             return projects
         else:
@@ -565,7 +567,10 @@ class ProjectOverview(RootModel):
 
     @staticmethod
     def get_project_id(platform: str, language: str) -> Optional[int]:
-        return ProjectOverview.projects()[platform][language].id
+        id = ProjectOverview.projects()[platform][language].id
+        if not id:
+            raise ValueError(f"No project_id for {platform}, {language}")
+        return id
 
     def get_project(self, p_access: ProjectAccess) -> Optional[PlatformLanguageOverview]:
         if isinstance(p_access, int):
@@ -577,10 +582,11 @@ class ProjectOverview(RootModel):
             platform, language = p_access
             return self[platform][language]
 
+    # todo out
     def get_view_file(self, p_access: ProjectAccess) -> Optional[Path]:
         project = self.get_project(p_access)
         if project:
-            return project.get_view_file()
+            return SETTINGS.view_dir / f"{project.id}.json"
 
     def get_views(self, p_access: ProjectAccess) -> Optional[list[ProjectViewModel]]:
         project = self.get_project(p_access)
@@ -590,3 +596,18 @@ class ProjectOverview(RootModel):
 
 class UserInfo(BaseModel):
     users: dict[int, str]
+
+
+class TasksAgreementsChoices(BaseModel):
+    values: list[list[str]]
+
+
+class TasksAgreements(BaseModel):
+    choices: list[TasksAgreementsChoices]
+
+
+class Agreements(BaseModel):
+    project_id: int
+    # platform: str
+    # language: str
+    tasks: list[TasksAgreements]

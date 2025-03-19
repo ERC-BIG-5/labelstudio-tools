@@ -192,3 +192,20 @@ class UserModel(BaseModel):
     active_organization: int
     allow_newsletters: Optional[bool] = False
     # date_joined: datetime
+
+class ProjectViewDataModel(BaseModel):
+    id: int
+    type: str
+    title: str
+    target: str
+    hiddenColumns: dict[str, list[str]]
+    filters: dict # conjungtion, items
+    ordering: list[str]
+
+class ViewModel(BaseModel):
+    id: int
+    order: int
+    user: int
+    project: int
+    data: ProjectViewsDataModel
+

@@ -3,450 +3,201 @@ import pandas as pd
 from itertools import combinations
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import jaccard_score
+from collections import defaultdict
 
 
-def multilabel_cohens_kappa(rater1_sets, rater2_sets):
+def jaccard_similarity(set1, set2):
     """
-    Calculate Cohen's Kappa for multi-label coding where each rater can assign
-    multiple categories to each item.
+    Calculate Jaccard similarity between two sets (intersection / union).
 
     Parameters:
     -----------
-    rater1_sets : list of sets
-        List of sets, where each set contains the categories assigned by rater1 to an item
-    rater2_sets : list of sets
-        List of sets, where each set contains the categories assigned by rater2 to an item
+    set1 : set
+        First set of categories
+    set2 : set
+        Second set of categories
 
     Returns:
     --------
     float
-        Cohen's Kappa value for multi-label coding
+        Jaccard similarity (0-1)
     """
-    if len(rater1_sets) != len(rater2_sets):
-        raise ValueError("Both raters must have the same number of items")
+    if not set1 and not set2:  # Both empty
+        return 1.0
+    elif not set1 or not set2:  # One empty
+        return 0.0
 
-    n_items = len(rater1_sets)
-
-    # Calculate observed agreement
-    agreement_sum = 0
-    for set1, set2 in zip(rater1_sets, rater2_sets):
-        # Jaccard similarity for sets: |intersection| / |union|
-        if not set1 and not set2:  # Both sets are empty
-            agreement_sum += 1
-        elif not set1 or not set2:  # One set is empty
-            agreement_sum += 0
-        else:
-            intersection = len(set1.intersection(set2))
-            union = len(set1.union(set2))
-            agreement_sum += intersection / union
-
-    observed_agreement = agreement_sum / n_items
-
-    # Calculate agreement expected by chance
-    # For multi-label, we use the concept of label density
-    all_categories = set()
-    for s in rater1_sets + rater2_sets:
-        all_categories.update(s)
-
-    if not all_categories:  # No categories were assigned by any rater
-        return 1.0  # Perfect agreement (both raters assigned nothing to all items)
-
-    # Calculate label density for each category for each rater
-    cat_density_r1 = {cat: sum(1 for s in rater1_sets if cat in s) / n_items for cat in all_categories}
-    cat_density_r2 = {cat: sum(1 for s in rater2_sets if cat in s) / n_items for cat in all_categories}
-
-    # Expected agreement based on label densities
-    expected_agreement_sum = 0
-    for cat in all_categories:
-        # Probability of both raters including the category
-        p_both_include = cat_density_r1[cat] * cat_density_r2[cat]
-        # Probability of both raters excluding the category
-        p_both_exclude = (1 - cat_density_r1[cat]) * (1 - cat_density_r2[cat])
-        # Add to expected agreement
-        expected_agreement_sum += p_both_include + p_both_exclude
-
-    expected_agreement = expected_agreement_sum / len(all_categories)
-
-    # Calculate Cohen's Kappa
-    if expected_agreement == 1:
-        return 1.0  # Perfect agreement when expected agreement is also perfect
-
-    kappa = (observed_agreement - expected_agreement) / (1 - expected_agreement)
-    return kappa
+    intersection = len(set1.intersection(set2))
+    union = len(set1.union(set2))
+    return intersection / union
 
 
-def multilabel_lights_kappa(ratings_sets, rater_names=None):
+def paired_multilabel_kappa(item_data):
     """
-    Calculate Light's Kappa for multi-label coding data.
+    Calculate Light's Kappa for paired multi-label data where each item is rated by exactly
+    two coders who can assign multiple categories per item.
 
     Parameters:
     -----------
-    ratings_sets : list of list of sets or dict of dict of sets
-        Either a list where each element corresponds to a rater, and contains a list of sets
-        (one for each item), or a dictionary with rater names as keys and values as lists of sets.
-    rater_names : list, optional
-        List of rater names, required if ratings_sets is a list
+    item_data : list of tuples
+        List of (coder1, coder2, set1, set2) tuples, where:
+        - coder1, coder2 are the IDs or names of the two coders rating this item
+        - set1, set2 are the sets of categories assigned by each coder
 
     Returns:
     --------
-    float
-        Light's Kappa value (average of all pairwise Cohen's Kappa values)
     dict
-        Dictionary of all pairwise Cohen's Kappa values
-    pandas.DataFrame
-        Matrix of pairwise Cohen's Kappa values
+        Dictionary containing Light's Kappa results and additional analysis
     """
-    # Convert to dictionary format if list is provided
-    if isinstance(ratings_sets, list):
-        if rater_names is None:
-            rater_names = [f"Rater {i + 1}" for i in range(len(ratings_sets))]
-        ratings_dict = {name: sets for name, sets in zip(rater_names, ratings_sets)}
-    else:
-        ratings_dict = ratings_sets
-        rater_names = list(ratings_dict.keys())
+    # Step 1: Group the data by coder pairs
+    pair_items = defaultdict(list)
+    for coder1, coder2, set1, set2 in item_data:
+        # Ensure consistent ordering of coder pairs
+        if coder1 > coder2:
+            coder1, coder2 = coder2, coder1
+            set1, set2 = set2, set1
 
-    num_raters = len(ratings_dict)
+        pair_items[(coder1, coder2)].append((set1, set2))
 
-    if num_raters < 2:
-        raise ValueError("At least two raters are required")
+    # Step 2: Calculate agreement for each coder pair
+    pair_agreements = {}
+    all_jaccard_scores = []
 
-    # Calculate Cohen's Kappa for all pairs of raters
-    pairwise_kappas = {}
-    for rater1, rater2 in combinations(rater_names, 2):
-        # Extract ratings for both raters
-        sets_rater1 = ratings_dict[rater1]
-        sets_rater2 = ratings_dict[rater2]
+    for pair, item_sets in pair_items.items():
+        jaccard_scores = []
+        for set1, set2 in item_sets:
+            jaccard = jaccard_similarity(set1, set2)
+            jaccard_scores.append(jaccard)
+            all_jaccard_scores.append((pair, jaccard))
 
-        # Find overlapping items (both raters have rated)
-        valid_items = []
-        for i, (set1, set2) in enumerate(zip(sets_rater1, sets_rater2)):
-            if set1 is not None and set2 is not None:  # None indicates missing rating
-                valid_items.append(i)
+        # Calculate average Jaccard similarity (observed agreement)
+        observed_agreement = np.mean(jaccard_scores)
 
-        if not valid_items:
-            pairwise_kappas[(rater1, rater2)] = np.nan
-            continue
-
-        # Extract valid sets
-        valid_sets_r1 = [sets_rater1[i] for i in valid_items]
-        valid_sets_r2 = [sets_rater2[i] for i in valid_items]
-
-        # Calculate multi-label Cohen's Kappa
-        kappa = multilabel_cohens_kappa(valid_sets_r1, valid_sets_r2)
-        pairwise_kappas[(rater1, rater2)] = kappa
-
-    # Create a matrix of pairwise kappas
-    kappa_matrix = pd.DataFrame(
-        np.eye(num_raters),  # Diagonal of 1s (perfect agreement with self)
-        index=rater_names,
-        columns=rater_names
-    )
-
-    for (rater1, rater2), kappa in pairwise_kappas.items():
-        kappa_matrix.loc[rater1, rater2] = kappa
-        kappa_matrix.loc[rater2, rater1] = kappa  # Symmetric
-
-    # Calculate Light's Kappa (average of pairwise kappas)
-    valid_kappas = [k for k in pairwise_kappas.values() if not np.isnan(k)]
-    if not valid_kappas:
-        return np.nan, pairwise_kappas, kappa_matrix
-
-    lights_k = np.mean(valid_kappas)
-
-    return lights_k, pairwise_kappas, kappa_matrix
-
-
-def jaccard_based_lights_kappa(ratings_sets, rater_names=None):
-    """
-    An alternative implementation of Light's Kappa for multi-label coding,
-    based directly on Jaccard similarity for agreement calculation.
-
-    Parameters:
-    -----------
-    ratings_sets : list of list of sets or dict of dict of sets
-        Either a list where each element corresponds to a rater, and contains a list of sets
-        (one for each item), or a dictionary with rater names as keys and values as lists of sets.
-    rater_names : list, optional
-        List of rater names, required if ratings_sets is a list
-
-    Returns:
-    --------
-    float
-        Light's Kappa value (average of all pairwise Cohen's Kappa values)
-    dict
-        Dictionary of all pairwise Cohen's Kappa values
-    pandas.DataFrame
-        Matrix of pairwise Cohen's Kappa values
-    """
-    # Similar implementation to multilabel_lights_kappa, but uses Jaccard-based calculation
-    # This version is included as an alternative approach
-
-    # Convert to dictionary format if list is provided
-    if isinstance(ratings_sets, list):
-        if rater_names is None:
-            rater_names = [f"Rater {i + 1}" for i in range(len(ratings_sets))]
-        ratings_dict = {name: sets for name, sets in zip(rater_names, ratings_sets)}
-    else:
-        ratings_dict = ratings_sets
-        rater_names = list(ratings_dict.keys())
-
-    num_raters = len(ratings_dict)
-
-    if num_raters < 2:
-        raise ValueError("At least two raters are required")
-
-    # Calculate Jaccard-based agreement for all pairs of raters
-    pairwise_agreements = {}
-    for rater1, rater2 in combinations(rater_names, 2):
-        # Extract ratings for both raters
-        sets_rater1 = ratings_dict[rater1]
-        sets_rater2 = ratings_dict[rater2]
-
-        # Find overlapping items (both raters have rated)
-        valid_jaccard_scores = []
-        for set1, set2 in zip(sets_rater1, sets_rater2):
-            if set1 is not None and set2 is not None:  # None indicates missing rating
-                # Calculate Jaccard similarity
-                if not set1 and not set2:  # Both empty
-                    valid_jaccard_scores.append(1.0)
-                elif not set1 or not set2:  # One empty
-                    valid_jaccard_scores.append(0.0)
-                else:
-                    intersection = len(set1.intersection(set2))
-                    union = len(set1.union(set2))
-                    valid_jaccard_scores.append(intersection / union)
-
-        if not valid_jaccard_scores:
-            pairwise_agreements[(rater1, rater2)] = np.nan
-            continue
-
-        # Average Jaccard similarity
-        avg_jaccard = np.mean(valid_jaccard_scores)
-        pairwise_agreements[(rater1, rater2)] = avg_jaccard
-
-    # Create a matrix of pairwise agreements
-    agreement_matrix = pd.DataFrame(
-        np.eye(num_raters),  # Diagonal of 1s (perfect agreement with self)
-        index=rater_names,
-        columns=rater_names
-    )
-
-    for (rater1, rater2), agreement in pairwise_agreements.items():
-        agreement_matrix.loc[rater1, rater2] = agreement
-        agreement_matrix.loc[rater2, rater1] = agreement  # Symmetric
-
-    # Calculate Light's Kappa-like measure (average of pairwise Jaccard scores)
-    valid_agreements = [a for a in pairwise_agreements.values() if not np.isnan(a)]
-    if not valid_agreements:
-        return np.nan, pairwise_agreements, agreement_matrix
-
-    avg_agreement = np.mean(valid_agreements)
-
-    return avg_agreement, pairwise_agreements, agreement_matrix
-
-
-def one_hot_encode_sets(sets_list, all_categories=None):
-    """
-    Convert a list of sets to a one-hot encoded matrix.
-
-    Parameters:
-    -----------
-    sets_list : list of sets
-        List of sets, where each set contains the categories assigned to an item
-    all_categories : set or list, optional
-        Set of all possible categories. If None, inferred from the data.
-
-    Returns:
-    --------
-    numpy.ndarray
-        One-hot encoded matrix (items x categories)
-    list
-        List of category names
-    """
-    if all_categories is None:
+        # Calculate expected agreement based on category frequencies within this pair
         all_categories = set()
-        for s in sets_list:
-            if s is not None:
-                all_categories.update(s)
+        cat_counts1 = defaultdict(int)
+        cat_counts2 = defaultdict(int)
 
-    all_categories = sorted(all_categories)
-    n_items = len(sets_list)
-    n_cats = len(all_categories)
+        for set1, set2 in item_sets:
+            for cat in set1:
+                all_categories.add(cat)
+                cat_counts1[cat] += 1
+            for cat in set2:
+                all_categories.add(cat)
+                cat_counts2[cat] += 1
 
-    # Create one-hot matrix
-    one_hot = np.zeros((n_items, n_cats))
-    for i, item_set in enumerate(sets_list):
-        if item_set is not None:
-            for cat in item_set:
-                if cat in all_categories:
-                    j = all_categories.index(cat)
-                    one_hot[i, j] = 1
+        n_items = len(item_sets)
 
-    return one_hot, all_categories
-
-
-def multilabel_lights_kappa_scikit(ratings_sets, rater_names=None):
-    """
-    Calculate Light's Kappa for multi-label coding using scikit-learn's metrics.
-    This approach converts sets to one-hot encoding and uses Jaccard similarity.
-
-    Parameters:
-    -----------
-    ratings_sets : list of list of sets or dict of dict of sets
-        Either a list where each element corresponds to a rater, and contains a list of sets
-        (one for each item), or a dictionary with rater names as keys and values as lists of sets.
-    rater_names : list, optional
-        List of rater names, required if ratings_sets is a list
-
-    Returns:
-    --------
-    float
-        Light's Kappa value (average of all pairwise Cohen's Kappa values)
-    dict
-        Dictionary of all pairwise Cohen's Kappa values
-    pandas.DataFrame
-        Matrix of pairwise Cohen's Kappa values
-    """
-    # Convert to dictionary format if list is provided
-    if isinstance(ratings_sets, list):
-        if rater_names is None:
-            rater_names = [f"Rater {i + 1}" for i in range(len(ratings_sets))]
-        ratings_dict = {name: sets for name, sets in zip(rater_names, ratings_sets)}
-    else:
-        ratings_dict = ratings_sets
-        rater_names = list(ratings_dict.keys())
-
-    num_raters = len(ratings_dict)
-
-    if num_raters < 2:
-        raise ValueError("At least two raters are required")
-
-    # Gather all categories
-    all_categories = set()
-    for rater_sets in ratings_dict.values():
-        for item_set in rater_sets:
-            if item_set is not None:
-                all_categories.update(item_set)
-
-    # Calculate Jaccard similarity for all pairs of raters
-    pairwise_jaccards = {}
-    for rater1, rater2 in combinations(rater_names, 2):
-        # Extract ratings for both raters
-        sets_rater1 = ratings_dict[rater1]
-        sets_rater2 = ratings_dict[rater2]
-
-        # Find overlapping items (both raters have rated)
-        valid_items = []
-        for i, (set1, set2) in enumerate(zip(sets_rater1, sets_rater2)):
-            if set1 is not None and set2 is not None:
-                valid_items.append(i)
-
-        if not valid_items:
-            pairwise_jaccards[(rater1, rater2)] = np.nan
+        if not all_categories:  # No categories were used
+            # Perfect agreement if both coders assigned nothing to all items
+            pair_agreements[pair] = 1.0
             continue
 
-        # Extract valid sets
-        valid_sets_r1 = [sets_rater1[i] for i in valid_items]
-        valid_sets_r2 = [sets_rater2[i] for i in valid_items]
+        # Calculate chance agreement based on category frequencies
+        expected_agreement = 0
+        for cat in all_categories:
+            # Probability of both including the category
+            p1 = cat_counts1[cat] / n_items
+            p2 = cat_counts2[cat] / n_items
+            p_both_include = p1 * p2
 
-        # Convert to one-hot encoding
-        one_hot_r1, _ = one_hot_encode_sets(valid_sets_r1, all_categories)
-        one_hot_r2, _ = one_hot_encode_sets(valid_sets_r2, all_categories)
+            # Probability of both excluding the category
+            p_both_exclude = (1 - p1) * (1 - p2)
 
-        # Calculate Jaccard similarity score using scikit-learn
-        # Average over all items (axis=0) to get a single score
-        jaccard = jaccard_score(one_hot_r1, one_hot_r2, average='samples')
-        pairwise_jaccards[(rater1, rater2)] = jaccard
+            expected_agreement += p_both_include + p_both_exclude
 
-    # Create a matrix of pairwise Jaccard scores
-    jaccard_matrix = pd.DataFrame(
-        np.eye(num_raters),  # Diagonal of 1s (perfect agreement with self)
-        index=rater_names,
-        columns=rater_names
+        expected_agreement /= len(all_categories)
+
+        # Calculate Cohen's Kappa
+        if expected_agreement < 1.0:
+            kappa = (observed_agreement - expected_agreement) / (1 - expected_agreement)
+        else:
+            kappa = 1.0  # Perfect agreement when expected agreement is 1
+
+        pair_agreements[pair] = kappa
+
+    # Step 3: Calculate Light's Kappa (average of pair-wise kappas)
+    lights_kappa = np.mean(list(pair_agreements.values()))
+
+    # Step 4: Create the result dictionary with additional analysis
+    unique_coders = set()
+    for coder1, coder2 in pair_agreements.keys():
+        unique_coders.add(coder1)
+        unique_coders.add(coder2)
+
+    # Create a matrix of pair-wise kappas
+    n_coders = len(unique_coders)
+    coder_indices = {coder: i for i, coder in enumerate(sorted(unique_coders))}
+
+    kappa_matrix = np.eye(n_coders)  # Diagonal of 1s (perfect agreement with self)
+    for (coder1, coder2), kappa in pair_agreements.items():
+        i, j = coder_indices[coder1], coder_indices[coder2]
+        kappa_matrix[i, j] = kappa
+        kappa_matrix[j, i] = kappa  # Symmetric
+
+    # Create pandas DataFrame with coder names
+    kappa_df = pd.DataFrame(
+        kappa_matrix,
+        index=sorted(unique_coders),
+        columns=sorted(unique_coders)
     )
 
-    for (rater1, rater2), jaccard in pairwise_jaccards.items():
-        jaccard_matrix.loc[rater1, rater2] = jaccard
-        jaccard_matrix.loc[rater2, rater1] = jaccard  # Symmetric
+    # Identify items with highest and lowest agreement
+    item_agreements = [(pair, i, jaccard) for i, (pair, jaccard) in enumerate(all_jaccard_scores)]
+    item_agreements.sort(key=lambda x: x[2])
 
-    # Calculate Light's Kappa-like measure (average of pairwise Jaccard scores)
-    valid_jaccards = [j for j in pairwise_jaccards.values() if not np.isnan(j)]
-    if not valid_jaccards:
-        return np.nan, pairwise_jaccards, jaccard_matrix
+    worst_agreements = item_agreements[:5] if len(item_agreements) >= 5 else item_agreements
+    best_agreements = item_agreements[-5:] if len(item_agreements) >= 5 else reversed(item_agreements)
 
-    avg_jaccard = np.mean(valid_jaccards)
+    # Compile results
+    results = {
+        "lights_kappa": lights_kappa,
+        "pair_agreements": pair_agreements,
+        "kappa_matrix": kappa_df,
+        "worst_agreements": worst_agreements,
+        "best_agreements": list(reversed(best_agreements)),
+        "interpretation": interpret_kappa(lights_kappa)
+    }
 
-    # Convert average Jaccard to Kappa-like score
-    # Estimate chance agreement based on label density
-    all_one_hot = []
-    n_items = len(next(iter(ratings_dict.values())))
-
-    for rater, sets in ratings_dict.items():
-        one_hot, _ = one_hot_encode_sets(sets, all_categories)
-        all_one_hot.append(one_hot)
-
-    # Concatenate all one-hot matrices
-    all_one_hot_concat = np.vstack(all_one_hot)
-
-    # Calculate expected agreement by chance (based on label density)
-    label_densities = all_one_hot_concat.mean(axis=0)
-    chance_agreement = 0
-    for density in label_densities:
-        # Probability of both raters including the category
-        p_both_include = density * density
-        # Probability of both raters excluding the category
-        p_both_exclude = (1 - density) * (1 - density)
-        # Add to expected agreement
-        chance_agreement += p_both_include + p_both_exclude
-
-    chance_agreement /= len(label_densities)
-
-    # Convert Jaccard to Kappa using the chance agreement
-    if chance_agreement < 1.0:
-        kappa = (avg_jaccard - chance_agreement) / (1 - chance_agreement)
-    else:
-        kappa = 1.0  # Perfect agreement when chance agreement is also perfect
-
-    return kappa, pairwise_jaccards, jaccard_matrix
+    return results
 
 
-def interpret_agreement(value):
+def interpret_kappa(kappa_value):
     """
-    Interpret the strength of agreement based on Kappa value or Jaccard similarity.
+    Interpret the strength of agreement based on Kappa value.
 
     Parameters:
     -----------
-    value : float
-        The agreement value to interpret
+    kappa_value : float
+        The Kappa value to interpret
 
     Returns:
     --------
     str
-        Interpretation of the agreement value
+        Interpretation of the Kappa value
     """
-    if value < 0:
+    if kappa_value < 0:
         return "Poor agreement (less than chance)"
-    elif value < 0.2:
+    elif kappa_value < 0.2:
         return "Slight agreement"
-    elif value < 0.4:
+    elif kappa_value < 0.4:
         return "Fair agreement"
-    elif value < 0.6:
+    elif kappa_value < 0.6:
         return "Moderate agreement"
-    elif value < 0.8:
+    elif kappa_value < 0.8:
         return "Substantial agreement"
     else:
         return "Almost perfect agreement"
 
 
-def plot_agreement_heatmap(agreement_matrix, title="Pairwise Agreement Values"):
+def plot_kappa_heatmap(kappa_matrix, title="Pairwise Cohen's Kappa Values"):
     """
-    Plot a heatmap of pairwise agreement values.
+    Plot a heatmap of pairwise Cohen's Kappa values.
 
     Parameters:
     -----------
-    agreement_matrix : pandas.DataFrame
-        Matrix of pairwise agreement values
+    kappa_matrix : pandas.DataFrame
+        Matrix of pairwise Cohen's Kappa values
     title : str, optional
         Title for the heatmap
 
@@ -455,17 +206,22 @@ def plot_agreement_heatmap(agreement_matrix, title="Pairwise Agreement Values"):
     matplotlib.figure.Figure
     """
     plt.figure(figsize=(10, 8))
-    mask = np.triu(np.ones_like(agreement_matrix, dtype=bool), k=1)
+
+    # Only mask the upper triangle if the matrix is square
+    if kappa_matrix.shape[0] == kappa_matrix.shape[1]:
+        mask = np.triu(np.ones_like(kappa_matrix, dtype=bool), k=1)
+    else:
+        mask = None
 
     cmap = sns.diverging_palette(230, 20, as_cmap=True)
     sns.heatmap(
-        agreement_matrix,
+        kappa_matrix,
         annot=True,
         mask=mask,
         cmap=cmap,
-        vmin=0,
+        vmin=-1,
         vmax=1,
-        center=0.5,
+        center=0,
         square=True,
         linewidths=.5,
         cbar_kws={"shrink": .5}
@@ -476,121 +232,111 @@ def plot_agreement_heatmap(agreement_matrix, title="Pairwise Agreement Values"):
     return plt.gcf()
 
 
-# Example usage
-if __name__ == "__main__":
-    # Example: Multi-label coding where coders can select multiple categories for each item
+def create_test_data(n_items=30, n_coders=5, n_categories=8, sparsity=0.7):
+    """
+    Create test data for paired multi-label coding.
 
-    # Define categories
-    categories = ["Action", "Comedy", "Drama", "Fantasy", "Horror", "Romance", "Sci-Fi", "Thriller"]
+    Parameters:
+    -----------
+    n_items : int
+        Number of items to create
+    n_coders : int
+        Number of coders
+    n_categories : int
+        Number of possible categories
+    sparsity : float
+        Proportion of item-coder pairs to include (1.0 = all pairs)
 
-    # Create example data: 15 items (e.g., movies) rated by 4 raters
-    # Each rater assigns a set of genres (categories) to each movie
+    Returns:
+    --------
+    list
+        List of (coder1, coder2, set1, set2) tuples
+    """
     np.random.seed(42)
+    coders = [f"Coder_{i + 1}" for i in range(n_coders)]
+    categories = [f"Cat_{chr(65 + i)}" for i in range(n_categories)]
 
-
-    # Generate some random multi-label data with pattern:
-    # - Expert A and B tend to agree (similar label sets)
-    # - Expert C has moderate agreement
-    # - Novice has low agreement
-
-    # Function to create similar sets with controlled variation
-    def create_similar_sets(base_set, similarity):
-        """Create a similar set with controlled variation"""
-        if not base_set:
-            if np.random.random() < similarity:
-                return set()
-            else:
-                n_labels = np.random.randint(1, 4)
-                return set(np.random.choice(categories, n_labels, replace=False))
-
-        new_set = set()
-
-        # Keep each label with probability = similarity
-        for label in base_set:
-            if np.random.random() < similarity:
-                new_set.add(label)
-
-        # Add new labels with probability (1-similarity)/3
-        for label in set(categories) - base_set:
-            if np.random.random() < (1 - similarity) / 3:
-                new_set.add(label)
-
-        return new_set
-
-
-    # Generate base label sets for each item
-    n_items = 15
+    # Create base category sets for each item with varying complexity
     base_sets = []
     for _ in range(n_items):
-        n_labels = np.random.randint(0, 5)  # 0 to 4 labels per item
-        if n_labels == 0:
+        n_cats = np.random.randint(0, 5)  # 0 to 4 categories per item
+        if n_cats == 0:
             base_sets.append(set())
         else:
-            base_sets.append(set(np.random.choice(categories, n_labels, replace=False)))
+            base_sets.append(set(np.random.choice(categories, n_cats, replace=False)))
 
-    # Generate sets for each rater with varying similarity
-    expert_a_sets = [create_similar_sets(s, 0.9) for s in base_sets]  # High similarity to base
-    expert_b_sets = [create_similar_sets(s, 0.85) for s in base_sets]  # High similarity to base
-    expert_c_sets = [create_similar_sets(s, 0.6) for s in base_sets]  # Moderate similarity to base
-    novice_sets = [create_similar_sets(s, 0.3) for s in base_sets]  # Low similarity to base
+    # Create coding pairs with varying agreement
+    item_data = []
 
-    # Introduce some missing ratings (None)
-    for i in range(n_items):
-        if np.random.random() < 0.2:  # 20% chance of missing rating
-            if np.random.random() < 0.5:
-                expert_c_sets[i] = None
-            else:
-                novice_sets[i] = None
+    # Each item is rated by approximately 2 coders
+    for item_idx, base_set in enumerate(base_sets):
+        # Randomly select 2 coders for this item
+        selected_coders = np.random.choice(coders, 2, replace=False)
 
-    # Create a dictionary of ratings
-    ratings_dict = {
-        "Expert A": expert_a_sets,
-        "Expert B": expert_b_sets,
-        "Expert C": expert_c_sets,
-        "Novice": novice_sets
-    }
+        # Create sets for the coders with controlled variation from base set
+        coder_sets = []
 
-    # Print the first few items for inspection
-    print("Multi-label ratings example (first 5 items):")
-    for i in range(5):
+        for coder in selected_coders:
+            # Add noise based on coder's experience level (using coder number as proxy)
+            coder_num = int(coder.split('_')[1])
+            experience = 1 - (coder_num / n_coders) * 0.8  # Higher number = less experienced
+
+            # Create a similar set with controlled variation
+            new_set = set()
+
+            # Keep each label with probability based on experience
+            for label in base_set:
+                if np.random.random() < experience:
+                    new_set.add(label)
+
+            # Add new labels with probability based on inexperience
+            for label in set(categories) - base_set:
+                if np.random.random() < (1 - experience) / 3:
+                    new_set.add(label)
+
+            coder_sets.append(new_set)
+
+        # Add to the data
+        item_data.append((selected_coders[0], selected_coders[1], coder_sets[0], coder_sets[1]))
+
+    return item_data
+
+
+# Example usage
+if __name__ == "__main__":
+    # Create test data: Each item is rated by exactly 2 coders who can assign multiple categories
+    item_data = create_test_data(n_items=40, n_coders=5, n_categories=8)
+
+    # Print a few sample items
+    print("Sample multi-label paired coding data:")
+    for i, (coder1, coder2, set1, set2) in enumerate(item_data[:5]):
         print(f"Item {i + 1}:")
-        for rater, sets in ratings_dict.items():
-            if sets[i] is not None:
-                print(f"  {rater}: {sets[i]}")
-            else:
-                print(f"  {rater}: Not rated")
+        print(f"  {coder1}: {set1}")
+        print(f"  {coder2}: {set2}")
+        print(f"  Jaccard similarity: {jaccard_similarity(set1, set2):.3f}")
         print()
 
-    # Calculate Light's Kappa for multi-label data
-    print("\nUsing custom multi-label Cohen's Kappa:")
-    lights_k, pairwise_kappas, kappa_matrix = multilabel_lights_kappa(ratings_dict)
+    # Calculate Light's Kappa for the paired multi-label data
+    results = paired_multilabel_kappa(item_data)
 
-    print(f"Light's Kappa: {lights_k:.3f}")
-    print(f"Interpretation: {interpret_agreement(lights_k)}")
+    # Print results
+    print(f"Light's Kappa for paired multi-label coding: {results['lights_kappa']:.3f}")
+    print(f"Interpretation: {results['interpretation']}")
 
-    print("\nPairwise agreement values:")
-    for (rater1, rater2), kappa in sorted(pairwise_kappas.items(), key=lambda x: x[1] if not np.isnan(x[1]) else -2,
-                                          reverse=True):
-        if not np.isnan(kappa):
-            print(f"  {rater1} - {rater2}: {kappa:.3f} - {interpret_agreement(kappa)}")
-        else:
-            print(f"  {rater1} - {rater2}: NaN - Insufficient overlapping ratings")
+    print("\nPairwise Cohen's Kappa between coders:")
+    for pair, kappa in sorted(results['pair_agreements'].items(), key=lambda x: x[1], reverse=True):
+        print(f"  {pair[0]} - {pair[1]}: {kappa:.3f} - {interpret_kappa(kappa)}")
 
-    # Plot heatmap
-    plot_agreement_heatmap(kappa_matrix, "Multi-label Light's Kappa")
+    # Plot heatmap of kappa values between coders
+    plot_kappa_heatmap(results['kappa_matrix'])
 
-    # Alternative: Use scikit-learn based approach
-    print("\nUsing scikit-learn Jaccard-based approach:")
-    sk_kappa, sk_pairwise, sk_matrix = multilabel_lights_kappa_scikit(ratings_dict)
+    # Show examples of high and low agreement items
+    print("\nItems with lowest agreement:")
+    for pair, idx, jaccard in results['worst_agreements']:
+        print(f"  Item {idx}: {pair[0]}-{pair[1]} agreement = {jaccard:.3f}")
 
-    print(f"Light's Kappa (scikit): {sk_kappa:.3f}")
-    print(f"Interpretation: {interpret_agreement(sk_kappa)}")
-
-    # Alternative: Direct Jaccard similarity approach
-    print("\nUsing direct Jaccard similarity:")
-    jaccard_k, jaccard_pairwise, jaccard_matrix = jaccard_based_lights_kappa(ratings_dict)
-
-    print(f"Average Jaccard similarity: {jaccard_k:.3f}")
-    print(f"Interpretation: {interpret_agreement(jaccard_k)}")
+    print("\nItems with highest agreement:")
+    for pair, idx, jaccard in results['best_agreements']:
+        print(f"  Item {idx}: {pair[0]}-{pair[1]} agreement = {jaccard:.3f}")
 
     plt.show()

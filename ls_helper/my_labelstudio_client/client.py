@@ -215,6 +215,10 @@ class LabelStudioBase:
         resp = self._client_wrapper.httpx_client.patch(f"/api/dm/views/{view_id}", json=data)
         return resp
 
+    def get_task(self, task_id: int):
+        resp = self._client_wrapper.httpx_client.get(f"/api/tasks/{task_id}")
+        return resp
+
     def get_task_list(self,
                       *,
                       page: Optional[int] = None,
@@ -262,3 +266,11 @@ class LabelStudioBase:
     def validate_project_labeling_config(self, p_id: int, label_config: str):
         resp = self._client_wrapper.httpx_client.post(f"/api/projects/{p_id}/validate/", json={"label_config": label_config})
         return resp
+
+    def create_view(self, project_id: int, data: dict):
+        pass
+
+
+
+def ls_client() -> LabelStudioBase:
+    return LabelStudioBase(base_url=SETTINGS.LS_HOSTNAME, api_key=SETTINGS.LS_API_KEY)
