@@ -112,18 +112,16 @@ def calc_agreements(
             else:
                 options = options_dict[col]
 
-            if _choice_type(col) == "single":
-                vals[col] = [options.index(v[0]) for v in vals[col]]
-            else:
-                res = vals[col]
-                for add in range(min_num_coders - len(res)):
-                    res.append([])
-                del vals[col]
-                for o in options:
-                    vals[f"{col}-[{o}]"] = []
-                    # For each coder's results
-                    # 1 if option is in coder's choices, 0 otherwise
-                    vals[f"{col}-[{o}]"] = [1 if o in coder_choices else 0 for coder_choices in res]
+
+            res = vals[col]
+            for add in range(min_num_coders - len(res)):
+                res.append([])
+            del vals[col]
+            for o in options:
+                vals[f"{col}-[{o}]"] = []
+                # For each coder's results
+                # 1 if option is in coder's choices, 0 otherwise
+                vals[f"{col}-[{o}]"] = [1 if o in coder_choices else 0 for coder_choices in res]
 
         all_rel.append(vals)
 
@@ -136,21 +134,17 @@ def calc_agreements(
     for col in agreement_columns:
         # print(col)
         cols_names = []
-        if _choice_type(col) == "single":
-            cols = [[r[col] for r in all_rel]]
-            cols_names = [col]
-        else:
-            # For multiple choice, gather all option columns
-            option_cols = []
-            options = options_dict[col]
-            # Get all the binary columns for this base column
-            for o in options:
-                option_col_name = f"{col}-[{o}]"
-                cols_names.append(option_col_name)
-                option_col_data = [r.get(option_col_name, 0) for r in all_rel]
-                option_cols.append(option_col_data)
 
-            cols = option_cols
+        option_cols = []
+        options = options_dict[col]
+        # Get all the binary columns for this base column
+        for o in options:
+            option_col_name = f"{col}-[{o}]"
+            cols_names.append(option_col_name)
+            option_col_data = [r.get(option_col_name, 0) for r in all_rel]
+            option_cols.append(option_col_data)
+
+        cols = option_cols
 
         for col_name, col_ in zip(cols_names, cols):
             # print(col_name, len(col_))
@@ -179,64 +173,66 @@ def calc_agreements(
                 gwet_res = cac_4raters.gwet()
                 csv_row["coefficient"] = gwet_res["est"]["coefficient_value"]
 
-                if choice_type != "single":
+                #if choice_type != "single":
                     # Filter rows to include only those where at least one coder selected this option
-                    filtered_mask = [any(row) for row in col_]
-                    positive_mask = [all(row) for row in col_]
-                    conflicting_mask = [any(row) and not all(row) for row in col_]
-                    filtered_col_data = [row for row, mask in zip(col_, filtered_mask) if mask]
+                filtered_mask = [any(row) for row in col_]
+                positive_mask = [all(row) for row in col_]
+                conflicting_mask = [any(row) and not all(row) for row in col_]
+                filtered_col_data = [row for row, mask in zip(col_, filtered_mask) if mask]
 
-                    if filtered_col_data:  # Only proceed if there's data after filtering
-                        filtered_df = pd.DataFrame(filtered_col_data)
-                        num_filtered = len(filtered_df)
-                        csv_row["filtered_count"] = num_filtered
-                        # print(f"Filtered {num_filtered} rows")
-                        if num_filtered > 1:
-                            # Compute agreement on filtered data
-                            # print(filtered_df)
-                            filtered_cac = CAC(filtered_df)
-                            filtered_gwet = filtered_cac.gwet()
-                            both_selected = [row for row in col_ if all(row)]
-                            csv_row["positive_match"] = len(both_selected)
-                            csv_row["filtered_coefficient"] = filtered_gwet["est"]["coefficient_value"]
-                            # print(f"Positive match: {len(both_selected)}")
-                            # print(f"Filtered coefficient: {filtered_gwet['est']['coefficient_value']}")
+                if filtered_col_data:  # Only proceed if there's data after filtering
+                    filtered_df = pd.DataFrame(filtered_col_data)
+                    num_filtered = len(filtered_df)
+                    csv_row["filtered_count"] = num_filtered
+                    # print(f"Filtered {num_filtered} rows")
+                    if num_filtered > 1:
+                        # Compute agreement on filtered data
+                        # print(filtered_df)
+                        filtered_cac = CAC(filtered_df)
+                        filtered_gwet = filtered_cac.gwet()
+                        both_selected = [row for row in col_ if all(row)]
+                        csv_row["positive_match"] = len(both_selected)
+                        csv_row["filtered_coefficient"] = filtered_gwet["est"]["coefficient_value"]
+                        # print(f"Positive match: {len(both_selected)}")
+                        # print(f"Filtered coefficient: {filtered_gwet['est']['coefficient_value']}")
 
-                            # jaccard_similarities = []
-                            original_choices = []
+                        # jaccard_similarities = []
+                        original_choices = []
 
-                            # Extract original choices for each annotator
-                            for task_data in all_rel:
-                                annotator_choices = []
-                                for o in options:
-                                    option_col_name = f"{col}-[{o}]"
-                                    if task_data.get(option_col_name, 0) == 1:
-                                        annotator_choices.append(o)
-                                original_choices.append(annotator_choices)
+                        # Extract original choices for each annotator
+                        for task_data in all_rel:
+                            annotator_choices = []
+                            for o in options:
+                                option_col_name = f"{col}-[{o}]"
+                                if task_data.get(option_col_name, 0) == 1:
+                                    annotator_choices.append(o)
+                            original_choices.append(annotator_choices)
 
-                            # Calculate Jaccard for filtered data only
-                            filtered_choices = [choices for choices, mask in zip(original_choices, filtered_mask) if
-                                                mask]
-                            jaccard_score = calculate_jaccard(filtered_choices)
+                        # Calculate Jaccard for filtered data only
+                        filtered_choices = [choices for choices, mask in zip(original_choices, filtered_mask) if
+                                            mask]
+                        jaccard_score = calculate_jaccard(filtered_choices)
 
-                            # Add to CSV row
-                            csv_row["jaccard_index"] = jaccard_score
+                        # Add to CSV row
+                        csv_row["jaccard_index"] = jaccard_score
 
-                        elif num_filtered == 1:
-                            csv_row["positive_match"] = len([row for row in col_ if all(row)])
-                            # print(f"Positive match: {len([row for row in col_ if all(row)])}")
-                            # print(filtered_df[0])
-                        else:
-                            pass
-                            # print(f"No filtered coefficient")
+                    elif num_filtered == 1:
+                        csv_row["positive_match"] = len([row for row in col_ if all(row)])
+                        # print(f"Positive match: {len([row for row in col_ if all(row)])}")
+                        # print(filtered_df[0])
+                    else:
+                        pass
+                        # print(f"No filtered coefficient")
 
-                    # Write platform IDs for this column to the separate CSV
-                    id_row = {
-                        "filtered_ids": [pid for pid, mask in zip(platform_ids, filtered_mask) if mask],
-                        "positive_ids": [pid for pid, mask in zip(platform_ids, positive_mask) if mask],
-                        "conflicting_ids": [pid for pid, mask in zip(platform_ids, conflicting_mask) if mask]
-                    }
-                    pids[col_name] = id_row
+                # Write platform IDs for this column to the separate CSV
+                id_row = {
+                    "filtered_ids": [pid for pid, mask in zip(platform_ids, filtered_mask) if mask],
+                    "positive_ids": [pid for pid, mask in zip(platform_ids, positive_mask) if mask],
+                    "conflicting_ids": [pid for pid, mask in zip(platform_ids, conflicting_mask) if mask]
+                }
+                pids[col_name] = id_row
+
+
             # print(gwet_res)
             # print(gwet_res["est"]["coefficient_value"])
             writer.writerow(csv_row)

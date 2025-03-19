@@ -420,8 +420,8 @@ def annotations_results(platform: Annotated[str, typer.Argument()],
 
 
 @app.command(short_help="[stats] calculate general agreements stats")
-def agreements(platform: Annotated[str, typer.Option()],
-               language: Annotated[str, typer.Option()],
+def agreements(platform: Annotated[str, typer.Argument()],
+               language: Annotated[str, typer.Argument()],
                accepted_ann_age: Annotated[
                    int, typer.Option(help="Download annotations if older than x hours")] = 2,
                min_num_coders: Annotated[int, typer.Option()] = 2
