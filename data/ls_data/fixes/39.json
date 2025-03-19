@@ -54,10 +54,7 @@
     "inter_group-2_visual-0_other": {},
     "inter_group-2_visual-0_expl": {},
     "val-expr_visual": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "split_annotation": null,
+      "default": "Not codable",
       "deprecated": true
     },
     "val-expr_visual-1": {},
@@ -203,6 +200,134 @@
     "inter_group-1_visual-3_expl": {},
     "inter_group-2_visual-3": {},
     "inter_group-2_visual-3_other": {},
-    "inter_group-2_visual-3_expl": {}
+    "inter_group-2_visual-3_expl": {},
+    "rel-value_visual": {
+      "deprecated": true
+    },
+    "rel-value_visual_expl": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_personal-identity": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_cultural-identity": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_social-responsibility": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_social-cohesion": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_social-memory": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_social-relations": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_sense-of-place": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_sense-of-agency": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_spirituality": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_stewardship-principle": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_stewardship-eudaimonia": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_literacy": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_livelihoods": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_well-being": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_aesthetics": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_reciprocity": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_good-life": {
+      "deprecated": true
+    },
+    "rel-value_visual_conf_kinship": {
+      "deprecated": true
+    },
+    "nep_group-0_visual": {
+      "name_fix": "nep_materiality_visual",
+      "deprecated": true
+    },
+    "nep_group-0_visual_expl": {
+      "name_fix": "nep_materiality_explanation_visual",
+      "deprecated": true
+    },
+    "nep_group-1_visual": {
+      "name_fix": "nep_biological_visual",
+      "deprecated": true
+    },
+    "nep_group-1_visual_expl": {
+      "name_fix": "nep_biological_explanation_visual",
+      "deprecated": true
+    },
+    "nep_group-2_visual": {
+      "name_fix": "landscape-type_visual",
+      "deprecated": true
+    },
+    "nep_group-2x_visual": {
+      "name_fix": "landcover-type_visual",
+      "deprecated": true
+    },
+    "nep_group-2_visual_other": {
+      "name_fix": "landscape-type_other_visual",
+      "deprecated": true
+    },
+    "nep_group-2_visual_expl": {
+      "name_fix": "landscape-type_expl_visual",
+      "deprecated": true
+    },
+    "inter_group-0_visual": {
+      "name_fix": "basic-interaction_visual",
+      "deprecated": true
+    },
+    "inter_group-0_visual_other": {
+      "name_fix": "basic-interaction_other_visual",
+      "deprecated": true
+    },
+    "inter_group-0_visual_expl": {
+      "name_fix": "basic-interaction_expl_visual",
+      "deprecated": true
+    },
+    "inter_group-1_visual": {
+      "name_fix": "stewardship_visual",
+      "deprecated": true
+    },
+    "inter_group-1_visual_other": {
+      "name_fix": "stewardship_other_visual",
+      "deprecated": true
+    },
+    "inter_group-1_visual_expl": {
+      "name_fix": "stewardship_expl_visual",
+      "deprecated": true
+    },
+    "inter_group-2_visual": {
+      "name_fix": "disturbances_visual",
+      "deprecated": true
+    },
+    "inter_group-2_visual_other": {
+      "name_fix": "disturbances_other_visual",
+      "deprecated": true
+    },
+    "inter_group-2_visual_expl": {
+      "name_fix": "disturbances_expl_visual",
+      "deprecated": true
+    }
   }
 }
