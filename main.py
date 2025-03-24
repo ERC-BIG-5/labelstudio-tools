@@ -395,7 +395,6 @@ def agreements(platform: Annotated[str, typer.Argument()],
                min_num_coders: Annotated[int, typer.Option()] = 2
                ) -> dict[str, Path]:
 
-    platforms_overview2
     mp = create_annotations_results((platform,language), accepted_ann_age=accepted_ann_age)
 
     agreements_table_path, pid_data_file = calc_agreements(mp, min_num_coders)

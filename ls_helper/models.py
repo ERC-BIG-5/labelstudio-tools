@@ -76,7 +76,6 @@ class ResultStruct(BaseModel):
         ordered_name_fixes = find_name_fixes(self.ordered_fields, data_extensions)
         for old, new in ordered_name_fixes:
             self.ordered_fields[self.ordered_fields.index(old)] = new
-        # TODO DOES NOT ACCOUNT FOR SPLITS
         choices_name_fixes = find_name_fixes(self.choices.keys(), data_extensions, True)
 
         for old, new in choices_name_fixes:
@@ -85,46 +84,27 @@ class ResultStruct(BaseModel):
             self.choices[new] = choice
             del self.choices[old]
 
-        split_items: list[tuple[str, dict[str, Choices]]] = []
         # check if defaults are correct
         for k, v in self.choices.items():
             ext = data_extensions.get_from_rev(v.name)
-            if ext and ext.split_annotation:
-                all_new_choices: dict[str, "Choices"] = {}
-                for split in ext.split_annotation:
-                    new_choices = Choices(name=split.new_name, toName=v.toName, options=[
-                        Choice(value=v) for v in split.options
-                    ])
-                    if split.default:
-                        assert split.default in [v.annot_val for v in new_choices.options]
-                    all_new_choices[new_choices.name] = new_choices
-                split_items.append((k, all_new_choices))
-            else:
-                # catch non-existing defaults..
-                if ext and ext.default:
-                    if not allow_non_existing_defaults:
-                        if v.choice == "single":
-                            if not isinstance(ext.default, str):
-                                raise ValueError(f"Choice {k} has default value {ext.default}")
-                            if ext.default not in (acc_vals := [c.annot_val for c in v.options]):
-                                raise ValueError(
-                                    f"Choice {k} has default invalid value {ext.default}, options: {acc_vals}")
-                        elif v.choice == "multiple":
-                            if not isinstance(ext.default, list):
-                                raise ValueError(f"Choice {k} has default value {ext.default}")
-                            if any(d not in (acc_vals := [c.annot_val for c in v.options]) for d in ext.default):
-                                raise ValueError(
-                                    f"Choice {k} has default invalid value {ext.default}, options: {acc_vals}")
-                    # TODO pass actually add the default...
-                    v.insert_option(0, Choice(value=ext.default, alias=ext.default))
+            # catch non-existing defaults..
+            if ext and ext.default:
+                if not allow_non_existing_defaults:
+                    if v.choice == "single":
+                        if not isinstance(ext.default, str):
+                            raise ValueError(f"Choice {k} has default value {ext.default}")
+                        if ext.default not in (acc_vals := [c.annot_val for c in v.options]):
+                            raise ValueError(
+                                f"Choice {k} has default invalid value {ext.default}, options: {acc_vals}")
+                    elif v.choice == "multiple":
+                        if not isinstance(ext.default, list):
+                            raise ValueError(f"Choice {k} has default value {ext.default}")
+                        if any(d not in (acc_vals := [c.annot_val for c in v.options]) for d in ext.default):
+                            raise ValueError(
+                                f"Choice {k} has default invalid value {ext.default}, options: {acc_vals}")
+                # TODO pass actually add the default...
+                v.insert_option(0, Choice(value=ext.default, alias=ext.default))
 
-        for old, new_choices in split_items:
-            del self.choices[old]
-            self.choices |= new_choices
-            old_index = self.ordered_fields.index(old)
-            self.ordered_fields.remove(old)
-            for nc in reversed(new_choices.values()):
-                self.ordered_fields.insert(old_index, nc.name)
 
         text_name_fixes = find_name_fixes(self.free_text, data_extensions, True)
         for old, new in text_name_fixes:
@@ -133,37 +113,12 @@ class ResultStruct(BaseModel):
         pass
 
 
-class VariableSplit(BaseModel):
-    new_name: str
-    description: Optional[str] = None
-    options: list[str]
-    default: Optional[str] = None
-    value_map: dict[str, str] = None  # From original to new
-
-
 class VariableExtension(BaseModel):
     name_fix: Optional[str] = None
     description: Optional[str] = None
     default: Optional[str | list[str]] = None
-    split_annotation: Optional[list[VariableSplit]] = None
     deprecated: Optional[bool] = None
 
-    def apply_split(self, value: "TaskAnnotationItem", fillin_defaults: bool = True) -> dict[str, "TaskAnnotationItem"]:
-        result_values: dict[str, TaskAnnotationItem] = {}
-        for split_annotation in self.split_annotation:
-            values = [split_annotation.value_map[v] for v in value.values]
-
-            result_values[split_annotation.new_name] = TaskAnnotationItem(
-                name=split_annotation.new_name,
-                type=value.type_,
-                num_coders=value.num_coders,
-                values=values,
-                _pre_defaults_added=values
-            )
-            if split_annotation.default and fillin_defaults:
-                result_values[split_annotation.new_name].values.extend(
-                    [split_annotation.default] * (len(values) - value.num_coders))
-        return result_values
 
 
 class ProjectAnnotationExtension(BaseModel):
@@ -283,12 +238,11 @@ class TaskResultModel(BaseModel):
 
 class TaskAnnotationItem(BaseModel):
     name: str
-    type_: Literal["single", "multiple", "text", "datetime"] = Field(None, alias="type")
+    type_: Literal["single", "multiple", "text", "datetime", "list"] = Field(None, alias="type")
     num_coders: int
     values: list[list[str]] = Field(default_factory=list)
     value_indices: list[list[int]] = Field(default_factory=list)
     users: list[int | str] = Field(default_factory=list)
-    _pre_defaults_added: list[str] | list[list[str]]
 
     def add(self, value: str | list[str], value_index: int | list[int], user_id: int) -> None:
         self.values.append(value)
@@ -308,13 +262,16 @@ class TaskAnnotationItem(BaseModel):
         # if with_user:
         #     comb = [f"{v} ({u})" for v, u in zip(self.values, self.users)]
         #     return "; ".join(comb)
-        coder_join = [", ".join(cv) for cv in self.values]
+        if self.type_ == "list":
+            coders = []
+            for coder_resp in self.values:
+                # for item in coder_resp:
+                #     items.append(["|".join(item) for item in item])
+                coders.append(["|".join(item) for item in coder_resp])
+            coder_join = [", ".join(cv) for cv in coders]
+        else:
+            coder_join = [", ".join(cv) for cv in self.values]
         return "; ".join(coder_join)
-        # else:
-        #     return "; ".join(self._pre_defaults_added)
-
-    def set_predefaults(self):
-        self._pre_defaults_added = self.values
 
 
 class TaskAnnotResults(BaseModel):
@@ -325,8 +282,8 @@ class TaskAnnotResults(BaseModel):
     relevant_input_data: dict[str, Any]
     users: list[int]
 
-    def add(self, item_name: str, value: str | list[str], value_index: int | list[int], user_id: int,
-            type_: Literal["single", "multiple", "text", "datetime"]) -> None:
+    def add(self, item_name: str, value: list[str] | list[list[str]], value_index: list[int] | list[list[int]], user_id: int,
+            type_: Literal["single", "multiple", "text", "datetime", "list"]) -> None:
         annotation_item = self.items.setdefault(item_name, TaskAnnotationItem.model_validate(
             {"name": item_name, "type": type_, "num_coders": self.num_coders}))
 
@@ -336,15 +293,11 @@ class TaskAnnotResults(BaseModel):
                         annotation_extension: "ProjectAnnotationExtension",
                         fillin_defaults: bool = True) -> None:
         # replace tuple[OLD-NAME: NEW_ITEMS
-        split_items: list[tuple[str, dict[str, TaskAnnotationItem]]] = []
         for item_name, value in self.items.items():
             fix = annotation_extension.get_from_rev(item_name)
             if not fix:
                 pass
             else:
-                if fix.split_annotation:
-                    split_items.append((item_name, fix.apply_split(value, fillin_defaults)))
-                    continue
                 # print(item_name, fix)
                 if fillin_defaults:
                     if value.type_ == "single":
@@ -366,9 +319,7 @@ class TaskAnnotResults(BaseModel):
                 self.items[new_name] = TaskAnnotationItem(name=new_name, values=[[fix.default]] * self.num_coders,
                                                           num_coders=self.num_coders)
 
-        for split_old_item_name, new_items in split_items:
-            del self.items[split_old_item_name]
-            self.items |= new_items
+
 
     def get_disagreements(self) -> dict[str, dict[str, int]]:
         """
@@ -429,13 +380,15 @@ class MyProject(BaseModel):
             default_cols = {orig: fix.default for orig, fix in self.data_extensions.fixes.items() if fix.default}
             if task.data["platform_id"] == "1477219043216142337":
                 pass
+
+
             for ann in task.annotations:
                 if ann.was_cancelled:
                     continue
                 user_id = ann.completed_by
-                #added_cols = set()
+                # added_cols = set()
 
-                result_dict = {name_fixes.get(ann_res.from_name, ann_res.from_name) : ann_res for ann_res in ann.result}
+                result_dict = {name_fixes.get(ann_res.from_name, ann_res.from_name): ann_res for ann_res in ann.result}
 
                 for col in name_fixes.values():
                     fix_name = name_fixes.get(col, col)
@@ -456,58 +409,45 @@ class MyProject(BaseModel):
                         if choice:
                             type_ = choice.choice
                             if default_value:
-                                default_value_index = self.annotation_structure.choices.get(fix_name).get_index(default_value)
+                                default_value_index = self.annotation_structure.choices.get(fix_name).get_index(
+                                    default_value)
                                 task_calc_results.add(fix_name, [default_value], [default_value_index], user_id, type_)
                             else:
                                 task_calc_results.add(fix_name, [], [], user_id, type_)
                         else:
                             task_calc_results.add(fix_name, [], [], user_id, "text")
 
-                """
-                for ann_res in ann.result:
-                    col = ann_res.from_name
-                    fix_name = name_fixes.get(col, col)
-                    added_cols.add(fix_name)
-                    # all_cols.add(col)
-                    if ann_res.type == "choices":
-                        choices_c = self.annotation_structure.choices.get(fix_name)
-                        value = ann_res.direct_value
-                        value_index = self.annotation_structure.choices.get(fix_name).get_index(value)
-                        if not choices_c:
-                            print(f"choice not in result-struct: {col}")
-                        else:
-                            task_calc_results.add(fix_name, value, value_index, user_id, choices_c.choice)
-                    else:  # text
-                        task_calc_results.add(fix_name, ann_res.direct_value, None, user_id, "text")
-                for name, default_val in default_cols.items():
-                    fix_name = name_fixes.get(name, name)
-                    if fix_name in added_cols:
-                        continue
-                    type_ = self.annotation_structure.choices[name].choice
-                    default_value_index = self.annotation_structure.choices.get(name).get_index(default_val)
-                    task_calc_results.add(fix_name, [default_val], [default_value_index], user_id, type_)
 
-                for last in name_fixes:
-                    if last not in task_calc_results.items:
-                        fix_name = name_fixes.get(last, last)
-                        type_ = self.annotation_structure.choices.get(fix_name)
-                        if type_:
-                            type_ = type_.choice
-                        else:
-                            type_ = "text"
-                        task_calc_results.add(fix_name, [], [], user_id, type_)
-                """
-                # merge all individual indices in the naming ..._ID_... into a one level deper nesting.
-                index_names: dict[str, list[tuple[int, str]]] = {}
-                pattern = r'_(\d+)_'
-                for name, result in task_calc_results.items.items():
-                    match = re.search(r'_(\d+)_', name)
-                    if match:
-                        number = int(match.group(1))  # This will be "123"
-                        # print(name, number)
-                        group_name = re.sub(pattern, "_", name)
-                        # print(group_name)
-                        index_names.setdefault(group_name, []).append((number, result.values))
+            index_names: dict[str, list[tuple[int, TaskAnnotationItem]]] = {}
+            # merge all individual indices in the naming ..._ID_... into a one level deper nesting.
+            pattern = r'_(\d+)_|_(\d+)$'
+            for name, result in task_calc_results.items.items():
+                match = re.search(pattern, name)
+                if match:
+                    # #todo use the number to order, guarantee right order
+                    number = int(match.group(0).strip("_"))
+                    group_name = re.sub(pattern, "_", name).strip("_")
+                    index_names.setdefault(group_name, []).append((number,result))
+
+
+
+            for sum_col, data in index_names.items():
+                # delete original columns
+                for c in data:
+                    del task_calc_results.items[c[1].name]
+
+                for user_idx, user in enumerate(users):
+                    # here sort by number
+                    # TODO CHECK IF THE USER
+                    values = []
+                    values_indices = []
+                    for item in data:
+                        item_no, item_data = item
+                        assert users == item_data.users
+                        values.append(item_data.values[user_idx])
+                        values_indices.append(item_data.value_indices[user_idx])
+                    # print("adding", f"{sum_col}_$")
+                    task_calc_results.add(f"{sum_col}_$", values, values_indices, user, "list")
 
             self.annotation_results.append(task_calc_results)
 
@@ -532,13 +472,13 @@ class MyProject(BaseModel):
             print("warning, result2csv with_defaults is disabled")
         extra_cols = ["num_coders", "users", "cancellations", "updated_at", "username", "displayname", "description"]
         rows = []
+
+        all_fieldnames: list[str] = []
         # task
         for task in self.annotation_results:
             if task.num_coders < min_coders:
                 continue
             # annotation
-            if task.relevant_input_data["platform_id"] == "1477219043216142337":
-                pass
             row_final: dict[str, str | int] = {"num_coders": task.num_coders,
                                                "cancellations": task.num_cancellations,
                                                "users": ", ".join(map(str, task.users))}
@@ -551,14 +491,17 @@ class MyProject(BaseModel):
             for input_name, input_value in self.annotation_structure.inputs.items():
                 # todo, crashed, when direct access. task.data is checked against, config
                 row_final[input_name] = task.relevant_input_data.get(input_value)
-
+            for k in row_final:
+                if k not in all_fieldnames:
+                    all_fieldnames.append(k)
             rows.append(row_final)
 
+        # todo, more robust. collect. what we have.
         final_cols = extra_cols
         for col in self.annotation_structure.ordered_fields:
             final_cols.append(col)
 
-        writer = DictWriter(open(dest, 'w'), fieldnames=final_cols)
+        writer = DictWriter(open(dest, 'w'), fieldnames=all_fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 
