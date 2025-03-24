@@ -1,13 +1,15 @@
 import json
+import re
 import uuid
 from collections import Counter
 from csv import DictWriter
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Literal, Any, TypedDict, Iterable
+from typing import Optional, Literal, Any, Iterable
 
 import orjson
-from pydantic import BaseModel, Field, ConfigDict, model_validator, field_validator, RootModel
+from deprecated.classic import deprecated
+from pydantic import BaseModel, Field, ConfigDict, RootModel, model_validator
 
 from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel
 from ls_helper.settings import SETTINGS
@@ -44,10 +46,26 @@ class Choices(BaseModel):
     toName: str
     options: list[Choice]
     choice: Literal["single", "multiple"] = "single"
+    indices: Optional[list[str]] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def create_indices(cls, data: "Choices"):
+        data.indices = [c.annot_val for c in data.options]
+        return data
+
+    def get_index(self, value: str | list[str]) -> int | list[int]:
+        if isinstance(value, str):
+            return self.indices.index(value)
+        else:
+            return [self.indices.index(v) for v in value]
+
+    def insert_option(self, index, choice: Choice):
+        self.options.insert(index, choice)
+        self.indices = [c.annot_val for c in self.options]
 
 
 class ResultStruct(BaseModel):
-    project_id: int
+    # project_id: int
     ordered_fields: list[str]
     choices: dict[str, Choices]
     free_text: list[str]
@@ -82,17 +100,23 @@ class ResultStruct(BaseModel):
                     all_new_choices[new_choices.name] = new_choices
                 split_items.append((k, all_new_choices))
             else:
-                if ext and ext.default and not allow_non_existing_defaults:
-                    if v.choice == "single":
-                        if not isinstance(ext.default, str):
-                            raise ValueError(f"Choice {k} has default value {ext.default}")
-                        if ext.default not in (acc_vals := [c.annot_val for c in v.options]):
-                            raise ValueError(f"Choice {k} has default invalid value {ext.default}, options: {acc_vals}")
-                    elif v.choice == "multiple":
-                        if not isinstance(ext.default, list):
-                            raise ValueError(f"Choice {k} has default value {ext.default}")
-                        if any(d not in (acc_vals := [c.annot_val for c in v.options]) for d in ext.default):
-                            raise ValueError(f"Choice {k} has default invalid value {ext.default}, options: {acc_vals}")
+                # catch non-existing defaults..
+                if ext and ext.default:
+                    if not allow_non_existing_defaults:
+                        if v.choice == "single":
+                            if not isinstance(ext.default, str):
+                                raise ValueError(f"Choice {k} has default value {ext.default}")
+                            if ext.default not in (acc_vals := [c.annot_val for c in v.options]):
+                                raise ValueError(
+                                    f"Choice {k} has default invalid value {ext.default}, options: {acc_vals}")
+                        elif v.choice == "multiple":
+                            if not isinstance(ext.default, list):
+                                raise ValueError(f"Choice {k} has default value {ext.default}")
+                            if any(d not in (acc_vals := [c.annot_val for c in v.options]) for d in ext.default):
+                                raise ValueError(
+                                    f"Choice {k} has default invalid value {ext.default}, options: {acc_vals}")
+                    # TODO pass actually add the default...
+                    v.insert_option(0, Choice(value=ext.default, alias=ext.default))
 
         for old, new_choices in split_items:
             del self.choices[old]
@@ -105,6 +129,8 @@ class ResultStruct(BaseModel):
         text_name_fixes = find_name_fixes(self.free_text, data_extensions, True)
         for old, new in text_name_fixes:
             self.free_text[self.free_text.index(old)] = new
+
+        pass
 
 
 class VariableSplit(BaseModel):
@@ -141,7 +167,6 @@ class VariableExtension(BaseModel):
 
 
 class ProjectAnnotationExtension(BaseModel):
-    project_id: int
     fixes: dict[str, VariableExtension]
     fix_reverse_map: dict[str, str] = Field(description="fixes[k].name_fix = fixes[k]", default_factory=dict,
                                             exclude=True)
@@ -258,14 +283,16 @@ class TaskResultModel(BaseModel):
 
 class TaskAnnotationItem(BaseModel):
     name: str
-    type_: Literal["single", "multiple", "text"] = Field(None, alias="type")
+    type_: Literal["single", "multiple", "text", "datetime"] = Field(None, alias="type")
     num_coders: int
     values: list[list[str]] = Field(default_factory=list)
+    value_indices: list[list[int]] = Field(default_factory=list)
     users: list[int | str] = Field(default_factory=list)
     _pre_defaults_added: list[str] | list[list[str]]
 
-    def add(self, value: str | list[str], user_id: int) -> None:
+    def add(self, value: str | list[str], value_index: int | list[int], user_id: int) -> None:
         self.values.append(value)
+        self.value_indices.append(value_index)
         self.users.append(user_id)
 
     def get_disagreement(self) -> Optional[dict[str, int]]:
@@ -291,18 +318,19 @@ class TaskAnnotationItem(BaseModel):
 
 
 class TaskAnnotResults(BaseModel):
+    task_id: int
     items: Optional[dict[str, TaskAnnotationItem]] = Field(default_factory=dict)
     num_coders: int
     num_cancellations: int
     relevant_input_data: dict[str, Any]
     users: list[int]
 
-    def add(self, item_name: str, value: Any, user_id: int, choices: Optional[Choices] = None) -> None:
-        type_ = choices.choice if choices is not None else "text"
+    def add(self, item_name: str, value: str | list[str], value_index: int | list[int], user_id: int,
+            type_: Literal["single", "multiple", "text", "datetime"]) -> None:
         annotation_item = self.items.setdefault(item_name, TaskAnnotationItem.model_validate(
             {"name": item_name, "type": type_, "num_coders": self.num_coders}))
 
-        annotation_item.add(value, user_id)
+        annotation_item.add(value, value_index, user_id)
 
     def apply_extension(self,
                         annotation_extension: "ProjectAnnotationExtension",
@@ -369,86 +397,123 @@ class TaskAnnotResults(BaseModel):
             res.set_predefaults()
 
 
-class ProjectAnnotationResults(BaseModel):
-    project_id: int
-    annotation_results: list[TaskAnnotResults]
-
-    def apply_extension(self, data_extensions: ProjectAnnotationExtension, fillin_defaults: bool = True) -> None:
-        # apply to the results
-        for ann_res in self.annotation_results:
-            # TaskAnnotResults
-            name_fixes: list[tuple[str, str]] = find_name_fixes(ann_res.items.keys(), data_extensions)
-
-            for old, new in name_fixes:
-                ann_res.items[new] = ann_res.items[old]
-                ann_res.items[new].name = new
-                del ann_res.items[old]
-
-        for ann_res in self.annotation_results:
-            ann_res.apply_extension(data_extensions, fillin_defaults)
-
-
 class MyProject(BaseModel):
+    platform: str
+    language: str
     project_data: ProjectModel
     annotation_structure: ResultStruct
-    raw_annotation_result: Optional[ProjectAnnotations] = None
-    calc_annotation_result: Optional[ProjectAnnotationResults] = None
-    project_views: Optional[list[ProjectViewModel]] = None
     data_extensions: Optional[ProjectAnnotationExtension] = None
+    raw_annotation_result: Optional[ProjectAnnotations] = None
+    annotation_results: Optional[list[TaskAnnotResults]] = None
+    project_views: Optional[list[ProjectViewModel]] = None
 
     _extension_applied: Optional[bool] = False
 
     @property
     def project_id(self) -> int:
-        return self.annotation_structure.project_id
+        return self.project_data.id
 
-    def calculate_results(self) -> ProjectAnnotationResults:
-        if not self.raw_annotation_result:
-            print("No raw_annotation_result")
-        task_annotation_results = []
-        # task
+    def calculate_results(self) -> list[TaskAnnotResults]:
+        self.annotation_results = []
         for task in self.raw_annotation_result.annotations:
             # annotation
             # this should be a model, from which we can also calc the
-            if task.data["platform_id"] == "1641215658611421185":
-                pass
             cancel_mask = [ann.was_cancelled for ann in task.annotations]
             users = [ann.completed_by for idx, ann in enumerate(task.annotations) if not cancel_mask[idx]]
 
             task_calc_results = TaskAnnotResults(num_coders=len(users), relevant_input_data=task.data,
                                                  num_cancellations=task.cancelled_annotations,
-                                                 users=users)
+                                                 users=users, task_id=task.id)
 
+            name_fixes = {orig: fix.name_fix for orig, fix in self.data_extensions.fixes.items() if fix.name_fix}
+            default_cols = {orig: fix.default for orig, fix in self.data_extensions.fixes.items() if fix.default}
+            if task.data["platform_id"] == "1477219043216142337":
+                pass
             for ann in task.annotations:
-
                 if ann.was_cancelled:
                     continue
                 user_id = ann.completed_by
+                #added_cols = set()
+
+                result_dict = {name_fixes.get(ann_res.from_name, ann_res.from_name) : ann_res for ann_res in ann.result}
+
+                for col in name_fixes.values():
+                    fix_name = name_fixes.get(col, col)
+                    if ann_res := result_dict.get(col):
+                        if ann_res.type == "choices":
+                            choices_c = self.annotation_structure.choices.get(fix_name)
+                            value = ann_res.direct_value
+                            value_index = self.annotation_structure.choices.get(fix_name).get_index(value)
+                            if not choices_c:
+                                print(f"choice not in result-struct: {col}")
+                            else:
+                                task_calc_results.add(fix_name, value, value_index, user_id, choices_c.choice)
+                        else:  # text
+                            task_calc_results.add(fix_name, ann_res.direct_value, None, user_id, "text")
+                    else:
+                        default_value = default_cols.get(fix_name)
+                        choice = self.annotation_structure.choices.get(fix_name)
+                        if choice:
+                            type_ = choice.choice
+                            if default_value:
+                                default_value_index = self.annotation_structure.choices.get(fix_name).get_index(default_value)
+                                task_calc_results.add(fix_name, [default_value], [default_value_index], user_id, type_)
+                            else:
+                                task_calc_results.add(fix_name, [], [], user_id, type_)
+                        else:
+                            task_calc_results.add(fix_name, [], [], user_id, "text")
+
+                """
                 for ann_res in ann.result:
                     col = ann_res.from_name
+                    fix_name = name_fixes.get(col, col)
+                    added_cols.add(fix_name)
                     # all_cols.add(col)
                     if ann_res.type == "choices":
-                        choices_c = self.annotation_structure.choices.get(col)
+                        choices_c = self.annotation_structure.choices.get(fix_name)
+                        value = ann_res.direct_value
+                        value_index = self.annotation_structure.choices.get(fix_name).get_index(value)
                         if not choices_c:
                             print(f"choice not in result-struct: {col}")
                         else:
-                            if choices_c.choice == "single":
-                                task_calc_results.add(col, ann_res.direct_value, user_id, choices_c)
-                            else:
-                                task_calc_results.add(col, ann_res.direct_value, user_id, choices_c)
+                            task_calc_results.add(fix_name, value, value_index, user_id, choices_c.choice)
                     else:  # text
-                        task_calc_results.add(col, ann_res.direct_value, user_id, choices_c)
-                task_calc_results.set_all_to_pre_default()
+                        task_calc_results.add(fix_name, ann_res.direct_value, None, user_id, "text")
+                for name, default_val in default_cols.items():
+                    fix_name = name_fixes.get(name, name)
+                    if fix_name in added_cols:
+                        continue
+                    type_ = self.annotation_structure.choices[name].choice
+                    default_value_index = self.annotation_structure.choices.get(name).get_index(default_val)
+                    task_calc_results.add(fix_name, [default_val], [default_value_index], user_id, type_)
 
-            task_annotation_results.append(task_calc_results)
+                for last in name_fixes:
+                    if last not in task_calc_results.items:
+                        fix_name = name_fixes.get(last, last)
+                        type_ = self.annotation_structure.choices.get(fix_name)
+                        if type_:
+                            type_ = type_.choice
+                        else:
+                            type_ = "text"
+                        task_calc_results.add(fix_name, [], [], user_id, type_)
+                """
+                # merge all individual indices in the naming ..._ID_... into a one level deper nesting.
+                index_names: dict[str, list[tuple[int, str]]] = {}
+                pattern = r'_(\d+)_'
+                for name, result in task_calc_results.items.items():
+                    match = re.search(r'_(\d+)_', name)
+                    if match:
+                        number = int(match.group(1))  # This will be "123"
+                        # print(name, number)
+                        group_name = re.sub(pattern, "_", name)
+                        # print(group_name)
+                        index_names.setdefault(group_name, []).append((number, result.values))
 
-            if task.data["platform_id"] == "1641215658611421185":
-                pass
-        self.calc_annotation_result = ProjectAnnotationResults(
-            project_id=self.project_id,
-            annotation_results=task_annotation_results)
-        return self.calc_annotation_result
+            self.annotation_results.append(task_calc_results)
 
+        return self.annotation_results
+
+    @deprecated
     def apply_extension(self, fillin_defaults: bool = True) -> None:
         if not self.data_extensions:
             print("no data extension set/applied")
@@ -457,24 +522,23 @@ class MyProject(BaseModel):
         # apply it to the struct...
         if not self._extension_applied:
             self.annotation_structure.apply_extension(self.data_extensions)
-        # apply it to the results
-        if not self.calc_annotation_result:
-            print("No calc_annotation_result")
         else:
-            self.calc_annotation_result.apply_extension(self.data_extensions, fillin_defaults=fillin_defaults)
+            self.annotation_results.apply_extension(self.data_extensions, fillin_defaults=fillin_defaults)
 
         self._extension_applied = True
 
     def results2csv(self, dest: Path, with_defaults: bool = True, min_coders: int = 1):
         if not with_defaults:
             print("warning, result2csv with_defaults is disabled")
-        extra_cols = ["num_coders", "users", "cancellations"]
+        extra_cols = ["num_coders", "users", "cancellations", "updated_at", "username", "displayname", "description"]
         rows = []
         # task
-        for task in self.calc_annotation_result.annotation_results:
+        for task in self.annotation_results:
             if task.num_coders < min_coders:
                 continue
             # annotation
+            if task.relevant_input_data["platform_id"] == "1477219043216142337":
+                pass
             row_final: dict[str, str | int] = {"num_coders": task.num_coders,
                                                "cancellations": task.num_cancellations,
                                                "users": ", ".join(map(str, task.users))}
@@ -482,6 +546,7 @@ class MyProject(BaseModel):
                 row_final |= task.data_str(with_defaults)
             except Exception as e:
                 print(e)
+                raise
 
             for input_name, input_value in self.annotation_structure.inputs.items():
                 # todo, crashed, when direct access. task.data is checked against, config
@@ -511,6 +576,31 @@ class PlatformLanguageOverview(BaseModel):
         data = json.load(view_file.open())
         return [ProjectViewModel.model_validate(v) for v in data]
 
+    def project_data(self) -> ProjectModel:
+        platform, lang = ProjectOverview.get_platform_lang_from_id(self.id)
+        return ProjectModel.model_validate_json((SETTINGS.projects_dir / f"{platform}/{lang}.json").read_text())
+
+    def get_fixes(self) -> ProjectAnnotationExtension:
+        if (fi := SETTINGS.fixes_dir / "unifixes.json").exists():
+            data_extensions = ProjectAnnotationExtension.model_validate(json.load(fi.open()))
+        else:
+            print(f"no unifixes.json file yet in {SETTINGS.fixes_dir / 'unifix.json'}")
+            data_extensions = {}
+        if (p_fixes_file := SETTINGS.fixes_dir / f"{self.id}.json").exists():
+            p_fixes = ProjectAnnotationExtension.model_validate_json(p_fixes_file.read_text(encoding="utf-8"))
+            data_extensions.fixes.update(p_fixes.fixes)
+            data_extensions.fix_reverse_map.update(p_fixes.fix_reverse_map)
+
+        return data_extensions
+
+    @property
+    def platform(self) -> str:
+        return platforms_overview.get_platform_lang_from_id(self.id)[0]
+
+    @property
+    def language(self) -> str:
+        return platforms_overview.get_platform_lang_from_id(self.id)[1]
+
 
 class ProjectPlatformOverview(RootModel):
     root: dict[str, PlatformLanguageOverview]
@@ -536,9 +626,10 @@ class ProjectPlatformOverview(RootModel):
             return UserInfo.model_validate(json.load(pp.open()))
 
 
-ProjectAccess = int | tuple[str, str]
+ProjectAccess = int | str | tuple[str, str]
 
 
+@deprecated("reason, we want to use ProjectOverview2 (new_models)")
 class ProjectOverview(RootModel):
     root: dict[str, ProjectPlatformOverview]
 
@@ -550,8 +641,13 @@ class ProjectOverview(RootModel):
         for k, v in iter(self.root.items()):
             yield k, v.root
 
-    def __getitem__(self, item):
-        return self.root[item].root
+    def __getitem__(self, item: ProjectAccess | str):
+        if isinstance(item, str):
+            return self.root[item].root
+        elif isinstance(item, int):
+            return self.get_platform_lang_from_id(item)
+        else:
+            return self.root[item[0]][item[1]]
 
     @staticmethod
     def project_data_path(platform: str, language: str) -> Path:
@@ -561,12 +657,13 @@ class ProjectOverview(RootModel):
     def projects() -> "ProjectOverview":
         pp = Path(SETTINGS.BASE_DATA_DIR / "projects.json")
         if not pp.exists():
-            projects = ProjectOverview(json.load(Path("data/projects_template.json").open()))
+            projects = ProjectOverview.model_validate_json(Path("data/projects_template.json").open())
             json.dump(projects.model_dump(), pp.open("w"), indent=2)
             return projects
         else:
-            return ProjectOverview.model_validate(json.load(pp.open()))
+            return ProjectOverview.model_validate_json(pp.read_text())
 
+    # todo maybe return Model
     @staticmethod
     def project_data(platform: str, language: str) -> Optional[dict]:
         pp = ProjectOverview.project_data_path(platform, language)
@@ -580,6 +677,14 @@ class ProjectOverview(RootModel):
         if not id:
             raise ValueError(f"No project_id for {platform}, {language}")
         return id
+
+    @staticmethod
+    def get_platform_lang_from_id(project_id: int) -> tuple[str, str]:
+        for platform, platform_infos in ProjectOverview.projects():
+            for lang, project_info in platform_infos.items():
+                if project_info.id == project_id:
+                    return platform, lang
+        raise ValueError(f"No project_id for {project_id}")
 
     def get_project(self, p_access: ProjectAccess) -> Optional[PlatformLanguageOverview]:
         if isinstance(p_access, int):
@@ -601,6 +706,7 @@ class ProjectOverview(RootModel):
         project = self.get_project(p_access)
         if project:
             return project.get_views()
+        root: dict[str, ProjectPlatformOverview]
 
 
 class UserInfo(BaseModel):
@@ -620,3 +726,6 @@ class Agreements(BaseModel):
     # platform: str
     # language: str
     tasks: list[TasksAgreements]
+
+
+platforms_overview = ProjectOverview.projects()

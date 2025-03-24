@@ -1,10 +1,7 @@
 import xml.etree.ElementTree as ET
-from csv import DictWriter
-from pathlib import Path
 from typing import Optional
 
-from ls_helper.models import ResultStruct, Choices, Choice, VariableExtension, TaskResultModel, TaskAnnotResults, \
-    ProjectAnnotations, ProjectAnnotationExtension, ProjectAnnotationResults
+from ls_helper.models import ResultStruct, Choices, Choice
 
 
 def get_config_project_project_data(project_data: dict):
@@ -12,8 +9,7 @@ def get_config_project_project_data(project_data: dict):
 
 
 def parse_label_config_xml(xml_string,
-                           project_id: int,
-                           include_text: bool = False,
+                           include_text: bool = True,
                            include_text_names: Optional[list[str]] = None) -> ResultStruct:
     root: ET.Element = ET.fromstring(xml_string)
 
@@ -42,7 +38,6 @@ def parse_label_config_xml(xml_string,
                     ordered_fields.append(name)
 
     return ResultStruct(
-        project_id=project_id,
         ordered_fields=ordered_fields,
         choices=choices,
         free_text=free_text,

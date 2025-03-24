@@ -1,25 +1,27 @@
 import json
 import shutil
 import webbrowser
-from datetime import datetime
-from datetime import timedelta
 from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
+from irrCAC.raw import CAC
 from tqdm import tqdm
 
-from ls_helper.agreements import calc_agreements
+from ls_helper.agreements import calc_agreements, prepare_df
 from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.annotation_timing import annotation_timing, plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
-from ls_helper.annotations import get_platform_fixes
+from ls_helper.annotations import create_annotations_results, get_recent_annotations, create_df, \
+    prepare_numeric_agreement
+from ls_helper.config_helper import check_config_update
 from ls_helper.exp.build_configs import build_configs
-from ls_helper.funcs import get_latest_annotation, get_latest_annotation_file, build_view_with_filter_p_ids
-from ls_helper.models import ProjectAnnotations, ProjectOverview, MyProject, ProjectAnnotationExtension
+from ls_helper.funcs import build_view_with_filter_p_ids
+from ls_helper.models import ProjectOverview
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
 from ls_helper.my_labelstudio_client.models import ProjectViewModel
-from ls_helper.settings import SETTINGS, ls_logger
+from ls_helper.new_models import platforms_overview2
+from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
 
 app = typer.Typer(name="Labelstudio helper")
@@ -34,18 +36,6 @@ def open_image_simple(image_path):
     file_path = Path(image_path).absolute().as_uri()
     webbrowser.open(file_path)
 
-
-def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[ProjectAnnotations]:
-    latest_file = get_latest_annotation_file(project_id)
-    if latest_file is not None:
-        file_dt = datetime.strptime(latest_file.stem, "%Y%m%d_%H%M")
-        # print(file_dt, datetime.now(), datetime.now() - file_dt)
-        if datetime.now() - file_dt < timedelta(hours=accepted_age):
-            ls_logger.info("Get recent, gets latest annotation")
-            return get_latest_annotation(project_id)
-
-    print("downloading annotations")
-    return ls_client().get_project_annotations(project_id)
 
 
 def project_selection(platform: Optional[str] = None, language: Optional[str] = None) -> list[tuple[str, str, int]]:
@@ -104,11 +94,12 @@ def setup_project_settings(platform: Annotated[str, typer.Option()],
 @app.command(
     short_help="[setup] run build_config function and copy it into 'labeling_configs_dir'. Run 'update_labeling_configs' afterward")
 def generate_labeling_configs(
-        short="generate labeling configs for all platforms. User 'update-labeling-configs' afterward"):
-    platform_configs = build_configs()
-    for platform, fp in platform_configs.items():
-        # todo, maybe diff the languages...
-        shutil.copy(fp, SETTINGS.labeling_configs_dir / f"{platform}.xml")
+        platform: str, language: str):
+    config_files = build_configs()
+    check_config_update(config_files)
+    pass # TODO
+    #platform_projects.
+    #check_against_fixes(next_conf, )
 
 
 @app.command(help="[ls maint] Upload labeling config")
@@ -267,15 +258,10 @@ def download_project_views(
 @app.command(short_help="[plot] Plot the completed tasks over time")
 def status(platform: Annotated[str, typer.Argument()],
            language: Annotated[str, typer.Argument()],
+           name: Annotated[Optional[str], typer.Option()] = None,
            accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 6):
-    po = ProjectOverview.projects().get_project((platform, language))
-    project_annotations = get_recent_annotations(po.id, accepted_ann_age)
-
-    df = annotation_timing(project_annotations)
-    temp_file = plot_date_distribution(df)
-
-    open_image_simple(temp_file.name)
-    temp_file.close()
+    from ls_helper import main_funcs
+    main_funcs.status(platform, language, name, accepted_ann_age)
 
 
 @app.command(short_help="[plot] Plot the total completed tasks over day")
@@ -393,30 +379,12 @@ def annotations_results(platform: Annotated[str, typer.Argument()],
                             int, typer.Option(help="Download annotations if older than x hours")] = 6,
                         min_coders: Annotated[int, typer.Option()] = 2) -> tuple[
     Path, str]:
-    project_data = ProjectOverview.project_data(platform, language)
-    if not project_data:
-        print(ProjectOverview.projects())
-        raise ValueError(f"No project data for {platform}/{language}")
-    project_id = project_data["id"]
+    mp = create_annotations_results((platform,language), accepted_ann_age=accepted_ann_age)
 
-    conf = parse_label_config_xml(project_data["label_config"],
-                                  project_id=project_id,
-                                  include_text=True)
-
-    annotations = get_recent_annotations(project_id, accepted_ann_age)
-
-    data_extensions = get_platform_fixes(project_id)
-
-    mp = MyProject(project_data=project_data,
-                   annotation_structure=conf,
-                   data_extensions=data_extensions,
-                   raw_annotation_result=annotations)
-    mp.calculate_results()
-    mp.apply_extension(fillin_defaults=True)
-    dest = SETTINGS.annotations_results_dir / f"{str(project_id)}.csv"
+    dest = SETTINGS.annotations_results_dir / f"{str(mp.project_id)}.csv"
     mp.results2csv(dest, with_defaults=True, min_coders=min_coders)
     print(f"annotation results -> {dest}")
-    return dest, annotations.file_path.stem
+    return dest, mp.raw_annotation_result.file_path.stem
 
 
 @app.command(short_help="[stats] calculate general agreements stats")
@@ -426,16 +394,11 @@ def agreements(platform: Annotated[str, typer.Argument()],
                    int, typer.Option(help="Download annotations if older than x hours")] = 2,
                min_num_coders: Annotated[int, typer.Option()] = 2
                ) -> dict[str, Path]:
-    project_data = ProjectOverview.project_data(platform, language)
-    project_id = project_data["id"]
 
-    conf = parse_label_config_xml(project_data["label_config"],
-                                  project_id=project_id,
-                                  include_text=True)
+    platforms_overview2
+    mp = create_annotations_results((platform,language), accepted_ann_age=accepted_ann_age)
 
-    annotations = get_recent_annotations(project_id, accepted_ann_age)
-    agreements_table_path, pid_data_file = calc_agreements(platform, language, min_num_coders, project_data, conf,
-                                                           annotations)
+    agreements_table_path, pid_data_file = calc_agreements(mp, min_num_coders)
     return {"agreements": agreements_table_path, "pids": pid_data_file}
 
 
@@ -454,8 +417,8 @@ if __name__ == "__main__":
 
     # JUPP
     #annotations_results("youtube", "en", 2)
-    annotations_results("twitter", "en", 2)
-    agreements("twitter", "en", 2)
+    #annotations_results("twitter", "en", 2)
+    #agreements("twitter", "en", 2)
     # CODING GAME
     # download_project_views("youtube", "en")
     # download_project_views("youtube", "en")
@@ -470,3 +433,60 @@ if __name__ == "__main__":
     # download_project_data("test")
     # generate_labeling_configs()
     # update_labeling_configs("test", "en")
+
+    # TODO
+    #generate_labeling_configs()
+
+    res = annotations_results("twitter", "en")
+    exit()
+    #print(json.dumps(res.calc_annotation_result.model_dump(), indent=2))
+    Path("d.json").write_text(res.model_dump_json(include={"annotation_results"},indent=2))
+    df = create_df(res)
+    multi_choice_options = {}
+
+    for c_name,c in res.annotation_structure.choices.items():
+        if c.choice == "multiple":
+            multi_choice_options[c_name] = c.indices
+
+    pp_s, pp_m = prepare_df(df,True, {"nature_visual", "stewardship_text"},multi_choice_options)
+    df.to_csv(Path("df.csv"))
+    pp_s["nature_visual"].to_csv(Path("nature_visual.csv"))
+
+    for cat  in ["nature_visual"]:
+        cac_4raters = CAC(pp_s[cat])
+        print(cac_4raters)
+        fleiss = cac_4raters.fleiss()
+        print(fleiss)
+        gwet = cac_4raters.gwet()
+        print(gwet)
+
+    for cat in ["stewardship_text"]:
+        m_df = pp_m[cat]
+        agreement_dfs = {val: group for val, group in m_df.groupby('response_idx')}
+        print(cat)
+        for val,a in agreement_dfs.items():
+            print(multi_choice_options[cat][val])
+            is_all_zeros = (a == 0).all().all()
+            if is_all_zeros:
+                print("None")
+                continue
+            cac_4raters = CAC(a)
+            fleiss = cac_4raters.fleiss()["est"]["coefficient_value"]
+            print(f"{fleiss=}")
+            gwet = cac_4raters.gwet()["est"]["coefficient_value"]
+            print(f"{gwet=}")
+            if multi_choice_options[cat][val] == "preservation":
+                pass
+    #p_df,  mapp_ = prepare_numeric_agreement(df)
+    #print(p_df["nature_visual"].head(30))
+    #p_df["nature_visual"].to_csv(Path("p_df.csv"))
+    """
+    single_df = df[df['question_type'] == 'single']
+
+    # Pivot to get format for agreement calculation
+    pivot_single = single_df.pivot_table(
+        index=['task_id', 'item_id', 'question_id'],
+        columns='coder_id',
+        values='response'
+    )
+    """

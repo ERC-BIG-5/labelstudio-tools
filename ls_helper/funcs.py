@@ -196,7 +196,7 @@ def get_latest_annotation(project_id: int) -> Optional[ProjectAnnotations]:
                               file_path=annotation_file)
 
 
-def generate_result_fixes_template(project_id: int, annotation_struct: ResultStruct) -> ProjectAnnotationExtension:
+def generate_result_fixes_template(annotation_struct: ResultStruct) -> ProjectAnnotationExtension:
     data: dict[str, VariableExtension] = {}
 
     for field in annotation_struct.inputs:
@@ -204,7 +204,7 @@ def generate_result_fixes_template(project_id: int, annotation_struct: ResultStr
     for field in annotation_struct.ordered_fields:
         data[field] = VariableExtension()
 
-    return ProjectAnnotationExtension(project_id=project_id, fixes=data)
+    return ProjectAnnotationExtension(fixes=data)
 
 
 def apply_fixes(annotations: ProjectAnnotations, fixes: ProjectAnnotationExtension):

@@ -2,7 +2,7 @@ from typing import Literal
 
 import numpy as np
 
-from ls_helper.models import ResultStruct, ProjectAnnotationResults
+from ls_helper.models import ResultStruct, TaskAnnotResults
 
 
 def fleiss_kappa(table, method='fleiss'):
@@ -116,7 +116,7 @@ def calculate_fleiss_kappa(results: list[TaskResults],
     return float(kappa)
 
 
-def calc_agreements(result: ProjectAnnotationResults,
+def calc_agreements(results_list: list[TaskAnnotResults],
                     result_struct: ResultStruct,
                     all_coders: set[str],
                     handle_missing_coding: Literal["only_full", "all", "discard_missing"] = 'only_full'):
@@ -132,7 +132,6 @@ def calc_agreements(result: ProjectAnnotationResults,
         print("No agreement calculation for less than 2 coders. bye")
         return
     agreements = {}
-    results_list = result.annotation_results
     for choice in result_struct.choices.keys():
         if handle_missing_coding == "only_full":
             # check, if any coder, did not answer

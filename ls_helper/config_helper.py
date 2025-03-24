@@ -1,11 +1,13 @@
-import csv
-import json
-import os
+import shutil
 import xml.etree.ElementTree as ET
-from collections import defaultdict
 from pathlib import Path
 
-from pandas.core.config_init import copy_on_write_doc
+from deepdiff import DeepDiff
+
+from ls_helper.ana_res import parse_label_config_xml
+from ls_helper.exp.build_configs import build_configs
+from ls_helper.models import PlatformLanguageOverview, ProjectOverview, ProjectAnnotationExtension, ResultStruct
+from ls_helper.settings import SETTINGS
 
 
 def get_tree_n_root(xml_file: Path) -> tuple:
@@ -78,6 +80,7 @@ def find_duplicates(xml_file):
         k: v for k, v in unique_names.items() if len(v) > 1
     }
 
+
 def check_references(root):
     print("broken references:")
     names = list(find_all_names(root).keys())
@@ -88,15 +91,44 @@ def check_references(root):
             print(ref)
 
 
-def complete_config(xml_file: Path):
-    tree = ET.parse(xml_file)
-    root = tree.getroot()
+def check_config_update(platform_configs: dict[str, Path]):
+    for platform, fp in platform_configs.items():
+        # todo, maybe diff the languages...
+        next_file = SETTINGS.labeling_configs_dir / f"{platform}-next.xml"
+        next_conf = parse_label_config_xml(fp.read_text())
 
-    img1 = root.findall(".//{*}Image")[0]
-    print(img1)
+        # shutil.copy(fp, next_file)
+
+        current_file = SETTINGS.labeling_configs_dir / f"{platform}.xml"
+        current_conf = parse_label_config_xml(current_file.read_text())
+
+        diff = DeepDiff(current_conf, next_conf)
+        print(diff)
+
+
+
+
+def check_against_fixes(label_config: str | ResultStruct, fixes: ProjectAnnotationExtension):
+    """
+    Do
+    :param label_config: xml config string
+    :param project_info:
+    :return:
+    """
+    if isinstance(label_config, str):
+        conf = parse_label_config_xml(label_config)
+    else:
+        conf = label_config
+    columns = set(list(conf.choices.keys()) + list(conf.free_text))
+    fixes_set = set(fixes.fixes)
+    print(f"columns missing in fixes: {columns - fixes_set}")
+    print(f"obsolete fixes: {columns - fixes_set}")
 
 
 if __name__ == "__main__":
+    p_info = ProjectOverview.projects().get_project(("twitter", "en"))
+    check_against_fixes(p_info)
+    """ not sure, what was done here...
     project_p = os.getcwd()
     step1_t = Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/configs/step1/output/gen_twitter.xml")
     # step1_t = Path(f"{project_p}/data//home/rsoleyma/projects/MyLabelstudioHelper/data/configs/step1/output/gen_twitter.xml")
@@ -114,6 +146,7 @@ if __name__ == "__main__":
     all_names = list(all_names.keys())
     all_names_s = [s.split("_") for s in all_names]
     # print(json.dumps(list(zip(all_names,all_names_s)), indent=2))
+    """
 
     # print(all_names_s)
     # fout = Path(f"{project_p}/data/extra/name_checker.csv")

@@ -3,14 +3,14 @@ from pathlib import Path
 
 from ana_res import parse_label_config_xml, get_config_project_project_data
 from ls_helper.funcs import get_latest_annotation, test_update_other_coding_game, update_coding_game
-from ls_helper.models import ProjectAnnotationResults, MyProject, ProjectAnnotationExtension
+from ls_helper.models import MyProject, ProjectAnnotationExtension, TaskAnnotResults
 from my_labelstudio_client.client import LabelStudioBase
 from settings import SETTINGS
 
 
-def upload_disagreement_selection(results: ProjectAnnotationResults, view_id: int):
+def upload_disagreement_selection(results: list[TaskAnnotResults], view_id: int):
     disagreement_platform_ids = []
-    for task_result in results.annotation_results:
+    for task_result in results:
         simple_disagreements = task_result.get_disagreements()
         if simple_disagreements:
             platform_id = task_result.relevant_input_data["platform_id"]

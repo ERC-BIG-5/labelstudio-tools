@@ -1,0 +1,28 @@
+# Readme
+
+### Keeping the configs right
+
+People decide on changing the configs while data is coming in.
+For this, we have the fixes files (Model: ProjectAnnotationExtension)
+which stores "fixes" a dict of names that correspond to task_data (optionally),
+choices and text-inputs (other later, other types of user input).
+
+These fixes per variable of type:
+
+```python
+class VariableExtension(BaseModel):
+    name_fix: Optional[str] = None
+    description: Optional[str] = None
+    default: Optional[str | list[str]] = None
+    split_annotation: Optional[list[VariableSplit]] = None
+    deprecated: Optional[bool] = None
+```
+
+crucially have: `name_fix` which is a fix applied after creating result and agreement tables.
+`default` and `deprecated`
+
+Todo:
+- [ ] we need more tooling around `deprecated`. kicking them out of the results and agreements. 
+    and finding where they are still in use (in order to create LS views) so people can update the annotations.
+    A final step  would be removing them from the label_configs, and fixes, when data is clean.
+   the configs, should work with the "hidden" or "deprecated" classes, to hidden, highlight them (red).
