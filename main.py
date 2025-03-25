@@ -5,22 +5,20 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
-from irrCAC.raw import CAC
 from tqdm import tqdm
 
 from ls_helper.agreements import calc_agreements, prepare_df
 from ls_helper.ana_res import parse_label_config_xml
-from ls_helper.annotation_timing import annotation_timing, plot_date_distribution, annotation_total_over_time, \
+from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
-from ls_helper.annotations import create_annotations_results, get_recent_annotations, create_df, \
-    prepare_numeric_agreement
+from ls_helper.annotations import create_annotations_results, get_recent_annotations
 from ls_helper.config_helper import check_config_update
 from ls_helper.exp.build_configs import build_configs
 from ls_helper.funcs import build_view_with_filter_p_ids
 from ls_helper.models import ProjectOverview
+from ls_helper.my_labelstudio_client.annot_master import prepare_df_for_agreement, calc_agreements2, prep_multi_select
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
 from ls_helper.my_labelstudio_client.models import ProjectViewModel
-from ls_helper.new_models import platforms_overview2
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
 
@@ -35,7 +33,6 @@ def open_image_simple(image_path):
     # Convert to absolute path and URI format
     file_path = Path(image_path).absolute().as_uri()
     webbrowser.open(file_path)
-
 
 
 def project_selection(platform: Optional[str] = None, language: Optional[str] = None) -> list[tuple[str, str, int]]:
@@ -97,9 +94,9 @@ def generate_labeling_configs(
         platform: str, language: str):
     config_files = build_configs()
     check_config_update(config_files)
-    pass # TODO
-    #platform_projects.
-    #check_against_fixes(next_conf, )
+    pass  # TODO
+    # platform_projects.
+    # check_against_fixes(next_conf, )
 
 
 @app.command(help="[ls maint] Upload labeling config")
@@ -379,7 +376,7 @@ def annotations_results(platform: Annotated[str, typer.Argument()],
                             int, typer.Option(help="Download annotations if older than x hours")] = 6,
                         min_coders: Annotated[int, typer.Option()] = 2) -> tuple[
     Path, str]:
-    mp = create_annotations_results((platform,language), accepted_ann_age=accepted_ann_age)
+    mp = create_annotations_results((platform, language), accepted_ann_age=accepted_ann_age)
 
     dest = SETTINGS.annotations_results_dir / f"{str(mp.project_id)}.csv"
     mp.results2csv(dest, with_defaults=True, min_coders=min_coders)
@@ -394,8 +391,7 @@ def agreements(platform: Annotated[str, typer.Argument()],
                    int, typer.Option(help="Download annotations if older than x hours")] = 2,
                min_num_coders: Annotated[int, typer.Option()] = 2
                ) -> dict[str, Path]:
-
-    mp = create_annotations_results((platform,language), accepted_ann_age=accepted_ann_age)
+    mp = create_annotations_results((platform, language), accepted_ann_age=accepted_ann_age)
 
     agreements_table_path, pid_data_file = calc_agreements(mp, min_num_coders)
     return {"agreements": agreements_table_path, "pids": pid_data_file}
@@ -404,7 +400,7 @@ def agreements(platform: Annotated[str, typer.Argument()],
 if __name__ == "__main__":
     pass
     # crashes... FIX
-    #agreements("youtube", "en")
+    # agreements("youtube", "en")
 
     # download_project_data("youtube", "en")
 
@@ -415,9 +411,9 @@ if __name__ == "__main__":
     #                Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/temp/yt_en_problematic_tasks.json"))
 
     # JUPP
-    #annotations_results("youtube", "en", 2)
-    #annotations_results("twitter", "en", 2)
-    #agreements("twitter", "en", 2)
+    # annotations_results("youtube", "en", 2)
+    # annotations_results("twitter", "en", 2)
+    # agreements("twitter", "en", 2)
     # CODING GAME
     # download_project_views("youtube", "en")
     # download_project_views("youtube", "en")
@@ -434,51 +430,66 @@ if __name__ == "__main__":
     # update_labeling_configs("test", "en")
 
     # TODO
-    #generate_labeling_configs()
+    # generate_labeling_configs()
 
-    res = annotations_results("twitter", "en")
+    # METHOD 3. straight to DF
+    # get raw DF
+    res = create_annotations_results(("twitter", "en"))
+    #
+    # deff = prepare_df_for_agreement(res,"framing")
+    # calc_agreements2(deff)
+
+    cats = ["nature_text", "val-expr_text", "val-expr_visual", "nep_materiality_text", "nep_biological_text",
+            "landscape-type_text", "basic-interaction_text","media_relevant", "nep_materiality_visual_$", "nep_biological_visual_$", "landscape-type_visual_$",
+            "basic-interaction_visual_$"]
+    for cat in cats:
+        # print(cat)
+        type_ = res.annotation_structure.question_type(cat)
+        if type_ == "single":
+            deff = prepare_df_for_agreement(res, cat, False)
+            fleiss, gwet = calc_agreements2(deff)
+            print(f"{cat=} {fleiss=} {gwet=}")
+        else:
+            print(f"M {cat}")
+            rdf = res.raw_annotation_df
+            options = res.annotation_structure.choices.get(cat).raw_options_list()
+            # print(options)
+            # red_df = prep_multi_select(rdf, cat, options)
+            pass
+
     exit()
-    #print(json.dumps(res.calc_annotation_result.model_dump(), indent=2))
-    Path("d.json").write_text(res.model_dump_json(include={"annotation_results"},indent=2))
-    df = create_df(res)
-    multi_choice_options = {}
 
-    for c_name,c in res.annotation_structure.choices.items():
-        if c.choice == "multiple":
-            multi_choice_options[c_name] = c.indices
+    # METHOD 2.... TOO LONG
+    res = create_annotations_results(("twitter", "en"))
+    # res.results2csv(Path("t.csv"), with_defaults=True, min_coders=2)
+    # # print(json.dumps(res.calc_annotation_result.model_dump(), indent=2))
+    # # Path("d.json").write_text(res.model_dump_json(include={"annotation_results"},indent=2))
+    # df = create_df(res)
+    # df.to_csv(Path("df.csv"))
+    #
+    # multi_choice_options = {}
+    #
+    # for c_name, c in res.annotation_structure.choices.items():
+    #     if c.choice == "multiple":
+    #         multi_choice_options[c_name] = c.indices
+    #
+    pp_s, pp_m = prepare_df(df, True, {"nature_text", "nature_visual", "nep_materiality_text", "nep_biological_text",
+                                       "landscape-type_text",
+                                       "basic-interaction_text", "media_relevant"}, multi_choice_options)
+    # df.to_csv(Path("df.csv"))
+    #
+    # cats = ["nature_text", "nature_visual",
+    #         "nep_materiality_text", "nep_biological_text", "landscape-type_text", "basic-interaction_text",
+    #         "media_relevant", "nep_materiality_visual_$", "nep_biological_visual_$", "landscape-type_visual_$",
+    #         "basic-interaction_visual_$"]
+    #
+    # calc_agreements2(res, cats)
+    # END METHOD 2
+    # pp_s["nature_visual"].to_csv(Path("nature_visual.csv"))
 
-    pp_s, pp_m = prepare_df(df,True, {"nature_visual", "stewardship_text"},multi_choice_options)
-    df.to_csv(Path("df.csv"))
-    pp_s["nature_visual"].to_csv(Path("nature_visual.csv"))
-
-    for cat  in ["nature_visual"]:
-        cac_4raters = CAC(pp_s[cat])
-        print(cac_4raters)
-        fleiss = cac_4raters.fleiss()
-        print(fleiss)
-        gwet = cac_4raters.gwet()
-        print(gwet)
-
-    for cat in ["stewardship_text"]:
-        m_df = pp_m[cat]
-        agreement_dfs = {val: group for val, group in m_df.groupby('response_idx')}
-        print(cat)
-        for val,a in agreement_dfs.items():
-            print(multi_choice_options[cat][val])
-            is_all_zeros = (a == 0).all().all()
-            if is_all_zeros:
-                print("None")
-                continue
-            cac_4raters = CAC(a)
-            fleiss = cac_4raters.fleiss()["est"]["coefficient_value"]
-            print(f"{fleiss=}")
-            gwet = cac_4raters.gwet()["est"]["coefficient_value"]
-            print(f"{gwet=}")
-            if multi_choice_options[cat][val] == "preservation":
-                pass
-    #p_df,  mapp_ = prepare_numeric_agreement(df)
-    #print(p_df["nature_visual"].head(30))
-    #p_df["nature_visual"].to_csv(Path("p_df.csv"))
+    # p_df,  mapp_ = prepare_numeric_agreement(df)
+    # print(p_df["nature_visual"].head(30))
+    # p_df["nature_visual"].to_csv(Path("p_df.csv"))
     """
     single_df = df[df['question_type'] == 'single']
 

@@ -8,15 +8,6 @@ from my_labelstudio_client.client import LabelStudioBase
 from settings import SETTINGS
 
 
-def upload_disagreement_selection(results: list[TaskAnnotResults], view_id: int):
-    disagreement_platform_ids = []
-    for task_result in results:
-        simple_disagreements = task_result.get_disagreements()
-        if simple_disagreements:
-            platform_id = task_result.relevant_input_data["platform_id"]
-            disagreement_platform_ids.append(platform_id)
-            # print(simple_disagreements)
-    print(disagreement_platform_ids)
 
 
 if __name__ == "__main__":

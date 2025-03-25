@@ -2,7 +2,9 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import pandas as pd
+from deprecated.classic import deprecated
 from pandas import DataFrame
+from pydantic import BaseModel
 
 from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.funcs import get_latest_annotation_file, get_latest_annotation
@@ -41,11 +43,11 @@ def create_annotations_results(project: ProjectAccess, add_annotations: bool = T
 
     if add_annotations:
         mp.raw_annotation_result = get_recent_annotations(p_info.id, accepted_ann_age)
-        mp.annotation_structure.apply_extension(mp.data_extensions)
-        mp.calculate_results()
+        mp.apply_extension()
+        mp.get_annotation_df()
     return mp
 
-
+@deprecated("straight to df2")
 def create_df(mp: MyProject) -> DataFrame:
     task_results = mp.annotation_results
     # Create lists to store our data
@@ -53,35 +55,72 @@ def create_df(mp: MyProject) -> DataFrame:
 
     # For each task result object
     for task_idx, task_result in enumerate(task_results):
+        #print(task_result.task_id)
         # For each item in the task
         for item_id, item in task_result.items.items():
             # Skip anything that's not single or multiple type
-            if item.type_ not in ["single", "multiple"]:
+
+            if item.type_ not in ["single", "multiple", "list-single","list-multiple"]:
+                # text
+                # print(item.type_)
                 continue
 
             # For each coder
             for user_idx, user_id in enumerate(item.users):
                 # Get this user's values for this item
                 if user_idx < len(item.values):
-                    user_values,user_values_idx = item.values[user_idx], item.value_indices[user_idx]
+                    user_values, user_values_idx = item.values[user_idx], item.value_indices[user_idx]
 
-                    for val,val_idx in zip(user_values, user_values_idx):
-                    # For single choice, just one value per user per item
-                        rows.append({
-                            "task_id": task_result.task_id,
-                            "task_idx": task_idx,
-                            "item_id": item_id,
-                            "coder_id": user_id,
-                            "question_id": item.name,
-                            "question_type": item.type_,
-                            "response": val,
-                            "response_idx": val_idx
-                        })
-
+                    for idx,(val, val_idx) in enumerate(zip(user_values, user_values_idx)):
+                        # For single choice, just one value per user per item
+                        if item.type_.startswith("list"):
+                            if not val:
+                                continue
+                            for i_idx, i_val in enumerate(val):
+                                rows.append({
+                                    "task_id": task_result.task_id,
+                                    "task_idx": task_idx,
+                                    "coder_id": user_id,
+                                    "question_id": item.name,
+                                    "question_type": item.type_,
+                                    "response": i_val,
+                                    "list_index": idx,
+                                    "response_idx": val_idx[i_idx] if val_idx else None  # could be text
+                                })
+                        else:
+                            rows.append({
+                                "task_id": task_result.task_id,
+                                "task_idx": task_idx,
+                                "coder_id": user_id,
+                                "question_id": item.name,
+                                "question_type": item.type_,
+                                "response": val,
+                                "list_index": 0,
+                                "response_idx": val_idx
+                            })
 
     # Create the DataFrame
     df = pd.DataFrame(rows)
     return df
+
+def prepare_for_question(mp, question):
+    """
+    not sure, if that works well...
+    :param mp:
+    :param question:
+    :return:
+    """
+    df = mp.raw_annotation_df
+    # Get the valid task_id and ann_id combinations that exist in the original data
+    valid_combinations = df[['task_id', 'ann_id', 'user_id']].drop_duplicates()
+
+    # Create a complete DataFrame with valid combinations for the specific question
+    complete_df = valid_combinations.copy()
+    complete_df['question'] = question
+
+    # Filter the original DataFrame for the specific question
+    question_df = df[df["question"] == question].copy()
+    return question_df
 
 
 def prepare_numeric_agreement(df):
@@ -127,9 +166,6 @@ def prepare_numeric_agreement(df):
 
     return pivot_dfs, category_maps
 
-
-def annotations_calculations2(p_info: MyProject):
-    pass
 
 if __name__ == "__main__":
     pass

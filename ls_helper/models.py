@@ -1,14 +1,15 @@
 import json
 import re
 import uuid
-from collections import Counter
 from csv import DictWriter
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Literal, Any, Iterable
 
 import orjson
+import pandas as pd
 from deprecated.classic import deprecated
+from pandas import DataFrame
 from pydantic import BaseModel, Field, ConfigDict, RootModel, model_validator
 
 from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel
@@ -63,6 +64,9 @@ class Choices(BaseModel):
         self.options.insert(index, choice)
         self.indices = [c.annot_val for c in self.options]
 
+    def raw_options_list(self) -> list[str]:
+        return [c.annot_val for c in self.options]
+
 
 class ResultStruct(BaseModel):
     # project_id: int
@@ -105,12 +109,21 @@ class ResultStruct(BaseModel):
                 # TODO pass actually add the default...
                 v.insert_option(0, Choice(value=ext.default, alias=ext.default))
 
-
         text_name_fixes = find_name_fixes(self.free_text, data_extensions, True)
         for old, new in text_name_fixes:
             self.free_text[self.free_text.index(old)] = new
 
         pass
+
+    def question_type(self, q) -> str:
+        if "$" in q:
+            q = q.replace("$","0")
+        if q in self.choices:
+            return self.choices[q].choice
+        elif q in self.free_text:
+            return "text"
+        else:
+            raise ValueError("unknown question type", q)
 
 
 class VariableExtension(BaseModel):
@@ -118,7 +131,6 @@ class VariableExtension(BaseModel):
     description: Optional[str] = None
     default: Optional[str | list[str]] = None
     deprecated: Optional[bool] = None
-
 
 
 class ProjectAnnotationExtension(BaseModel):
@@ -238,7 +250,8 @@ class TaskResultModel(BaseModel):
 
 class TaskAnnotationItem(BaseModel):
     name: str
-    type_: Literal["single", "multiple", "text", "datetime", "list"] = Field(None, alias="type")
+    type_: Literal["single", "multiple", "text", "datetime", "list-single", "list-multiple", "list-text"] = Field(None,
+                                                                                                                  alias="type")
     num_coders: int
     values: list[list[str]] = Field(default_factory=list)
     value_indices: list[list[int]] = Field(default_factory=list)
@@ -249,20 +262,12 @@ class TaskAnnotationItem(BaseModel):
         self.value_indices.append(value_index)
         self.users.append(user_id)
 
-    def get_disagreement(self) -> Optional[dict[str, int]]:
-        if self.type_ == "single":
-            if self.num_coders > 1:
-                if len(set(self.values)) > 1:
-                    return dict(Counter(self.values))
-        else:
-            print("[TaskAnnotationItem] no disagreement calculation for other than 'single'")
-
     def value_str(self, with_defaults: bool = True, with_user: bool = False) -> str:
         # if with_defaults:
         # if with_user:
         #     comb = [f"{v} ({u})" for v, u in zip(self.values, self.users)]
         #     return "; ".join(comb)
-        if self.type_ == "list":
+        if self.type_.startswith("list"):
             coders = []
             for coder_resp in self.values:
                 # for item in coder_resp:
@@ -282,8 +287,10 @@ class TaskAnnotResults(BaseModel):
     relevant_input_data: dict[str, Any]
     users: list[int]
 
-    def add(self, item_name: str, value: list[str] | list[list[str]], value_index: list[int] | list[list[int]], user_id: int,
-            type_: Literal["single", "multiple", "text", "datetime", "list"]) -> None:
+    def add(self, item_name: str, value: list[str] | list[list[str]], value_index: list[int] | list[list[int]],
+            user_id: int,
+            type_: Literal[
+                "single", "multiple", "text", "datetime", "list-single", "list-multiple", "list-text"]) -> None:
         annotation_item = self.items.setdefault(item_name, TaskAnnotationItem.model_validate(
             {"name": item_name, "type": type_, "num_coders": self.num_coders}))
 
@@ -292,7 +299,6 @@ class TaskAnnotResults(BaseModel):
     def apply_extension(self,
                         annotation_extension: "ProjectAnnotationExtension",
                         fillin_defaults: bool = True) -> None:
-        # replace tuple[OLD-NAME: NEW_ITEMS
         for item_name, value in self.items.items():
             fix = annotation_extension.get_from_rev(item_name)
             if not fix:
@@ -319,21 +325,6 @@ class TaskAnnotResults(BaseModel):
                 self.items[new_name] = TaskAnnotationItem(name=new_name, values=[[fix.default]] * self.num_coders,
                                                           num_coders=self.num_coders)
 
-
-
-    def get_disagreements(self) -> dict[str, dict[str, int]]:
-        """
-
-        Returns {col:str -> {option:str -> count:int}}
-        -------
-
-        """
-        disagreements: dict[str, dict[str, int]] = {}
-        for item_name, item_values in self.items.items():
-            if i_d := item_values.get_disagreement():
-                disagreements[item_name] = i_d
-        return disagreements
-
     def data(self) -> dict[str, Any]:
         return {k: v.values for k, v in self.items.items()}
 
@@ -348,6 +339,18 @@ class TaskAnnotResults(BaseModel):
             res.set_predefaults()
 
 
+class PrincipleRow(BaseModel):
+    task_id: int
+    ann_id: int
+    user_id: int
+    user: Optional[str] = None
+    updated_at: datetime
+    type: str = Field(alias="type")
+    question: str = Field(alias="question")
+    value_idx: int
+    value: str
+
+
 class MyProject(BaseModel):
     platform: str
     language: str
@@ -357,6 +360,7 @@ class MyProject(BaseModel):
     raw_annotation_result: Optional[ProjectAnnotations] = None
     annotation_results: Optional[list[TaskAnnotResults]] = None
     project_views: Optional[list[ProjectViewModel]] = None
+    raw_annotation_df: Optional[pd.DataFrame] = None
 
     _extension_applied: Optional[bool] = False
 
@@ -364,6 +368,7 @@ class MyProject(BaseModel):
     def project_id(self) -> int:
         return self.project_data.id
 
+    @deprecated(reason="use straight 2df")
     def calculate_results(self) -> list[TaskAnnotResults]:
         self.annotation_results = []
         for task in self.raw_annotation_result.annotations:
@@ -376,22 +381,18 @@ class MyProject(BaseModel):
                                                  num_cancellations=task.cancelled_annotations,
                                                  users=users, task_id=task.id)
 
-            name_fixes = {orig: fix.name_fix for orig, fix in self.data_extensions.fixes.items() if fix.name_fix}
+            all_cos = {orig: fix.name_fix if fix.name_fix else orig for orig, fix in self.data_extensions.fixes.items()}
             default_cols = {orig: fix.default for orig, fix in self.data_extensions.fixes.items() if fix.default}
-            if task.data["platform_id"] == "1477219043216142337":
-                pass
-
 
             for ann in task.annotations:
                 if ann.was_cancelled:
                     continue
                 user_id = ann.completed_by
-                # added_cols = set()
 
-                result_dict = {name_fixes.get(ann_res.from_name, ann_res.from_name): ann_res for ann_res in ann.result}
+                result_dict = {all_cos.get(ann_res.from_name, ann_res.from_name): ann_res for ann_res in ann.result}
 
-                for col in name_fixes.values():
-                    fix_name = name_fixes.get(col, col)
+                for col in all_cos.values():
+                    fix_name = all_cos.get(col, col)
                     if ann_res := result_dict.get(col):
                         if ann_res.type == "choices":
                             choices_c = self.annotation_structure.choices.get(fix_name)
@@ -417,8 +418,7 @@ class MyProject(BaseModel):
                         else:
                             task_calc_results.add(fix_name, [], [], user_id, "text")
 
-
-            index_names: dict[str, list[tuple[int, TaskAnnotationItem]]] = {}
+            index_columns_map: dict[str, list[tuple[int, TaskAnnotationItem]]] = {}
             # merge all individual indices in the naming ..._ID_... into a one level deper nesting.
             pattern = r'_(\d+)_|_(\d+)$'
             for name, result in task_calc_results.items.items():
@@ -427,18 +427,14 @@ class MyProject(BaseModel):
                     # #todo use the number to order, guarantee right order
                     number = int(match.group(0).strip("_"))
                     group_name = re.sub(pattern, "_", name).strip("_")
-                    index_names.setdefault(group_name, []).append((number,result))
+                    index_columns_map.setdefault(group_name, []).append((number, result))
 
-
-
-            for sum_col, data in index_names.items():
+            for sum_col, data in index_columns_map.items():
                 # delete original columns
                 for c in data:
                     del task_calc_results.items[c[1].name]
 
                 for user_idx, user in enumerate(users):
-                    # here sort by number
-                    # TODO CHECK IF THE USER
                     values = []
                     values_indices = []
                     for item in data:
@@ -446,15 +442,12 @@ class MyProject(BaseModel):
                         assert users == item_data.users
                         values.append(item_data.values[user_idx])
                         values_indices.append(item_data.value_indices[user_idx])
-                    # print("adding", f"{sum_col}_$")
-                    task_calc_results.add(f"{sum_col}_$", values, values_indices, user, "list")
+                    task_calc_results.add(f"{sum_col}_$", values, values_indices, user, f"list-{item[1].type_}")
 
             self.annotation_results.append(task_calc_results)
-
         return self.annotation_results
 
-    @deprecated
-    def apply_extension(self, fillin_defaults: bool = True) -> None:
+    def apply_extension(self) -> None:
         if not self.data_extensions:
             print("no data extension set/applied")
             return
@@ -462,15 +455,125 @@ class MyProject(BaseModel):
         # apply it to the struct...
         if not self._extension_applied:
             self.annotation_structure.apply_extension(self.data_extensions)
-        else:
-            self.annotation_results.apply_extension(self.data_extensions, fillin_defaults=fillin_defaults)
 
         self._extension_applied = True
+
+    def get_annotation_df(self) -> DataFrame:
+        rows = []
+
+        def var_method(k, fix):
+            if fix.deprecated:
+                return None
+            if fix.name_fix:
+                return fix.name_fix
+            return k
+
+        q_extens = {k: var_method(k, v) for k, v in self.data_extensions.fixes.items()}
+
+        for task in self.raw_annotation_result.annotations:
+            # print(task.id)
+            for ann in task.annotations:
+                # print(f"{task.id=} {ann.id=}")
+                if ann.was_cancelled:
+                    # print(f"{task.id=} {ann.id=} C")
+                    continue
+                # print(f"{task.id=} {ann.id=} {len(ann.result)=}")
+                rows.append(PrincipleRow.model_construct(task_id=task.id,
+                                                         ann_id=ann.id, user_id=ann.completed_by,
+                                                         updated_at=ann.updated_at,
+                                                         value_idx=-1).model_dump(by_alias=True))
+                for q_id, question in enumerate(ann.result):
+                    new_name = q_extens[question.from_name]
+                    if not new_name:
+                        continue
+                    # print(question)
+                    if question.type == "choices":
+                        type_ = self.annotation_structure.choices[new_name].choice
+                    elif question.type == "textarea":
+                        type_ = "text"
+                    else:
+                        print("unknown question type")
+                        type_ = "x"
+                    for v_idx, v in enumerate(question.value.direct_value):
+                        rows.append(PrincipleRow(task_id=task.id,
+                                                 ann_id=ann.id,
+                                                 user_id=ann.completed_by,
+                                                 updated_at=ann.updated_at,
+                                                 question=new_name,
+                                                 type=type_,
+                                                 value_idx=v_idx,
+                                                 value=v).model_dump(by_alias=True))
+        df = DataFrame(rows)
+
+        self.raw_annotation_df = df.astype(
+            {"task_id": "int32", "ann_id": "int32", 'user_id': "category", "value_idx": "int32",
+             'type': "category", 'question': "category", 'value': "string"})
+        return self.raw_annotation_df
+
+    def get_default_df(self, question: str) -> DataFrame:
+        # todo, this should use the reverse map , as we want to work with fixed names from here on
+        if "$" in question:
+            question = question.replace("$","0")
+        rev_name = self.data_extensions.fix_reverse_map[question]
+        if not (question_da := self.data_extensions.fixes.get(rev_name)):
+            raise ValueError(f"unknown question: {question} options: {list(self.data_extensions.fixes.keys())}")
+        if not (default := question_da.default):
+            raise ValueError(f"no default: {question}")
+        return self._add_df_defaults(question, default)
+
+    def _add_df_defaults(self, question: str, default: str) -> DataFrame:
+
+        # Get the valid task_id and ann_id combinations that exist in the original data
+        df = self.raw_annotation_df
+        valid_combinations = df[['task_id', 'ann_id', 'user_id']].drop_duplicates()
+
+        # Create a complete DataFrame with valid combinations for the specific question
+        complete_df = valid_combinations.copy()
+        complete_df['question'] = question
+
+        # Filter the original DataFrame for the specific question
+        question_df = df[df["question"] == question].copy()
+
+        # Then merge with question-specific data
+        result = pd.merge(
+            complete_df,
+            question_df[['task_id', 'ann_id', "updated_at", 'question', 'value_idx', 'value']],
+            on=['task_id', 'ann_id', 'question'],
+            how='left'
+        )
+
+        # Fill missing values with default
+        result['value'] = result['value'].fillna(default)
+        result['value_idx'] = result['value_idx'].fillna(0).astype('int32')
+
+        # Add any other columns needed from the original DataFrame
+        if 'type' in df.columns:
+            if len(question_df) > 0:
+                result['type'] = question_df['type'].iloc[0]  # Use type from the question data
+            else:
+                type_col = df[df['question'] == question]['type'].iloc[0] if len(
+                    df[df['question'] == question]) > 0 else \
+                    df['type'].iloc[
+                        0]
+                result['type'] = type_col
+        # todo verify
+        if 'updated_at' in df.columns:
+            if len(question_df) > 0:
+                result['updated_at'] = question_df['updated_at'].iloc[0]  # Use type from the question data
+            else:
+                type_col = df[df['question'] == question]['updated_at'].iloc[0] if len(
+                    df[df['question'] == question]) > 0 else \
+                    df['updated_at'].iloc[
+                        0]
+                result['updated_at'] = type_col
+
+        return result
 
     def results2csv(self, dest: Path, with_defaults: bool = True, min_coders: int = 1):
         if not with_defaults:
             print("warning, result2csv with_defaults is disabled")
-        extra_cols = ["num_coders", "users", "cancellations", "updated_at", "username", "displayname", "description"]
+        extra_cols = ["task_id", "num_coders", "users", "cancellations", "updated_at", "username", "displayname",
+                      "description"]
         rows = []
 
         all_fieldnames: list[str] = []
@@ -480,6 +583,7 @@ class MyProject(BaseModel):
                 continue
             # annotation
             row_final: dict[str, str | int] = {"num_coders": task.num_coders,
+                                               "task_id": task.task_id,
                                                "cancellations": task.num_cancellations,
                                                "users": ", ".join(map(str, task.users))}
             try:
@@ -505,7 +609,7 @@ class MyProject(BaseModel):
         writer.writeheader()
         writer.writerows(rows)
 
-    model_config = ConfigDict(validate_assignment=True)
+    model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
 
 
 class PlatformLanguageOverview(BaseModel):
