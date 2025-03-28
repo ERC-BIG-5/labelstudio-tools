@@ -87,7 +87,7 @@ def calc_agreements(
     # print(len(results.annotation_results))
     # for each col (final col), store the platform_ids of filtered/positive/conflict(=filtered-positive)
     platform_ids = []
-    for task in mp.annotation_results.annotation_results:
+    for task in mp.annotation_results:
         if task.num_coders < min_num_coders:
             continue
         platform_ids.append(task.relevant_input_data["platform_id"])
@@ -376,6 +376,7 @@ def prepare_df(df: DataFrame, use_value_indices: bool = True,
     return single_type_df, multiple_type_df
 
 
+@deprecated("")
 def calc_agreements2(
         res: MyProject,
         selected_categories: Sequence[str]

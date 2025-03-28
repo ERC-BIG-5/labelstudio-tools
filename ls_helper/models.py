@@ -4,16 +4,25 @@ import uuid
 from csv import DictWriter
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Literal, Any, Iterable
+from typing import Optional, Literal, Any, Iterable, Annotated
 
 import orjson
 import pandas as pd
 from deprecated.classic import deprecated
 from pandas import DataFrame
-from pydantic import BaseModel, Field, ConfigDict, RootModel, model_validator
+from pydantic import BaseModel, Field, ConfigDict, RootModel, model_validator, PlainSerializer
 
 from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel
 from ls_helper.settings import SETTINGS
+
+# todo bring and import tools,
+SerializableDatetime = Annotated[
+    datetime, PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used='json')
+]
+
+SerializableDatetimeAlways = Annotated[
+    datetime, PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used='always')
+]
 
 
 def find_name_fixes(orig_keys: Iterable[str],
@@ -117,7 +126,7 @@ class ResultStruct(BaseModel):
 
     def question_type(self, q) -> str:
         if "$" in q:
-            q = q.replace("$","0")
+            q = q.replace("$", "0")
         if q in self.choices:
             return self.choices[q].choice
         elif q in self.free_text:
@@ -152,7 +161,7 @@ class ProjectAnnotationExtension(BaseModel):
 
 
 class ProjectAnnotations(BaseModel):
-    project_id: int
+    project_id: int  # todo, out...
     annotations: list["TaskResultModel"]
     file_path: Optional[Path] = None
 
@@ -207,13 +216,13 @@ class TaskAnnotationModel(BaseModel):
     result: list[AnnotationResult]
     was_cancelled: bool
     ground_truth: bool
-    created_at: datetime
-    updated_at: datetime
-    draft_created_at: Optional[datetime] = None
+    created_at: SerializableDatetimeAlways
+    updated_at: SerializableDatetimeAlways
+    draft_created_at: Optional[SerializableDatetimeAlways] = None
     lead_time: float
     prediction: dict
     result_count: int
-    unique_id: uuid.UUID
+    unique_id: Annotated[uuid.UUID, PlainSerializer(lambda v: str(v), return_type=str, when_used='always')]
     import_id: Optional[int] = None
     last_action: Optional[str] = None
     task: int
@@ -230,15 +239,15 @@ class TaskResultModel(BaseModel):
     annotations: list[TaskAnnotationModel]
     meta: dict = Field()
     data: dict = Field(..., description="the task data")
-    created_at: datetime
-    updated_at: datetime
+    created_at: SerializableDatetimeAlways
+    updated_at: SerializableDatetimeAlways
     inner_id: int
     total_annotations: int
     cancelled_annotations: int
     total_predictions: int
     comment_count: int
     unresolved_comment_count: int
-    last_comment_updated_at: Optional[datetime] = None
+    last_comment_updated_at: Optional[SerializableDatetimeAlways] = None
     project: int
     updated_by: int
     comment_authors: list[int]
@@ -358,7 +367,7 @@ class MyProject(BaseModel):
     annotation_structure: ResultStruct
     data_extensions: Optional[ProjectAnnotationExtension] = None
     raw_annotation_result: Optional[ProjectAnnotations] = None
-    annotation_results: Optional[list[TaskAnnotResults]] = None
+    #annotation_results: Optional[list[TaskAnnotResults]] = Field(None, deprecated="raw_annotation_df")
     project_views: Optional[list[ProjectViewModel]] = None
     raw_annotation_df: Optional[pd.DataFrame] = None
 
@@ -458,7 +467,7 @@ class MyProject(BaseModel):
 
         self._extension_applied = True
 
-    def get_annotation_df(self) -> DataFrame:
+    def get_annotation_df(self, debug_task_limit: Optional[int] = None) -> DataFrame:
         rows = []
 
         def var_method(k, fix):
@@ -470,10 +479,12 @@ class MyProject(BaseModel):
 
         q_extens = {k: var_method(k, v) for k, v in self.data_extensions.fixes.items()}
 
+        debug_mode = debug_task_limit is not None
+
         for task in self.raw_annotation_result.annotations:
             # print(task.id)
             for ann in task.annotations:
-                # print(f"{task.id=} {ann.id=}")
+                print(f"{task.id=} {ann.id=}")
                 if ann.was_cancelled:
                     # print(f"{task.id=} {ann.id=} C")
                     continue
@@ -503,6 +514,12 @@ class MyProject(BaseModel):
                                                  type=type_,
                                                  value_idx=v_idx,
                                                  value=v).model_dump(by_alias=True))
+
+            if debug_mode:
+                debug_task_limit -= 1
+                if debug_task_limit == 0:
+                    break
+
         df = DataFrame(rows)
 
         self.raw_annotation_df = df.astype(
@@ -513,7 +530,7 @@ class MyProject(BaseModel):
     def get_default_df(self, question: str) -> DataFrame:
         # todo, this should use the reverse map , as we want to work with fixed names from here on
         if "$" in question:
-            question = question.replace("$","0")
+            question = question.replace("$", "0")
         rev_name = self.data_extensions.fix_reverse_map[question]
         if not (question_da := self.data_extensions.fixes.get(rev_name)):
             raise ValueError(f"unknown question: {question} options: {list(self.data_extensions.fixes.keys())}")

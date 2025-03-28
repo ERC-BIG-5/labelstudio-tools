@@ -11,7 +11,7 @@ from ls_helper.agreements import calc_agreements, prepare_df
 from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
-from ls_helper.annotations import create_annotations_results, get_recent_annotations
+from ls_helper.annotations import create_annotations_results, get_recent_annotations, _reformat_for_datapipelines
 from ls_helper.config_helper import check_config_update
 from ls_helper.exp.build_configs import build_configs
 from ls_helper.funcs import build_view_with_filter_p_ids
@@ -19,6 +19,7 @@ from ls_helper.models import ProjectOverview
 from ls_helper.my_labelstudio_client.annot_master import prepare_df_for_agreement, calc_agreements2, prep_multi_select
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
 from ls_helper.my_labelstudio_client.models import ProjectViewModel
+from ls_helper.new_models import platforms_overview2
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
 
@@ -66,10 +67,9 @@ def generate_result_fixes_template(platform: Annotated[str, typer.Argument()],
     project_id = project_data["id"]
 
     conf = parse_label_config_xml(project_data["label_config"],
-                                  project_id=project_id,
                                   include_text=True)
     from ls_helper.funcs import generate_result_fixes_template as gen_fixes_template
-    res_template = gen_fixes_template(project_id, conf)
+    res_template = gen_fixes_template(conf)
     dest = Path(f"data/temp/result_fix_template_{platform}-{language}_{project_id}.json")
     dest.write_text(res_template.model_dump_json())
     print(f"file -> {dest.as_posix()}")
@@ -397,11 +397,36 @@ def agreements(platform: Annotated[str, typer.Argument()],
     return {"agreements": agreements_table_path, "pids": pid_data_file}
 
 
-if __name__ == "__main__":
-    pass
-    # crashes... FIX
-    # agreements("youtube", "en")
+@app.command()
+def add_project():
+    plist = ls_client().projects_list()
 
+
+@app.command()
+def reformat_for_datapipelines(platform: Annotated[str, typer.Argument()],
+                               language: Annotated[str, typer.Argument()],
+                               destination: Path):
+    """
+    create a file with a dict platform_id: annotation, which can be ingested by the pipeline
+    :param platform:
+    :param language:
+    :param destination:
+    :return:
+    """
+    # does extra caluculation but ok.
+    mp = create_annotations_results((platform, language), True, 0)
+    _reformat_for_datapipelines(mp, destination)
+
+
+if __name__ == "__main__":
+
+    # reformat_for_datapipelines("twitter", "en",
+    #                            Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/temp/twitter_en_res.json"))
+
+    # pass
+    # crashes... FIX
+    # agreements("twitter", "en")
+    # exit()
     # download_project_data("youtube", "en")
 
     # clean ...ON VM
@@ -440,8 +465,12 @@ if __name__ == "__main__":
     # calc_agreements2(deff)
 
     cats = ["nature_text", "val-expr_text", "val-expr_visual", "nep_materiality_text", "nep_biological_text",
-            "landscape-type_text", "basic-interaction_text","media_relevant", "nep_materiality_visual_$", "nep_biological_visual_$", "landscape-type_visual_$",
+            "landscape-type_text", "basic-interaction_text", "media_relevant", "nep_materiality_visual_$",
+            "nep_biological_visual_$", "landscape-type_visual_$",
             "basic-interaction_visual_$"]
+    cats = ["media_relevant"]
+    res.raw_annotation_df.to_csv("df.csv")
+    exit()
     for cat in cats:
         # print(cat)
         type_ = res.annotation_structure.question_type(cat)
@@ -454,13 +483,13 @@ if __name__ == "__main__":
             rdf = res.raw_annotation_df
             options = res.annotation_structure.choices.get(cat).raw_options_list()
             # print(options)
-            # red_df = prep_multi_select(rdf, cat, options)
+            red_df = prep_multi_select(rdf, cat, options)
             pass
 
     exit()
 
     # METHOD 2.... TOO LONG
-    res = create_annotations_results(("twitter", "en"))
+    # res = create_annotations_results(("twitter", "en"))
     # res.results2csv(Path("t.csv"), with_defaults=True, min_coders=2)
     # # print(json.dumps(res.calc_annotation_result.model_dump(), indent=2))
     # # Path("d.json").write_text(res.model_dump_json(include={"annotation_results"},indent=2))

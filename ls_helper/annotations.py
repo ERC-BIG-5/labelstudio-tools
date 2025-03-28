@@ -1,10 +1,11 @@
+import json
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd
 from deprecated.classic import deprecated
 from pandas import DataFrame
-from pydantic import BaseModel
 
 from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.funcs import get_latest_annotation_file, get_latest_annotation
@@ -47,7 +48,8 @@ def create_annotations_results(project: ProjectAccess, add_annotations: bool = T
         mp.get_annotation_df()
     return mp
 
-@deprecated("straight to df2")
+
+@deprecated("straight to MyProject.get_annotation_df")
 def create_df(mp: MyProject) -> DataFrame:
     task_results = mp.annotation_results
     # Create lists to store our data
@@ -55,12 +57,12 @@ def create_df(mp: MyProject) -> DataFrame:
 
     # For each task result object
     for task_idx, task_result in enumerate(task_results):
-        #print(task_result.task_id)
+        # print(task_result.task_id)
         # For each item in the task
         for item_id, item in task_result.items.items():
             # Skip anything that's not single or multiple type
 
-            if item.type_ not in ["single", "multiple", "list-single","list-multiple"]:
+            if item.type_ not in ["single", "multiple", "list-single", "list-multiple"]:
                 # text
                 # print(item.type_)
                 continue
@@ -71,7 +73,7 @@ def create_df(mp: MyProject) -> DataFrame:
                 if user_idx < len(item.values):
                     user_values, user_values_idx = item.values[user_idx], item.value_indices[user_idx]
 
-                    for idx,(val, val_idx) in enumerate(zip(user_values, user_values_idx)):
+                    for idx, (val, val_idx) in enumerate(zip(user_values, user_values_idx)):
                         # For single choice, just one value per user per item
                         if item.type_.startswith("list"):
                             if not val:
@@ -103,6 +105,7 @@ def create_df(mp: MyProject) -> DataFrame:
     df = pd.DataFrame(rows)
     return df
 
+
 def prepare_for_question(mp, question):
     """
     not sure, if that works well...
@@ -123,6 +126,7 @@ def prepare_for_question(mp, question):
     return question_df
 
 
+@deprecated("not sure what this does")
 def prepare_numeric_agreement(df):
     # Create a mapping of category strings to numeric values for each question
     category_maps = {}
@@ -167,39 +171,15 @@ def prepare_numeric_agreement(df):
     return pivot_dfs, category_maps
 
 
-if __name__ == "__main__":
-    pass
-
-    """ merge to create unifixes DONE
-    merge = {}
-    print(yt_t -  twitter_f)
-    print(twitter_f - yt_t)
-    i_s = yt_t.intersection(twitter_f)
-    print(i_s)
-    for k in i_s:
-        print(k)
-        if yt.fixes[k].name_fix != twitter.fixes[k].name_fix:
-            print(k, yt.fixes[k].name_fix,twitter.fixes[k].name_fix )
-
-        merge[k] = yt.fixes[k]
-
-    merge = {k: merge[k] for k in yt.fixes.keys() if k in i_s}
-
-    #SETTINGS.unifix_file_path.write_text(ProjectAnnotationExtension(project_id=0, fixes=merge).model_dump_json(indent=2))
+def _reformat_for_datapipelines(mp, destinion_path: Path):
     """
-
-    """ removed the fixes in the platforms which are in the unifix DONE
-    print("tw")
-    for k in [k for k in twitter.fixes.keys() if k in uni_f]:
-        print(k)
-        del twitter.fixes[k]
-
-    (SETTINGS.fixes_dir /  "39.json").write_text(twitter.model_dump_json(indent=2, exclude_none=True))
-    print("-------")
-    print("yt")
-    for k in [k for k in yt.fixes.keys() if k in uni_f]:
-        print(k)
-        del yt.fixes[k]
-
-    #(SETTINGS.fixes_dir / "33.json").write_text(yt.model_dump_json(indent=2, exclude_none=True))
+    in order to assign assignment results to items in the sqlite database metadata-content
+    :param mp:
+    :return:
     """
+    res = {}
+
+    for task_result in mp.raw_annotation_result.annotations:
+        res[task_result.data["platform_id"]] = task_result.model_dump(exclude={"data"})
+    destinion_path.write_text(json.dumps(res))
+    print(f"annotations reformatted -> {destinion_path.as_posix()}")

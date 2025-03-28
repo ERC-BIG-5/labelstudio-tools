@@ -81,14 +81,22 @@ def find_duplicates(xml_file):
     }
 
 
-def check_references(root):
-    print("broken references:")
+def check_references(root) -> list[str]:
     names = list(find_all_names(root).keys())
     # print(names)
     refs = list(find_tag_name_refs(root).keys())
+    broken_refs = []
     for ref in refs:
         if ref not in names:
             print(ref)
+            broken_refs.append(ref)
+    if broken_refs:
+        print("broken references:")
+        for ref in broken_refs:
+            print(ref)
+    else:
+        print("all refs ok")
+    return broken_refs
 
 
 def check_config_update(platform_configs: dict[str, Path]):
@@ -104,8 +112,6 @@ def check_config_update(platform_configs: dict[str, Path]):
 
         diff = DeepDiff(current_conf, next_conf)
         print(diff)
-
-
 
 
 def check_against_fixes(label_config: str | ResultStruct, fixes: ProjectAnnotationExtension):
