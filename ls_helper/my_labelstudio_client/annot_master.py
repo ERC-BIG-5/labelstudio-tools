@@ -34,8 +34,20 @@ def prepare_df_for_agreement(mp: MyProject, question: str, indices: bool = True)
         lambda col: col.map(lambda x: value_indices.index(x) if (not pd.isna(x) and x in value_indices) else x))
     return deff
 
+def calc_agreements(df: DataFrame):
+    cac_4raters = CAC(df)
+    # print(cac_4raters)
+    try:
+        fleiss = cac_4raters.fleiss()
+        gwet = cac_4raters.gwet()
+        # print(f"{fleiss=} {gwet=}")
+        return fleiss, gwet
+    except Exception as e:
+        print(e)
+        return 1, 1
 
-def calc_agreements2(deff: DataFrame):
+def calc_agreements2(deff: DataFrame
+                     ):
     cac_4raters = CAC(deff)
     # print(cac_4raters)
     try:
@@ -48,7 +60,7 @@ def calc_agreements2(deff: DataFrame):
         return 1, 1
 
 
-def prep_multi_select(df, question, options):
+def prep_multi_select(df, question, options) -> dict[str, DataFrame]:
     """
     Create a binary indicator DataFrame for multi-select questions.
 
@@ -69,7 +81,7 @@ def prep_multi_select(df, question, options):
     unique_user_ids = df['user_id'].unique()
 
     # Create a result DataFrame with task_id and option as indices
-    result_rows = []
+    result_rows = {option: [] for option in options}
 
     # For each task_id and option combination
     for task_id in unique_task_ids:
@@ -91,7 +103,9 @@ def prep_multi_select(df, question, options):
                 # Add this ann_id as a column
                 row[user_id] = selected
 
-            result_rows.append(row)
+            result_rows[option].append(row)
 
-    result_df = pd.DataFrame(result_rows)
-    return result_df
+    result_dfs = {}
+    for option in options:
+        result_dfs[option] = pd.DataFrame(result_rows[option]).set_index(['task_id']).drop("option",axis=1)
+    return result_dfs

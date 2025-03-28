@@ -484,7 +484,7 @@ class MyProject(BaseModel):
         for task in self.raw_annotation_result.annotations:
             # print(task.id)
             for ann in task.annotations:
-                print(f"{task.id=} {ann.id=}")
+                #print(f"{task.id=} {ann.id=}")
                 if ann.was_cancelled:
                     # print(f"{task.id=} {ann.id=} C")
                     continue

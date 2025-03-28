@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 import pandas as pd
-from deprecated.classic import deprecated
 from pandas import DataFrame
 
 from ls_helper.ana_res import parse_label_config_xml
@@ -49,126 +49,34 @@ def create_annotations_results(project: ProjectAccess, add_annotations: bool = T
     return mp
 
 
-@deprecated("straight to MyProject.get_annotation_df")
-def create_df(mp: MyProject) -> DataFrame:
-    task_results = mp.annotation_results
-    # Create lists to store our data
-    rows = []
+def convert_strings_to_indices(df: DataFrame, string_list: list[str]):
+    result_df = df.copy()
 
-    # For each task result object
-    for task_idx, task_result in enumerate(task_results):
-        # print(task_result.task_id)
-        # For each item in the task
-        for item_id, item in task_result.items.items():
-            # Skip anything that's not single or multiple type
+    # Create a mapping dictionary for faster lookups
+    # Each string maps to its index in the list
+    string_to_index = {s: i for i, s in enumerate(string_list)}
 
-            if item.type_ not in ["single", "multiple", "list-single", "list-multiple"]:
-                # text
-                # print(item.type_)
-                continue
+    # Define a function to apply to each element
+    def map_to_index(value):
+        if pd.isna(value):
+            return np.nan
+        elif value in string_to_index:
+            return string_to_index[value]
+        else:
+            # Optional: handle case when string is not in the list
+            # Could return np.nan, -1, or raise an error
+            return np.nan
 
-            # For each coder
-            for user_idx, user_id in enumerate(item.users):
-                # Get this user's values for this item
-                if user_idx < len(item.values):
-                    user_values, user_values_idx = item.values[user_idx], item.value_indices[user_idx]
+    # Apply the function to all elements in the DataFrame
+    result_df = result_df.map(lambda x: map_to_index(x))
 
-                    for idx, (val, val_idx) in enumerate(zip(user_values, user_values_idx)):
-                        # For single choice, just one value per user per item
-                        if item.type_.startswith("list"):
-                            if not val:
-                                continue
-                            for i_idx, i_val in enumerate(val):
-                                rows.append({
-                                    "task_id": task_result.task_id,
-                                    "task_idx": task_idx,
-                                    "coder_id": user_id,
-                                    "question_id": item.name,
-                                    "question_type": item.type_,
-                                    "response": i_val,
-                                    "list_index": idx,
-                                    "response_idx": val_idx[i_idx] if val_idx else None  # could be text
-                                })
-                        else:
-                            rows.append({
-                                "task_id": task_result.task_id,
-                                "task_idx": task_idx,
-                                "coder_id": user_id,
-                                "question_id": item.name,
-                                "question_type": item.type_,
-                                "response": val,
-                                "list_index": 0,
-                                "response_idx": val_idx
-                            })
+    # Convert all columns to int32, with NaN represented as pd.NA
+    for col in result_df.columns:
+        # First convert to nullable integer type
+        result_df[col] = pd.to_numeric(result_df[col], errors='coerce')
+        result_df[col] = result_df[col].astype('Int32')  # Note: capital 'I' for nullable integer
 
-    # Create the DataFrame
-    df = pd.DataFrame(rows)
-    return df
-
-
-def prepare_for_question(mp, question):
-    """
-    not sure, if that works well...
-    :param mp:
-    :param question:
-    :return:
-    """
-    df = mp.raw_annotation_df
-    # Get the valid task_id and ann_id combinations that exist in the original data
-    valid_combinations = df[['task_id', 'ann_id', 'user_id']].drop_duplicates()
-
-    # Create a complete DataFrame with valid combinations for the specific question
-    complete_df = valid_combinations.copy()
-    complete_df['question'] = question
-
-    # Filter the original DataFrame for the specific question
-    question_df = df[df["question"] == question].copy()
-    return question_df
-
-
-@deprecated("not sure what this does")
-def prepare_numeric_agreement(df):
-    # Create a mapping of category strings to numeric values for each question
-    category_maps = {}
-
-    for question in df['question_id'].unique():
-        q_df = df[df['question_id'] == question]
-        categories = sorted(q_df['response'].dropna().unique())  # Sort and drop NAs
-        category_maps[question] = {cat: i for i, cat in enumerate(categories)}
-
-    # Process each question separately to maintain integer types
-    pivot_dfs = {}
-
-    for question in df['question_id'].unique():
-        # Filter data for this question (single-choice only)
-        q_df = df[(df['question_id'] == question) & (df['question_type'] == 'single')].copy()
-
-        # Create numeric responses using the mapping
-        q_df['response_numeric'] = q_df['response'].map(lambda x:
-                                                        category_maps[question].get(x, pd.NA) if pd.notna(x) else pd.NA)
-
-        # Convert to integer explicitly before pivoting
-        q_df['response_numeric'] = pd.to_numeric(q_df['response_numeric'],
-                                                 downcast='integer',
-                                                 errors='coerce')
-
-        # Create the pivot table for this question
-        pivot = q_df.pivot_table(
-            index=['task_id', 'item_id'],
-            columns='coder_id',
-            values='response_numeric',
-            aggfunc='first'  # In case of duplicates
-        )
-
-        # Force integer dtype after pivot (convert back from float)
-        for col in pivot.columns:
-            # Check if column can be safely converted to integer
-            if pivot[col].notna().all():
-                pivot[col] = pivot[col].astype(int)
-
-        pivot_dfs[question] = pivot.fillna(-1).astype(int)
-
-    return pivot_dfs, category_maps
+    return result_df
 
 
 def _reformat_for_datapipelines(mp, destinion_path: Path):

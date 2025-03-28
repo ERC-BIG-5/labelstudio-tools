@@ -7,7 +7,6 @@ from typing import Annotated, Optional
 import typer
 from tqdm import tqdm
 
-from ls_helper.agreements import calc_agreements, prepare_df
 from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
@@ -16,10 +15,10 @@ from ls_helper.config_helper import check_config_update
 from ls_helper.exp.build_configs import build_configs
 from ls_helper.funcs import build_view_with_filter_p_ids
 from ls_helper.models import ProjectOverview
-from ls_helper.my_labelstudio_client.annot_master import prepare_df_for_agreement, calc_agreements2, prep_multi_select
+from ls_helper.my_labelstudio_client.annot_master import prepare_df_for_agreement, calc_agreements2, prep_multi_select, \
+    calc_agreements
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
 from ls_helper.my_labelstudio_client.models import ProjectViewModel
-from ls_helper.new_models import platforms_overview2
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
 
@@ -392,9 +391,9 @@ def agreements(platform: Annotated[str, typer.Argument()],
                min_num_coders: Annotated[int, typer.Option()] = 2
                ) -> dict[str, Path]:
     mp = create_annotations_results((platform, language), accepted_ann_age=accepted_ann_age)
-
-    agreements_table_path, pid_data_file = calc_agreements(mp, min_num_coders)
-    return {"agreements": agreements_table_path, "pids": pid_data_file}
+    raise NotImplementedError("New agreements not implemented")
+    # agreements_table_path, pid_data_file = calc_agreements(mp, min_num_coders)
+    # return {"agreements": agreements_table_path, "pids": pid_data_file}
 
 
 @app.command()
@@ -470,13 +469,13 @@ if __name__ == "__main__":
             "basic-interaction_visual_$"]
     cats = ["media_relevant"]
     res.raw_annotation_df.to_csv("df.csv")
-    exit()
+    # exit()
     for cat in cats:
         # print(cat)
         type_ = res.annotation_structure.question_type(cat)
         if type_ == "single":
             deff = prepare_df_for_agreement(res, cat, False)
-            fleiss, gwet = calc_agreements2(deff)
+            fleiss, gwet = calc_agreements(deff)
             print(f"{cat=} {fleiss=} {gwet=}")
         else:
             print(f"M {cat}")
@@ -484,7 +483,9 @@ if __name__ == "__main__":
             options = res.annotation_structure.choices.get(cat).raw_options_list()
             # print(options)
             red_df = prep_multi_select(rdf, cat, options)
-            pass
+            for o, df in red_df.items():
+                fleiss, gwet = calc_agreements(df)
+                print(f"{cat=}{o=} {fleiss=} {gwet=}")
 
     exit()
 
@@ -502,9 +503,7 @@ if __name__ == "__main__":
     #     if c.choice == "multiple":
     #         multi_choice_options[c_name] = c.indices
     #
-    pp_s, pp_m = prepare_df(df, True, {"nature_text", "nature_visual", "nep_materiality_text", "nep_biological_text",
-                                       "landscape-type_text",
-                                       "basic-interaction_text", "media_relevant"}, multi_choice_options)
+
     # df.to_csv(Path("df.csv"))
     #
     # cats = ["nature_text", "nature_visual",
