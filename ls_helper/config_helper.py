@@ -1,12 +1,10 @@
-import shutil
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from deepdiff import DeepDiff
 
 from ls_helper.ana_res import parse_label_config_xml
-from ls_helper.exp.build_configs import build_configs
-from ls_helper.models import PlatformLanguageOverview, ProjectOverview, ProjectAnnotationExtension, ResultStruct
+from ls_helper.models import ProjectAnnotationExtension, ResultStruct
 from ls_helper.settings import SETTINGS
 
 
@@ -132,8 +130,9 @@ def check_against_fixes(label_config: str | ResultStruct, fixes: ProjectAnnotati
 
 
 if __name__ == "__main__":
-    p_info = ProjectOverview.projects().get_project(("twitter", "en"))
-    check_against_fixes(p_info)
+    pass
+    # p_info = ProjectOverview.projects().get_project(("twitter", "en"))
+    # check_against_fixes(p_info)
     """ not sure, what was done here...
     project_p = os.getcwd()
     step1_t = Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/configs/step1/output/gen_twitter.xml")

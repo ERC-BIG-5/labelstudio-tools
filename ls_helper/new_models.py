@@ -13,6 +13,21 @@ PlLang = tuple[str, str]
 ProjectAccess = int | str | PlLang
 
 
+def get_p_access(
+        id: Optional[int] = None,
+        alias: Optional[str] = None,
+        platform: Optional[str] = None,
+        language: Optional[str] = None,
+) -> ProjectAccess:
+    if alias:
+        return alias
+    elif id:
+        return id
+    elif platform and language:
+        return platform, language
+    raise ValueError(f"{id=} {platform=} {language=}, {alias=} not a valid project-access")
+
+
 class ProjectCreate(BaseModel):
     name: str
     platform: Optional[str] = "xx"
@@ -57,8 +72,11 @@ class ProjectInfo(ProjectCreate):
             raise FileNotFoundError(f"project data file for {self.id}: platform-language does not exist")
         return ProjectModel.model_validate_json(fin.read_text())
 
-    def get_structure(self) -> ResultStruct:
-        return parse_label_config_xml(self.project_data().label_config)
+    def get_structure(self,
+                      include_text: bool = True,
+                      include_text_names: Optional[list[str]] = None) -> ResultStruct:
+        return parse_label_config_xml(self.project_data().label_config, include_text=include_text,
+                                      include_text_names=include_text_names)
 
     def get_fixes(self) -> ProjectAnnotationExtension:
         if (fi := SETTINGS.fixes_dir / "unifixes.json").exists():
@@ -131,8 +149,7 @@ class ProjectOverView2(BaseModel):
             return self.projects[str(p_access)]
         elif isinstance(p_access, str):
             return self.alias_map[p_access]
-        elif isinstance(p_access, tuple):
-            assert len(p_access) == 2
+        elif isinstance(p_access, tuple) and len(p_access) == 2:
             return self.default_map[p_access]
         raise ValueError(f"unknown project access: {p_access}")
 
