@@ -33,8 +33,7 @@ def create_annotations_results(project: ProjectAccess, add_annotations: bool = T
     p_info = platforms_overview2.get_project(project)
     project_data = p_info.project_data()
 
-    conf = parse_label_config_xml(project_data.label_config)
-
+    conf = p_info.get_structure()
     data_extensions = p_info.get_fixes()
     mp = MyProject(
         platform=p_info.platform,

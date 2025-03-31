@@ -4,7 +4,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from ls_helper.models import ProjectAnnotationExtension
+from ls_helper.ana_res import parse_label_config_xml
+from ls_helper.models import ProjectAnnotationExtension, ResultStruct
 from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel
 from ls_helper.settings import SETTINGS
 
@@ -55,6 +56,9 @@ class ProjectInfo(ProjectCreate):
         if not fin:
             raise FileNotFoundError(f"project data file for {self.id}: platform-language does not exist")
         return ProjectModel.model_validate_json(fin.read_text())
+
+    def get_structure(self) -> ResultStruct:
+        return parse_label_config_xml(self.project_data().label_config)
 
     def get_fixes(self) -> ProjectAnnotationExtension:
         if (fi := SETTINGS.fixes_dir / "unifixes.json").exists():
@@ -124,7 +128,7 @@ class ProjectOverView2(BaseModel):
     def get_project(self, p_access: ProjectAccess) -> ProjectInfo:
         # int | str | platf_lang_default | platform_lang_name
         if isinstance(p_access, int):
-            return self.projects[p_access]
+            return self.projects[str(p_access)]
         elif isinstance(p_access, str):
             return self.alias_map[p_access]
         elif isinstance(p_access, tuple):

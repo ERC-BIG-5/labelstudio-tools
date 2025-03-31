@@ -150,14 +150,10 @@ def update_coding_game(client: LabelStudioBase,
         print(f"error updating view for coding game: {resp.status_code}")
         print(resp.json())
 
-
-def build_view_with_filter_p_ids(
-        client: LabelStudioBase,
-        view: ProjectViewModel,
-        platform_ids: list[str]):
+def build_platform_id_filter(platform_ids: list[str]):
     new_items = []
     new_filters = {"conjunction": "or", "items": new_items}
-    view.data.filters = new_filters
+
     for p_id in platform_ids:
         # print(for_coding_game)
         new_items.append({
@@ -166,6 +162,14 @@ def build_view_with_filter_p_ids(
             "type": "String",
             "value": p_id
         })
+    return new_filters
+
+def build_view_with_filter_p_ids(
+        client: LabelStudioBase,
+        view: ProjectViewModel,
+        platform_ids: list[str]):
+
+    new_filters = build_platform_id_filter(platform_ids)
 
     res = {
         "data": {"title": view.data.title, "filters": new_filters, "hiddenColumns": view.data.hiddenColumns}}

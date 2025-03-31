@@ -379,6 +379,7 @@ class PrincipleRow(BaseModel):
     ann_id: int
     user_id: int
     # user: Optional[str] = None
+    platform_id: str
     ts: datetime
     type: str
     category: str
@@ -549,6 +550,7 @@ class MyProject(BaseModel):
                         type_ = "x"
                     rows.append(PrincipleRow(task_id=task.id,
                                              ann_id=ann.id,
+                                             platform_id = task.data["platform_id"],
                                              user_id=ann.completed_by,
                                              ts=ann.updated_at,
                                              category=new_name,

@@ -16,16 +16,17 @@ from ls_helper.annotations import create_annotations_results, get_recent_annotat
 from ls_helper.anot_master2 import analyze_coder_agreement
 from ls_helper.config_helper import check_config_update
 from ls_helper.exp.build_configs import build_configs
-from ls_helper.funcs import build_view_with_filter_p_ids
-from ls_helper.models import ProjectOverview, extract_common_params
+from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter
+from ls_helper.models import ProjectOverview, extract_common_params, MyProject
 from ls_helper.my_labelstudio_client.annot_master import prep_single_select_agreement, prep_multi_select_agreement, \
     calc_agreements, export_annotations2csv
 from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.my_labelstudio_client.models import ProjectViewModel
+from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectViewCreate
 from ls_helper.new_models import platforms_overview2
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
+from tools.files import read_data
 
 app = typer.Typer(name="Labelstudio helper", pretty_exceptions_show_locals=True)
 
@@ -83,7 +84,14 @@ def generate_result_fixes_template(
                                   include_text=True)
     from ls_helper.funcs import generate_result_fixes_template as gen_fixes_template
     res_template = gen_fixes_template(conf)
-    dest = Path(f"data/temp/result_fix_template_{platform}-{language}_{project_id}.json")
+
+    universal_fixes = read_data(SETTINGS.unifix_file_path)
+    for k in res_template.fixes:
+        if k in universal_fixes:
+            # todo, can delete them?
+            print(k)
+
+    dest = Path(f"data/temp/result_fix_template_{project_id}.json")
     dest.write_text(res_template.model_dump_json())
     print(f"file -> {dest.as_posix()}")
 
@@ -236,18 +244,15 @@ def download_project_data(
         language: Annotated[Optional[str], typer.Argument()] = None,
         alias: Annotated[Optional[str], typer.Argument()] = None,
 ):
-    projects_to_dl = project_selection(platform, language)
+    p_a = extract_common_params(id, platform, language, alias)
+    p = platforms_overview2.get_project(p_a)
 
-    for idx, (platform_, language_, project_id) in enumerate(projects_to_dl, start=1):
-        project_data = ls_client().get_project(project_id)
-        if not project_data:
-            raise ValueError(f"No project found: {project_id}")
-        else:
-            _dir = SETTINGS.projects_dir / platform_
-            _dir.mkdir(parents=True, exist_ok=True)
-            dest = _dir / f"{language_}.json"
-            dest.write_text(project_data.model_dump_json())
-            print(f"{idx}/{len(projects_to_dl)} {dest}")
+    project_data = ls_client().get_project(p.id)
+    if not project_data:
+        raise ValueError(f"No project found: {p.id}")
+    else:
+        dest = SETTINGS.projects_dir / f"{p.id}.json"
+        dest.write_text(project_data.model_dump_json())
 
 
 @app.command(short_help="[maint]")
@@ -427,12 +432,9 @@ def agreements(
         accepted_ann_age: Annotated[
             int, typer.Option(help="Download annotations if older than x hours")] = 2,
         min_num_coders: Annotated[int, typer.Option()] = 2
-) -> dict[str, Path]:
+) -> tuple[Path, dict]:
     p_a = extract_common_params(id, platform, language, alias)
     mp = create_annotations_results(p_a, accepted_ann_age=accepted_ann_age)
-
-    df = mp.raw_annotation_df
-    pass
 
     variables = {}
 
@@ -460,8 +462,10 @@ def agreements(
         }
 
     agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, variables)
-    print(agreement_report)
-    print(agreement_report["conflicts"])
+    dest: Path = (SETTINGS.agreements_dir / f"{mp.project_id}.json")
+    dest.write_text(json.dumps(agreement_report))
+    return dest, agreement_report
+
     """
     # question_dfs = default_df.groupby("question")
     for cat, cat_info in mp.annotation_structure.choices.items():
@@ -485,10 +489,6 @@ def agreements(
                 fleiss, gwet = calc_agreements(df)
                 print(f"{cat=}{o=} {fleiss=} {gwet=}")
     """
-
-    # raise NotImplementedError("New agreements not implemented")
-    # agreements_table_path, pid_data_file = calc_agreements(mp, min_num_coders)
-    # return {"agreements": agreements_table_path, "pids": pid_data_file}
 
 
 @app.command()
@@ -526,14 +526,58 @@ def reformat_for_datapipelines(platform: Annotated[str, typer.Argument()],
     _reformat_for_datapipelines(mp, destination)
 
 
+@app.command()
+def create_conflict_view(
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Option()] = None,
+        language: Annotated[str, typer.Option()] = None,
+        variable: Annotated[str, typer.Option()] = None,
+        variable_option: Annotated[str, typer.Option()] = None
+):
+    p_a = extract_common_params(id, platform, language, alias)
+    p_info = platforms_overview2.get_project(p_a)
+
+    # down from here till... should be somewhere...
+    project_data = p_info.project_data()
+
+    conf = p_info.get_structure()
+    data_extensions = p_info.get_fixes()
+    mp = MyProject(
+        platform=p_info.platform,
+        language=p_info.language,
+        project_data=project_data,
+        annotation_structure=conf,
+        data_extensions=data_extensions)
+
+    mp.apply_extension()
+
+    # just check existence
+    _ = mp.annotation_structure.question_type(variable)
+
+    agreement_data = json.loads((SETTINGS.agreements_dir / f"{p_info.id}.json").read_text())
+
+    conflicts = agreement_data["conflicts"]
+    relevant_conflicts_p_ids = [c["platform_id"] for c in conflicts if c["variable"] == variable]
+    print(relevant_conflicts_p_ids)
+
+    title = f"conflict:{variable}"
+    ProjectMgmt.create_view(ProjectViewCreate.model_validate({"project": p_info.id, "data": {
+        "title": title,
+        "filters": build_platform_id_filter(relevant_conflicts_p_ids)}}))
+
+
 if __name__ == "__main__":
     # download_project_views(alias="twitter-en-2")
-    update_coding_game(alias="twitter-en-2")
+    #
+    # update_coding_game(alias="twitter-en-2")
 
-    #enerate_result_fixes_template(alias="twitter-en-2")
+    # download_project_data(id=41)
+    # agre = agreements(alias="twitter-en-2")
+    create_conflict_view(alias="twitter-en-2", variable="nature_any")
 
-    #agreements(alias="twitter-en-2")
-
+    # down
+    # generate_result_fixes_template(alias="twitter-en-2")
     exit()
 
     # reformat_for_datapipelines("twitter", "en",
