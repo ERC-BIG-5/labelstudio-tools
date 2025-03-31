@@ -7,15 +7,15 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
-from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.funcs import get_latest_annotation_file, get_latest_annotation
-from ls_helper.models import ProjectAccess, MyProject, ProjectAnnotations, platforms_overview
+from ls_helper.models import ProjectAccess, MyProject, UserInfo
 from ls_helper.my_labelstudio_client.client import ls_client
+from ls_helper.my_labelstudio_client.models import TaskResultModel
 from ls_helper.new_models import platforms_overview2
-from ls_helper.settings import ls_logger
+from ls_helper.settings import ls_logger, SETTINGS
 
 
-def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[ProjectAnnotations]:
+def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[list[TaskResultModel]]:
     latest_file = get_latest_annotation_file(project_id)
     if latest_file is not None:
         file_dt = datetime.strptime(latest_file.stem, "%Y%m%d_%H%M")
@@ -94,3 +94,14 @@ def _reformat_for_datapipelines(mp, destinion_path: Path):
         res[task_result.data["platform_id"]] = task_result.model_dump(exclude={"data"})
     destinion_path.write_text(json.dumps(res))
     print(f"annotations reformatted -> {destinion_path.as_posix()}")
+
+
+
+def users() -> "UserInfo":
+    pp = Path(SETTINGS.BASE_DATA_DIR / "users.json")
+    if not pp.exists():
+        users = UserInfo(**{})
+        json.dump(users.model_dump(), pp.open("w"), indent=2)
+        return users
+    else:
+        return UserInfo.model_validate(json.load(pp.open()))

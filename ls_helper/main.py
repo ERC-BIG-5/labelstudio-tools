@@ -3,12 +3,9 @@ from pathlib import Path
 
 from ana_res import parse_label_config_xml, get_config_project_project_data
 from ls_helper.funcs import get_latest_annotation, test_update_other_coding_game, update_coding_game
-from ls_helper.models import MyProject, ProjectAnnotationExtension, TaskAnnotResults
+from ls_helper.models import MyProject, ProjectAnnotationExtension
 from my_labelstudio_client.client import LabelStudioBase
 from settings import SETTINGS
-
-
-
 
 if __name__ == "__main__":
     client = LabelStudioBase(base_url=SETTINGS.LS_HOSTNAME, api_key=SETTINGS.LS_API_KEY)

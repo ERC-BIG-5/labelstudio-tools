@@ -6,13 +6,13 @@ from typing import Optional
 import httpx
 import jsonpath_ng
 
-from ls_helper.models import VariableExtension, ResultStruct, ProjectAnnotationExtension, ProjectAnnotations, MyProject
+from ls_helper.models import VariableExtension, ResultStruct, ProjectAnnotationExtension, MyProject
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
-from ls_helper.my_labelstudio_client.models import UserModel, ProjectViewModel
+from ls_helper.my_labelstudio_client.models import UserModel, ProjectViewModel, TaskResultModel
 from ls_helper.settings import SETTINGS, ls_logger
 
 
-def test_update_other_coding_game(project_annotations: ProjectAnnotations,
+def test_update_other_coding_game(annotations: list[TaskResultModel],
                                   project_id: int) -> tuple[dict[str, list[str]], list[str]]:
     """
     TODO THIS FUNC NEEDS TO GO
@@ -35,7 +35,7 @@ def test_update_other_coding_game(project_annotations: ProjectAnnotations,
     for_coding_game = []
     data_for_coding_game = []
 
-    for task_res in project_annotations.annotations:
+    for task_res in annotations:
         annotations = task_res.annotations
         for annotation in annotations:
             for result in annotation.result:
@@ -150,6 +150,7 @@ def update_coding_game(client: LabelStudioBase,
         print(f"error updating view for coding game: {resp.status_code}")
         print(resp.json())
 
+
 def build_platform_id_filter(platform_ids: list[str]):
     new_items = []
     new_filters = {"conjunction": "or", "items": new_items}
@@ -164,11 +165,11 @@ def build_platform_id_filter(platform_ids: list[str]):
         })
     return new_filters
 
+
 def build_view_with_filter_p_ids(
         client: LabelStudioBase,
         view: ProjectViewModel,
         platform_ids: list[str]):
-
     new_filters = build_platform_id_filter(platform_ids)
 
     res = {
@@ -190,14 +191,12 @@ def get_latest_annotation_file(project_id: int) -> Optional[Path]:
     return sorted(annotation_files)[-1]
 
 
-def get_latest_annotation(project_id: int) -> Optional[ProjectAnnotations]:
+def get_latest_annotation(project_id: int) -> Optional[list[TaskResultModel]]:
     annotation_file = get_latest_annotation_file(project_id)
     if not annotation_file:
         ls_logger.warning("No annotation file?!")
         return None
-    return ProjectAnnotations(project_id=project_id,
-                              annotations=json.load(annotation_file.open(encoding="utf-8")),
-                              file_path=annotation_file)
+    return [TaskResultModel.model_validate(t) for t in json.load(annotation_file.open(encoding="utf-8"))]
 
 
 def get_variable_extensions(annotation_struct: ResultStruct) -> ProjectAnnotationExtension:
@@ -210,9 +209,6 @@ def get_variable_extensions(annotation_struct: ResultStruct) -> ProjectAnnotatio
 
     return ProjectAnnotationExtension(fixes=data)
 
-
-def apply_fixes(annotations: ProjectAnnotations, fixes: ProjectAnnotationExtension):
-    pass
 
 
 def download_project_views(project_id: int, store: bool = True):

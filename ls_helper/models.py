@@ -1,32 +1,16 @@
-import json
-import re
-import uuid
 from csv import DictWriter
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Literal, Any, Iterable, Annotated
 
-import orjson
 import pandas as pd
-from deprecated.classic import deprecated
 from pandas import DataFrame
-from pydantic import BaseModel, Field, ConfigDict, RootModel, model_validator, PlainSerializer
+from pydantic import BaseModel, Field, ConfigDict, model_validator, PlainSerializer
 
-from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel
-from ls_helper.settings import SETTINGS
-
-# todo bring and import tools,
-SerializableDatetime = Annotated[
-    datetime, PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used='json')
-]
-
-SerializableDatetimeAlways = Annotated[
-    datetime, PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used='always')
-]
+from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel, TaskResultModel
 
 PlLang = tuple[str, str]
 ProjectAccess = int | str | PlLang
-
 
 
 def find_name_fixes(orig_keys: Iterable[str],
@@ -172,194 +156,6 @@ class ProjectAnnotationExtension(BaseModel):
             return self.fixes[orig_name]
 
 
-class ProjectAnnotations(BaseModel):
-    project_id: int  # todo, out...
-    annotations: list["TaskResultModel"]
-    file_path: Optional[Path] = None
-
-
-# modelling LS structure
-class ChoicesValue(BaseModel):
-    choices: list[str]
-
-    @property
-    def str_value(self) -> str:
-        return str(",".join(self.choices))
-
-    @property
-    def direct_value(self) -> list[str]:
-        return self.choices
-
-
-# modelling LS structure
-class TextValue(BaseModel):
-    text: list[str]
-
-    @property
-    def str_value(self) -> str:
-        return str(",".join(self.text))
-
-    @property
-    def direct_value(self) -> list[str]:
-        return self.text
-
-
-# modelling LS structure
-class AnnotationResult(BaseModel):
-    id: str
-    type: str
-    value: ChoicesValue | TextValue
-    origin: str
-    to_name: str
-    from_name: str
-
-    @property
-    def str_value(self) -> str:
-        return self.value.str_value
-
-    @property
-    def direct_value(self) -> list[str]:
-        return self.value.direct_value
-
-
-class TaskAnnotationModel(BaseModel):
-    id: int
-    completed_by: int
-    result: list[AnnotationResult]
-    was_cancelled: bool
-    ground_truth: bool
-    created_at: SerializableDatetimeAlways
-    updated_at: SerializableDatetimeAlways
-    draft_created_at: Optional[SerializableDatetimeAlways] = None
-    lead_time: float
-    prediction: dict
-    result_count: int
-    unique_id: Annotated[uuid.UUID, PlainSerializer(lambda v: str(v), return_type=str, when_used='always')]
-    import_id: Optional[int] = None
-    last_action: Optional[str] = None
-    task: int
-    project: int
-    updated_by: int
-    parent_prediction: Optional[int] = None
-    parent_annotation: Optional[int] = None
-    last_created_by: Optional[int] = None
-
-
-# LS structure
-class TaskResultModel(BaseModel):
-    id: int
-    annotations: list[TaskAnnotationModel]
-    meta: dict = Field()
-    data: dict = Field(..., description="the task data")
-    created_at: SerializableDatetimeAlways
-    updated_at: SerializableDatetimeAlways
-    inner_id: int
-    total_annotations: int
-    cancelled_annotations: int
-    total_predictions: int
-    comment_count: int
-    unresolved_comment_count: int
-    last_comment_updated_at: Optional[SerializableDatetimeAlways] = None
-    project: int
-    updated_by: int
-    comment_authors: list[int]
-
-    @property
-    def num_coders(self) -> int:
-        return len(self.annotations)
-
-
-class TaskAnnotationItem(BaseModel):
-    name: str
-    type_: Literal["single", "multiple", "text", "datetime", "list-single", "list-multiple", "list-text"] = Field(None,
-                                                                                                                  alias="type")
-    num_coders: int
-    values: list[list[str]] = Field(default_factory=list)
-    value_indices: list[list[int]] = Field(default_factory=list)
-    users: list[int | str] = Field(default_factory=list)
-
-    def add(self, value: str | list[str], value_index: int | list[int], user_id: int) -> None:
-        self.values.append(value)
-        self.value_indices.append(value_index)
-        self.users.append(user_id)
-
-    def value_str(self, with_defaults: bool = True, with_user: bool = False) -> str:
-        # if with_defaults:
-        # if with_user:
-        #     comb = [f"{v} ({u})" for v, u in zip(self.values, self.users)]
-        #     return "; ".join(comb)
-        if self.type_.startswith("list"):
-            coders = []
-            for coder_resp in self.values:
-                # for item in coder_resp:
-                #     items.append(["|".join(item) for item in item])
-                coders.append(["|".join(item) for item in coder_resp])
-            coder_join = [", ".join(cv) for cv in coders]
-        else:
-            coder_join = [", ".join(cv) for cv in self.values]
-        return "; ".join(coder_join)
-
-
-class TaskAnnotResults(BaseModel):
-    task_id: int
-    items: Optional[dict[str, TaskAnnotationItem]] = Field(default_factory=dict)
-    num_coders: int
-    num_cancellations: int
-    relevant_input_data: dict[str, Any]
-    users: list[int]
-
-    def add(self, item_name: str, value: list[str] | list[list[str]], value_index: list[int] | list[list[int]],
-            user_id: int,
-            type_: Literal[
-                "single", "multiple", "text", "datetime", "list-single", "list-multiple", "list-text"]) -> None:
-        annotation_item = self.items.setdefault(item_name, TaskAnnotationItem.model_validate(
-            {"name": item_name, "type": type_, "num_coders": self.num_coders}))
-
-        annotation_item.add(value, value_index, user_id)
-
-    def apply_extension(self,
-                        annotation_extension: "ProjectAnnotationExtension",
-                        fillin_defaults: bool = True) -> None:
-        for item_name, value in self.items.items():
-            fix = annotation_extension.get_from_rev(item_name)
-            if not fix:
-                pass
-            else:
-                # print(item_name, fix)
-                if fillin_defaults:
-                    if value.type_ == "single":
-                        # fill it up with default value
-                        if len(value.values) != value.num_coders and fix.default:
-                            assert isinstance(fix.default, str), "default must be a str"
-                            value.values.extend([[fix.default] * (value.num_coders - len(value.values))])
-                    elif value.type_ == "multiple":
-                        if len(value.values) != value.num_coders and fix.default:
-                            # assert isinstance(fix.default, list), "default must be a list"
-                            value.values.extend([[fix.default] * (value.num_coders - len(value.values))])
-        # those that are missing in the row:
-        for additional in set(annotation_extension.fixes) - set(self.items):
-            fix = annotation_extension.fixes[additional]
-            new_name = getattr(fix, "name_fix")
-            if not new_name:
-                new_name = additional
-            if fix.default:
-                self.items[new_name] = TaskAnnotationItem(name=new_name, values=[[fix.default]] * self.num_coders,
-                                                          num_coders=self.num_coders)
-
-    def data(self) -> dict[str, Any]:
-        return {k: v.values for k, v in self.items.items()}
-
-    def data_str(self, with_defaults: bool = True) -> dict[str, str]:
-        return {k: v.value_str(with_defaults) for k, v in self.items.items()}
-
-    class Config:
-        validate_assignment = True
-
-    def set_all_to_pre_default(self) -> None:
-        for res in self.items.values():
-            res.set_predefaults()
-
-
 class PrincipleRow(BaseModel):
     task_id: int
     ann_id: int
@@ -388,7 +184,7 @@ class MyProject(BaseModel):
     project_data: ProjectModel
     annotation_structure: ResultStruct
     data_extensions: Optional[ProjectAnnotationExtension] = None
-    raw_annotation_result: Optional[ProjectAnnotations] = None
+    raw_annotation_result: Optional[list[TaskResultModel]] = None
     project_views: Optional[list[ProjectViewModel]] = None
     raw_annotation_df: Optional[pd.DataFrame] = None
     assignment_df: Optional[pd.DataFrame] = None
@@ -398,85 +194,6 @@ class MyProject(BaseModel):
     @property
     def project_id(self) -> int:
         return self.project_data.id
-
-    @deprecated(reason="use straight 2df")
-    def calculate_results(self) -> list[TaskAnnotResults]:
-        self.annotation_results = []
-        for task in self.raw_annotation_result.annotations:
-            # annotation
-            # this should be a model, from which we can also calc the
-            cancel_mask = [ann.was_cancelled for ann in task.annotations]
-            users = [ann.completed_by for idx, ann in enumerate(task.annotations) if not cancel_mask[idx]]
-
-            task_calc_results = TaskAnnotResults(num_coders=len(users), relevant_input_data=task.data,
-                                                 num_cancellations=task.cancelled_annotations,
-                                                 users=users, task_id=task.id)
-
-            all_cos = {orig: fix.name_fix if fix.name_fix else orig for orig, fix in self.data_extensions.fixes.items()}
-            default_cols = {orig: fix.default for orig, fix in self.data_extensions.fixes.items() if fix.default}
-
-            for ann in task.annotations:
-                if ann.was_cancelled:
-                    continue
-                user_id = ann.completed_by
-
-                result_dict = {all_cos.get(ann_res.from_name, ann_res.from_name): ann_res for ann_res in ann.result}
-
-                for col in all_cos.values():
-                    fix_name = all_cos.get(col, col)
-                    if ann_res := result_dict.get(col):
-                        if ann_res.type == "choices":
-                            choices_c = self.annotation_structure.choices.get(fix_name)
-                            value = ann_res.direct_value
-                            value_index = self.annotation_structure.choices.get(fix_name).get_index(value)
-                            if not choices_c:
-                                print(f"choice not in result-struct: {col}")
-                            else:
-                                task_calc_results.add(fix_name, value, value_index, user_id, choices_c.choice)
-                        else:  # text
-                            task_calc_results.add(fix_name, ann_res.direct_value, None, user_id, "text")
-                    else:
-                        default_value = default_cols.get(fix_name)
-                        choice = self.annotation_structure.choices.get(fix_name)
-                        if choice:
-                            type_ = choice.choice
-                            if default_value:
-                                default_value_index = self.annotation_structure.choices.get(fix_name).get_index(
-                                    default_value)
-                                task_calc_results.add(fix_name, [default_value], [default_value_index], user_id, type_)
-                            else:
-                                task_calc_results.add(fix_name, [], [], user_id, type_)
-                        else:
-                            task_calc_results.add(fix_name, [], [], user_id, "text")
-
-            index_columns_map: dict[str, list[tuple[int, TaskAnnotationItem]]] = {}
-            # merge all individual indices in the naming ..._ID_... into a one level deper nesting.
-            pattern = r'_(\d+)_|_(\d+)$'
-            for name, result in task_calc_results.items.items():
-                match = re.search(pattern, name)
-                if match:
-                    # #todo use the number to order, guarantee right order
-                    number = int(match.group(0).strip("_"))
-                    group_name = re.sub(pattern, "_", name).strip("_")
-                    index_columns_map.setdefault(group_name, []).append((number, result))
-
-            for sum_col, data in index_columns_map.items():
-                # delete original columns
-                for c in data:
-                    del task_calc_results.items[c[1].name]
-
-                for user_idx, user in enumerate(users):
-                    values = []
-                    values_indices = []
-                    for item in data:
-                        item_no, item_data = item
-                        assert users == item_data.users
-                        values.append(item_data.values[user_idx])
-                        values_indices.append(item_data.value_indices[user_idx])
-                    task_calc_results.add(f"{sum_col}_$", values, values_indices, user, f"list-{item[1].type_}")
-
-            self.annotation_results.append(task_calc_results)
-        return self.annotation_results
 
     def apply_extension(self) -> None:
         if not self.data_extensions:
@@ -706,153 +423,6 @@ class MyProject(BaseModel):
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
 
 
-class PlatformLanguageOverview(BaseModel):
-    id: Optional[int] = None
-    coding_game_view_id: Optional[int] = None
-
-    def get_views(self) -> Optional[list[ProjectViewModel]]:
-        view_file = SETTINGS.view_dir / f"{self.id}.json"
-        if not view_file.exists():
-            return None
-        data = json.load(view_file.open())
-        return [ProjectViewModel.model_validate(v) for v in data]
-
-    # THIS IS ALREADY DONE BY NEW MODEL, BUT WE WANT TO USE IDS, INSTEAD OF THIS PLATFORM-LANGUAGE FILE NAME...
-    def project_data(self) -> ProjectModel:
-        platform, lang = ProjectOverview.get_platform_lang_from_id(self.id)
-        return ProjectModel.model_validate_json((SETTINGS.projects_dir / f"{platform}/{lang}.json").read_text())
-
-    # THIS IS ALREADY DONE BY NEW MODEL...
-    def get_fixes(self) -> ProjectAnnotationExtension:
-        if (fi := SETTINGS.fixes_dir / "unifixes.json").exists():
-            data_extensions = ProjectAnnotationExtension.model_validate(json.load(fi.open()))
-        else:
-            print(f"no unifixes.json file yet in {SETTINGS.fixes_dir / 'unifix.json'}")
-            data_extensions = {}
-        if (p_fixes_file := SETTINGS.fixes_dir / f"{self.id}.json").exists():
-            p_fixes = ProjectAnnotationExtension.model_validate_json(p_fixes_file.read_text(encoding="utf-8"))
-            data_extensions.fixes.update(p_fixes.fixes)
-            data_extensions.fix_reverse_map.update(p_fixes.fix_reverse_map)
-
-        return data_extensions
-
-    @property
-    def platform(self) -> str:
-        return platforms_overview.get_platform_lang_from_id(self.id)[0]
-
-    @property
-    def language(self) -> str:
-        return platforms_overview.get_platform_lang_from_id(self.id)[1]
-
-
-class ProjectPlatformOverview(RootModel):
-    root: dict[str, PlatformLanguageOverview]
-
-    @staticmethod
-    def languages() -> list[str]:
-        return ["en", "es"]
-
-    def __iter__(self):
-        return iter(self.root.items())
-
-    def __getitem__(self, item):
-        return self.root[item]
-
-    @staticmethod
-    def users() -> "UserInfo":
-        pp = Path(SETTINGS.BASE_DATA_DIR / "users.json")
-        if not pp.exists():
-            users = UserInfo(**{})
-            json.dump(users.model_dump(), pp.open("w"), indent=2)
-            return users
-        else:
-            return UserInfo.model_validate(json.load(pp.open()))
-
-
-PlLang = tuple[str, str]
-ProjectAccess = int | str | PlLang
-
-
-@deprecated("reason, we want to use ProjectOverview2 (new_models)")
-class ProjectOverview(RootModel):
-    root: dict[str, ProjectPlatformOverview]
-
-    @staticmethod
-    def platforms() -> list[str]:
-        return ["youtube", "twitter", "tiktok", "instagram", "facebook"]
-
-    def __iter__(self):
-        for k, v in iter(self.root.items()):
-            yield k, v.root
-
-    def __getitem__(self, item: ProjectAccess | str):
-        if isinstance(item, str):
-            return self.root[item].root
-        elif isinstance(item, int):
-            return self.get_platform_lang_from_id(item)
-        else:
-            return self.root[item[0]][item[1]]
-
-    @staticmethod
-    def project_data_path(platform: str, language: str) -> Path:
-        return SETTINGS.projects_dir / platform / f"{language}.json"
-
-    @staticmethod
-    def projects() -> "ProjectOverview":
-        pp = Path(SETTINGS.BASE_DATA_DIR / "projects.json")
-        if not pp.exists():
-            projects = ProjectOverview.model_validate_json(Path("data/projects_template.json").open())
-            json.dump(projects.model_dump(), pp.open("w"), indent=2)
-            return projects
-        else:
-            return ProjectOverview.model_validate_json(pp.read_text())
-
-    # todo maybe return Model
-    @staticmethod
-    def project_data(platform: str, language: str) -> Optional[dict]:
-        pp = ProjectOverview.project_data_path(platform, language)
-        if not pp.exists():
-            return None
-        return orjson.loads(pp.open().read())
-
-    @staticmethod
-    def get_project_id(platform: str, language: str) -> Optional[int]:
-        id = ProjectOverview.projects()[platform][language].id
-        if not id:
-            raise ValueError(f"No project_id for {platform}, {language}")
-        return id
-
-    @staticmethod
-    def get_platform_lang_from_id(project_id: int) -> tuple[str, str]:
-        for platform, platform_infos in ProjectOverview.projects():
-            for lang, project_info in platform_infos.items():
-                if project_info.id == project_id:
-                    return platform, lang
-        raise ValueError(f"No project_id for {project_id}")
-
-    def get_project(self, p_access: ProjectAccess) -> Optional[PlatformLanguageOverview]:
-        if isinstance(p_access, int):
-            for platform, lang_p in self.root.items():
-                for lang, p_data in lang_p.root.items():
-                    if p_data.id == p_access:
-                        return p_data
-        elif isinstance(p_access, tuple):
-            platform, language = p_access
-            return self[platform][language]
-
-    # todo out
-    def get_view_file(self, p_access: ProjectAccess) -> Optional[Path]:
-        project = self.get_project(p_access)
-        if project:
-            return SETTINGS.view_dir / f"{project.id}.json"
-
-    def get_views(self, p_access: ProjectAccess) -> Optional[list[ProjectViewModel]]:
-        project = self.get_project(p_access)
-        if project:
-            return project.get_views()
-        root: dict[str, ProjectPlatformOverview]
-
-
 class UserInfo(BaseModel):
     users: dict[int, str]
 
@@ -870,6 +440,3 @@ class Agreements(BaseModel):
     # platform: str
     # language: str
     tasks: list[TasksAgreements]
-
-
-platforms_overview = ProjectOverview.projects()

@@ -5,11 +5,9 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
-from deprecated.classic import deprecated
 from pydantic import BaseModel
 from tqdm import tqdm
 
-from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
 from ls_helper.annotations import create_annotations_results, get_recent_annotations, _reformat_for_datapipelines
@@ -18,7 +16,6 @@ from ls_helper.config_helper import check_config_update
 from ls_helper.exp.build_configs import build_configs
 from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter, get_variable_extensions
 from ls_helper.models import MyProject
-# from ls_helper.models import ProjectOverview, get_p_access, MyProject
 from ls_helper.my_labelstudio_client.annot_master import prep_single_select_agreement, prep_multi_select_agreement, \
     calc_agreements, export_annotations2csv
 from ls_helper.my_labelstudio_client.client import ls_client
@@ -449,30 +446,6 @@ def agreements(
     dest: Path = (SETTINGS.agreements_dir / f"{mp.project_id}.json")
     dest.write_text(json.dumps(agreement_report))
     return dest, agreement_report
-
-    """
-    # question_dfs = default_df.groupby("question")
-    for cat, cat_info in mp.annotation_structure.choices.items():
-        # print(cat)
-
-        
-        # # todo replace this line eventually when intern of merge-col list is stored properly
-        type_ = mp.annotation_structure.question_type(cat)
-        if type_ == "single":
-            default_df = mp.get_default_df(mp.raw_annotation_df, cat)
-            deff = prep_single_select_agreement(default_df, cat, False)
-            fleiss, gwet = calc_agreements(deff)
-            print(f"{cat=} {fleiss=} {gwet=}")
-        else:
-            print(f"M {cat}")
-            rdf = mp.raw_annotation_df
-            options = mp.annotation_structure.choices.get(cat).raw_options_list()
-            # print(options)
-            red_df = prep_multi_select_agreement(rdf, cat, options)
-            for o, df in red_df.items():
-                fleiss, gwet = calc_agreements(df)
-                print(f"{cat=}{o=} {fleiss=} {gwet=}")
-    """
 
 
 @app.command()

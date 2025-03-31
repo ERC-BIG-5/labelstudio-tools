@@ -2,7 +2,6 @@ from typing import Literal
 
 import numpy as np
 
-from ls_helper.models import ResultStruct, TaskAnnotResults
 
 
 def fleiss_kappa(table, method='fleiss'):
@@ -85,83 +84,5 @@ def fleiss_kappa(table, method='fleiss'):
         return (p_mean - p_mean_exp) / (1 - p_mean_exp)
 
 
-def calculate_fleiss_kappa(results: list[TaskResults],
-                           result_struct: ResultStruct,
-                           choice_name: str,
-                           num_coders: int) -> float:
-    """
-    Fleiss’ and Randolph’s kappa multi-rater agreement measure
-    https://www.statsmodels.org/dev/generated/statsmodels.stats.inter_rater.fleiss_kappa.html
-    """
-
-    categories = result_struct.choices[choice_name]
-
-    # restructure the data to get it to the structure for fleiss-kappa
-    # subjects in rows, and categories in columns
-    matrix: list[list[int]] = []
-    extended_categories = categories + [NO_RESPONSE]
-    for row in results:
-        row_data = [0] * len(extended_categories)
-        field_data = row.annotations.choices[choice_name]
-
-        for i, category in enumerate(extended_categories):
-            #print(category)
-            row_data[i] = len(field_data[category])
-
-        matrix.append(row_data)
-
-    # if CONFIG.DEBUG_MODE:
-    #     debug.store_coding_matrix(choice_name, matrix)
-    kappa = fleiss_kappa(matrix)
-    return float(kappa)
-
-
-def calc_agreements(results_list: list[TaskAnnotResults],
-                    result_struct: ResultStruct,
-                    all_coders: set[str],
-                    handle_missing_coding: Literal["only_full", "all", "discard_missing"] = 'only_full'):
-    """
-
-    :param results:
-    :param result_struct:
-    :param all_coders:
-    :param handle_missing_coding:
-    :return:
-    """
-    if len(all_coders) < 2:
-        print("No agreement calculation for less than 2 coders. bye")
-        return
-    agreements = {}
-    for choice in result_struct.choices.keys():
-        if handle_missing_coding == "only_full":
-            # check, if any coder, did not answer
-            complete_results_list = list(filter(lambda r: not r.annotations.choices[choice][NO_RESPONSE], results_list))
-            if not complete_results_list:
-                print(f"Choice: '{choice}' - List of rows annotated by all coders is empty.")
-                agreements[choice] = 0
-                continue
-            print(f"Choice: '{choice}' - Number of complete rows: {len(complete_results_list)}")
-            agreements[choice] = calculate_fleiss_kappa(complete_results_list, result_struct, choice, len(all_coders))
-        elif handle_missing_coding == "all":
-            agreements[choice] = calculate_fleiss_kappa(results_list, result_struct, choice, len(all_coders))
-        elif handle_missing_coding == "discard_missing":
-            # discard missing. take the rows, which have the highest numbers of coders
-            count_groups: dict[int, list[dict]] = {}
-            for row in results_list:
-                row_ = deepcopy(row.annotations.choices[choice])
-                del row_[NO_RESPONSE]
-                # check if its empty
-                coded_count = reduce(lambda a,b: a+b, (len(option_coders) for option_coders in row_.values()))
-                if not coded_count == 0:
-                    count_groups.setdefault(coded_count,[]).append(row_)
-            highest_counts_rows = list(sorted(count_groups.items(), key=lambda x: len(x[1]), reverse=True))
-            if highest_counts_rows[0][0] == 1:
-                highest_counts_rows.pop(0)
-            highest_count, rows_ = highest_counts_rows[0]
-            print(f"Choice: '{choice}' - Highest count: {highest_count}, {len(rows_)} rows")
-            agreements[choice] = calculate_fleiss_kappa2(rows_, result_struct, choice, len(all_coders))
-    for k, v in agreements.items():
-        agreements[k] = {"value": round(v, 3), "interpretation": interpretation_str(v)}
-    return agreements
 
 

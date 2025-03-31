@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from irrCAC.raw import CAC
 from pandas import DataFrame
-from traitlets import observe
 
 from ls_helper.models import MyProject
 

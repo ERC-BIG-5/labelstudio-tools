@@ -10,7 +10,7 @@ import httpx
 from httpx import Response
 
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectModel, UserModel, ProjectViewCreate, \
-    TaskCreate
+    TaskCreate, TaskResultModel
 from ls_helper.settings import SETTINGS, DEV_SETTINGS
 
 if typing.TYPE_CHECKING:
@@ -166,7 +166,7 @@ class LabelStudioBase:
         else:
             print(resp.status_code, resp.json())
 
-    def get_project_annotations(self, project_id: int) -> "ProjectAnnotations":
+    def get_project_annotations(self, project_id: int) -> list[TaskResultModel]:
         export_create = self._client_wrapper.httpx_client.post(f"/api/projects/{project_id}/exports", json={
             "task_filter_options": {"only_with_annotations": True}
         })
@@ -181,12 +181,7 @@ class LabelStudioBase:
         res_path.parent.mkdir(parents=True, exist_ok=True)
         print(f"dumping project annotations to {res_path}")
         json.dump(result, res_path.open("w", encoding="utf-8"))
-
-        from ls_helper.models import ProjectAnnotations
-
-        return ProjectAnnotations(project_id=project_id,
-                                  annotations=result,
-                                  file_path=res_path)
+        return [TaskResultModel.model_validate(t) for t in result]
 
     def get_project_views(self, project_id: int) -> list[ProjectViewModel]:
         resp = self._client_wrapper.httpx_client.get(f"api/dm/views/?project={project_id}")
@@ -280,9 +275,10 @@ class LabelStudioBase:
         view = ProjectViewModel.model_validate(resp.json())
         return data
 
-    def createTask(self,data: TaskCreate):
+    def createTask(self, data: TaskCreate):
         resp = self._client_wrapper.httpx_client.post(f"/api/tasks/", json=data.model_dump())
         return resp
+
 
 _GLOBAL_CLIENT: Optional[LabelStudioBase] = None
 

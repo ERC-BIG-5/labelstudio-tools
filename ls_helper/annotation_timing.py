@@ -8,12 +8,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from numpy.ma.extras import average
 
-from ls_helper.models import ProjectAnnotations
+from ls_helper.my_labelstudio_client.models import TaskResultModel
 
 
-def annotation_timing(annotation_data : ProjectAnnotations, min_annotations: int = 2) -> pd.DataFrame:
+def annotation_timing(annotations: list[TaskResultModel], min_annotations: int = 2) -> pd.DataFrame:
     counter = collections.Counter[date]()
-    for ann in annotation_data.annotations:
+    for ann in annotations:
         if ann.total_annotations < min_annotations:
             continue
         dt = ann.annotations[-1].created_at.date()
@@ -23,9 +23,9 @@ def annotation_timing(annotation_data : ProjectAnnotations, min_annotations: int
     # print(df)
     return df
 
-def get_annotation_lead_times(annotation_data : ProjectAnnotations, min_annotations: int = 2) -> pd.DataFrame:
+def get_annotation_lead_times(annotations: list[TaskResultModel], min_annotations: int = 2) -> pd.DataFrame:
     lead_times: dict[date, list[float]] = {}
-    for ann in annotation_data.annotations:
+    for ann in annotations:
         if ann.total_annotations < min_annotations:
             continue
         dt = ann.annotations[-1].created_at.date()
@@ -36,8 +36,8 @@ def get_annotation_lead_times(annotation_data : ProjectAnnotations, min_annotati
     df = df.sort_values('date')
     return df
 
-def annotation_total_over_time(annotation_data : ProjectAnnotations, min_annotations: int = 2):
-    df = annotation_timing(annotation_data, min_annotations)
+def annotation_total_over_time(annotations: list[TaskResultModel],  min_annotations: int = 2):
+    df = annotation_timing(annotations, min_annotations)
     result_df = df.sort_values('date')
 
     # Calculate the cumulative sum
@@ -106,9 +106,3 @@ def plot_cumulative_annotations(cumulative_df: pd.DataFrame, title: str = "Cumul
     # Show plot
     # plt.show()
 
-if __name__ == "__main__":
-    fp = Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/annotations/33/33-20250306_1221.json")
-    data = json.load(fp.open())
-    pa = ProjectAnnotations(project_id=33,annotations=data, file_path=fp)
-    df = annotation_timing(pa)
-    plot_date_distribution(df)

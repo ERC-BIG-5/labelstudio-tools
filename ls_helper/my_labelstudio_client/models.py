@@ -1,8 +1,10 @@
+import uuid
 from datetime import datetime
 from typing import Optional, Any, TypedDict, Literal, Annotated
 
 from pydantic import BaseModel, Field, PlainSerializer, ConfigDict
 
+from tools.Pydantic_annotated_types import SerializableDatetimeAlways
 
 
 class ProjectModel(BaseModel):
@@ -170,20 +172,22 @@ class ProjectViewsDataModel(BaseModel):
     })]}) = None
     ordering: Optional[list[str]] = None
 
+
 class ProjectViewCreate(BaseModel):
     project: int
     data: Optional[ProjectViewsDataModel] = Field(default_factory=ProjectViewsDataModel)
 
+
 class TaskCreate(BaseModel):
     project: int
     data: dict[str, Any]
+
 
 # from LS
 class ProjectViewModel(ProjectViewCreate):
     id: int
     user: int
     order: int
-
 
 
 class UserModel(BaseModel):
@@ -200,14 +204,16 @@ class UserModel(BaseModel):
     allow_newsletters: Optional[bool] = False
     # date_joined: datetime
 
+
 class ProjectViewDataModel(BaseModel):
     id: int
     type: str
     title: str
     target: str
     hiddenColumns: dict[str, list[str]]
-    filters: dict # conjungtion, items
+    filters: dict  # conjungtion, items
     ordering: list[str]
+
 
 class ViewModel(BaseModel):
     id: int
@@ -215,3 +221,90 @@ class ViewModel(BaseModel):
     user: int
     project: int
     data: ProjectViewsDataModel
+
+
+class ChoicesValue(BaseModel):
+    choices: list[str]
+
+    @property
+    def str_value(self) -> str:
+        return str(",".join(self.choices))
+
+    @property
+    def direct_value(self) -> list[str]:
+        return self.choices
+
+
+class TextValue(BaseModel):
+    text: list[str]
+
+    @property
+    def str_value(self) -> str:
+        return str(",".join(self.text))
+
+    @property
+    def direct_value(self) -> list[str]:
+        return self.text
+
+
+class AnnotationResult(BaseModel):
+    id: str
+    type: str
+    value: ChoicesValue | TextValue
+    origin: str
+    to_name: str
+    from_name: str
+
+    @property
+    def str_value(self) -> str:
+        return self.value.str_value
+
+    @property
+    def direct_value(self) -> list[str]:
+        return self.value.direct_value
+
+
+class TaskAnnotationModel(BaseModel):
+    id: int
+    completed_by: int
+    result: list[AnnotationResult]
+    was_cancelled: bool
+    ground_truth: bool
+    created_at: SerializableDatetimeAlways
+    updated_at: SerializableDatetimeAlways
+    draft_created_at: Optional[SerializableDatetimeAlways] = None
+    lead_time: float
+    prediction: dict
+    result_count: int
+    unique_id: Annotated[uuid.UUID, PlainSerializer(lambda v: str(v), return_type=str, when_used='always')]
+    import_id: Optional[int] = None
+    last_action: Optional[str] = None
+    task: int
+    project: int
+    updated_by: int
+    parent_prediction: Optional[int] = None
+    parent_annotation: Optional[int] = None
+    last_created_by: Optional[int] = None
+
+
+class TaskResultModel(BaseModel):
+    id: int
+    annotations: list[TaskAnnotationModel]
+    meta: dict = Field()
+    data: dict = Field(..., description="the task data")
+    created_at: SerializableDatetimeAlways
+    updated_at: SerializableDatetimeAlways
+    inner_id: int
+    total_annotations: int
+    cancelled_annotations: int
+    total_predictions: int
+    comment_count: int
+    unresolved_comment_count: int
+    last_comment_updated_at: Optional[SerializableDatetimeAlways] = None
+    project: int
+    updated_by: int
+    comment_authors: list[int]
+
+    @property
+    def num_coders(self) -> int:
+        return len(self.annotations)

@@ -116,7 +116,6 @@ def check_against_fixes(label_config: str | ResultStruct, fixes: ProjectAnnotati
     """
     Do
     :param label_config: xml config string
-    :param project_info:
     :return:
     """
     if isinstance(label_config, str):
