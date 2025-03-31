@@ -1,20 +1,37 @@
-from pathlib import Path
+from typing import Any, Optional
 
 import orjson
 
-from ls_helper.ana_res import parse_label_config_xml
-from ls_helper.models import ProjectOverview, MyProject
+from ls_helper.my_labelstudio_client.client import ls_client
+from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel, ProjectViewCreate
+from ls_helper.new_models import ProjectCreate, platforms_overview2
 from ls_helper.settings import SETTINGS
+from tools.env_root import root
+from tools.files import read_data
 
 
 class ProjectMgmt:
+    DEFAULT_VIEW_HIDDEN_COLUMNS_FP = root() / "data/ls_data/default/ls_project_view_hiddenColumns.json"
+
+    @staticmethod
+    def default_project_values() -> dict[str, Any]:
+        return {
+            "color": "#617ada",
+            "maximum_annotations": 2,
+            "sampling": "Uniform sampling"
+        }
+
 
     @staticmethod
     def update_projects():
+        """
+        TODO, not sure if still used or required.
+        :return:
+        """
         projects_data = SETTINGS.client.projects_list()
         project_map = {p.id: p for p in projects_data}
 
-        projects_info = ProjectOverview.projects()
+        projects_info = platforms_overview2
         for platform, p_data in projects_info:
             # print(platform, p_data)
             for lang, l_d in p_data.items():
@@ -23,12 +40,33 @@ class ProjectMgmt:
                     if _id not in project_map:
                         print(
                             f"warning: project-info has {platform}.{lang} with id: {_id} but does not exist in LS data")
-                    dest = projects_info.project_data_path(platform, lang)
+                    dest = p_data.project_data_path(platform, lang)
                     ls_project_data = project_map[_id]
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     dest.write_text(
                         orjson.dumps(ls_project_data.model_dump(), option=orjson.OPT_INDENT_2).decode("utf-8"),
                         encoding="utf-8")
+
+    @classmethod
+    def create_view(cls, view: ProjectViewCreate) -> ProjectViewModel:
+        if not view.data.hiddenColumns:
+            view.data.hiddenColumns = read_data(cls.DEFAULT_VIEW_HIDDEN_COLUMNS_FP)
+        return ls_client().create_view(view)
+
+    @classmethod
+    def create_project(cls, p: ProjectCreate, add_coding_game_view: bool = True) -> tuple[
+        ProjectModel, Optional[ProjectViewModel]]:
+        model = ProjectModel(title=p.name,
+                             description=p.full_description,
+                             **ProjectMgmt.default_project_values())
+        resp = ls_client().create_project(model)
+        project = ProjectModel.model_validate(resp.json())
+        coding_game_view: Optional[ProjectViewModel] = None
+        if add_coding_game_view:
+            coding_game_view = cls.create_view(ProjectViewCreate.model_validate(
+                {"project": project.id, "data": {}}))
+
+        return project, coding_game_view
 
     # @staticmethod
     # def get_annotations(platform: str, language: str):

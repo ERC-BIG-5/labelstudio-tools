@@ -1,41 +1,98 @@
+import json
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseModel, RootModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
 
-from ls_helper.models import ProjectAccess
+from ls_helper.models import ProjectAnnotationExtension
+from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel
 from ls_helper.settings import SETTINGS
 
+PlLang = tuple[str, str]
+ProjectAccess = int | str | PlLang
 
-class ProjectInfo(BaseModel):
-    id: int
-    platform: str
-    language: str
+
+class ProjectCreate(BaseModel):
     name: str
+    platform: Optional[str] = "xx"
+    language: Optional[str] = "xx"
+    description: Optional[str] = None
     alias: Optional[str] = None
-    default: Optional[bool] = False
-    #
+    default: Optional[bool] = Field(False, deprecated="default should be on the Overview model")
     label_config_template: Optional[str] = None
     label_config_additions: Optional[list[str]] = Field(default_factory=list)
     coding_game_view_id: Optional[int] = None
 
     @model_validator(mode="after")
-    def post_build(cls, data: "ProjectInfo") -> None:
+    def post_build(cls, data: "ProjectInfo") -> "ProjectInfo":
         if not data.alias:
             data.alias = data.name.lower().replace(" ", "_")
-
         return data
+
+    @property
+    def full_description(self) -> str:
+        return f"{self.name}\n{self.platform}:{self.language}\n{self.description}"
+
+    @property
+    def pl_lang(self) -> PlLang:
+        return self.platform, self.language
+
+    def save(self):
+        platforms_overview2.add_project(self)
+
+
+class ProjectInfo(ProjectCreate):
+    id: int
+
+    def project_data(self) -> ProjectModel:
+        # todo transfer all to id.json
+        fin: Optional[Path] = None
+        if (p_p_l := SETTINGS.projects_dir / f"{self.platform}/{self.language}.json").exists():
+            print(f"project data file for {self.id}: platform-language... change in future")
+            fin = p_p_l
+        elif (p_i := SETTINGS.projects_dir / f"{self.id}.json").exists():
+            fin = p_i
+        if not fin:
+            raise FileNotFoundError(f"project data file for {self.id}: platform-language does not exist")
+        return ProjectModel.model_validate_json(fin.read_text())
+
+    def get_fixes(self) -> ProjectAnnotationExtension:
+        if (fi := SETTINGS.fixes_dir / "unifixes.json").exists():
+            data_extensions = ProjectAnnotationExtension.model_validate(json.load(fi.open()))
+        else:
+            print(f"no unifixes.json file yet in {SETTINGS.fixes_dir / 'unifix.json'}")
+            data_extensions = {}
+        if (p_fixes_file := SETTINGS.fixes_dir / f"{self.id}.json").exists():
+            p_fixes = ProjectAnnotationExtension.model_validate_json(p_fixes_file.read_text(encoding="utf-8"))
+            data_extensions.fixes.update(p_fixes.fixes)
+            data_extensions.fix_reverse_map.update(p_fixes.fix_reverse_map)
+
+        return data_extensions
+
+    def get_views(self) -> Optional[list[ProjectViewModel]]:
+        view_file = SETTINGS.view_dir / f"{self.id}.json"
+        if not view_file.exists():
+            return None
+        data = json.load(view_file.open())
+        return [ProjectViewModel.model_validate(v) for v in data]
+
+    # todo out?
+    def get_view_file(self) -> Optional[Path]:
+        return SETTINGS.view_dir / f"{self.id}.json"
 
 
 class ProjectOverView2(BaseModel):
     projects: dict[ProjectAccess, ProjectInfo]
     alias_map: dict[str, ProjectInfo] = Field(default_factory=dict, exclude=True)
-    default_map: dict[tuple[str, str], ProjectInfo] = Field(default_factory=dict, exclude=True)
+    default_map: dict[PlLang, ProjectInfo] = Field(default_factory=dict, exclude=True)
 
     @model_validator(mode="after")
     def create_map(cls, overview: "ProjectOverView2") -> "ProjectOverView2":
+        """
+        create alias_map and default_map
+        """
         for project in overview.projects.values():
-            #print(project.id, project.name)
+            # print(project.id, project.name)
             if project.alias in overview.alias_map:
                 print(f"warning: alias {project.alias} already exists")
                 continue
@@ -62,7 +119,7 @@ class ProjectOverView2(BaseModel):
             print("projects file missing")
         # print(pp.read_text())
         # print(ProjectOverView2.model_validate_json(pp.read_text()))
-        return ProjectOverView2.model_validate_json(pp.read_text())
+        return ProjectOverView2.model_validate({"projects": json.loads(pp.read_text())})
 
     def get_project(self, p_access: ProjectAccess) -> ProjectInfo:
         # int | str | platf_lang_default | platform_lang_name
@@ -71,9 +128,35 @@ class ProjectOverView2(BaseModel):
         elif isinstance(p_access, str):
             return self.alias_map[p_access]
         elif isinstance(p_access, tuple):
-            if len(p_access) == 2:
-                # assert isinstance(p_access[1], tuple) and len(p_access[1]) == 2
-                return self.default_map[p_access]
+            assert len(p_access) == 2
+            return self.default_map[p_access]
+        raise ValueError(f"unknown project access: {p_access}")
+
+    def add_project(self, p: ProjectCreate, save: bool = True):
+        from ls_helper.project_mgmt import ProjectMgmt
+
+        if p.alias in self.alias_map:
+            raise ValueError(f"alias {p.alias} already exists")
+        if p.default:
+            if default_ := self.default_map[(p.platform, p.language)]:
+                if default_.default:
+                    raise ValueError(f"default {p.pl_lang} already exists")
+
+        project_model = ProjectMgmt.create_project(p)
+
+        p_i = ProjectInfo(id=project_model.id, **p.model_dump())
+
+        self.projects[p_i.id] = p_i
+        if p_i.default:
+            self.default_map[p.pl_lang] = p_i
+        self.alias_map[p.alias] = p_i
+        if save:
+            self.save()
+
+    def save(self):
+        projects = {p.id: p for p in self.projects.values()}
+        pp = Path(SETTINGS.BASE_DATA_DIR / "projects2.json")
+        pp.write_text(json.dumps({id: p.model_dump() for id, p in projects.items()}))
 
 
-platforms_overview2 = ProjectOverView2.load()
+platforms_overview2: ProjectOverView2 = ProjectOverView2.load()

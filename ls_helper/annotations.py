@@ -11,6 +11,7 @@ from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.funcs import get_latest_annotation_file, get_latest_annotation
 from ls_helper.models import ProjectAccess, MyProject, ProjectAnnotations, platforms_overview
 from ls_helper.my_labelstudio_client.client import ls_client
+from ls_helper.new_models import platforms_overview2
 from ls_helper.settings import ls_logger
 
 
@@ -29,7 +30,7 @@ def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[Proje
 
 def create_annotations_results(project: ProjectAccess, add_annotations: bool = True,
                                accepted_ann_age: Optional[int] = 6) -> MyProject:
-    p_info = platforms_overview.get_project(project)
+    p_info = platforms_overview2.get_project(project)
     project_data = p_info.project_data()
 
     conf = parse_label_config_xml(project_data.label_config)
@@ -42,11 +43,14 @@ def create_annotations_results(project: ProjectAccess, add_annotations: bool = T
         annotation_structure=conf,
         data_extensions=data_extensions)
 
+    mp.apply_extension()
     if add_annotations:
         mp.raw_annotation_result = get_recent_annotations(p_info.id, accepted_ann_age)
-        mp.apply_extension()
-        mp.get_annotation_df()
+        raw_annotation_df, assignment_df = mp.get_annotation_df()
+        mp.raw_annotation_df = raw_annotation_df
+        mp.assignment_df = assignment_df
     return mp
+
 
 
 def convert_strings_to_indices(df: DataFrame, string_list: list[str]):

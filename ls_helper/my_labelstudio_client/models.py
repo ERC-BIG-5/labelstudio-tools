@@ -4,6 +4,7 @@ from typing import Optional, Any, TypedDict, Literal, Annotated
 from pydantic import BaseModel, Field, PlainSerializer, ConfigDict
 
 
+
 class ProjectModel(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
     id: Optional[int] = None
@@ -156,7 +157,7 @@ class ProjectModel(BaseModel):
 # from LS
 class ProjectViewsDataModel(BaseModel):
     type: Optional[str] = None
-    title: str
+    title: Optional[str] = None
     target: Optional[str] = None
     gridWidth: Optional[int] = None
     columnWidth: Optional[int] = None
@@ -166,17 +167,23 @@ class ProjectViewsDataModel(BaseModel):
     columnsDisplay: Optional[dict] = None
     filters: TypedDict("filters", {"conjunction": Literal["and", "or"], "items": list[TypedDict("items", {
         "filter": str, "operator": str, "type": str, "value": str | int
-    })]})
+    })]}) = None
     ordering: Optional[list[str]] = None
 
+class ProjectViewCreate(BaseModel):
+    project: int
+    data: Optional[ProjectViewsDataModel] = Field(default_factory=ProjectViewsDataModel)
+
+class TaskCreate(BaseModel):
+    project: int
+    data: dict[str, Any]
 
 # from LS
-class ProjectViewModel(BaseModel):
+class ProjectViewModel(ProjectViewCreate):
     id: int
-    order: int
     user: int
-    project: int
-    data: ProjectViewsDataModel
+    order: int
+
 
 
 class UserModel(BaseModel):
@@ -208,4 +215,3 @@ class ViewModel(BaseModel):
     user: int
     project: int
     data: ProjectViewsDataModel
-

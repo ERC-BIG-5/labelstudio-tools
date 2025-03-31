@@ -24,6 +24,24 @@ SerializableDatetimeAlways = Annotated[
     datetime, PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used='always')
 ]
 
+PlLang = tuple[str, str]
+ProjectAccess = int | str | PlLang
+
+
+def extract_common_params(
+        id: Optional[int] = None,
+        platform: Optional[str] = None,
+        language: Optional[str] = None,
+        alias: Optional[str] = None,
+) -> ProjectAccess:
+    if alias:
+        return alias
+    elif id:
+        return id
+    elif platform and language:
+        return platform, language
+    raise ValueError(f"{id=} {platform=} {language=}, {alias=} no project")
+
 
 def find_name_fixes(orig_keys: Iterable[str],
                     data_extension: "ProjectAnnotationExtension",
@@ -125,6 +143,14 @@ class ResultStruct(BaseModel):
         pass
 
     def question_type(self, q) -> str:
+        """
+        in some parts, we turn column indices into $, so this is the
+        way to get the original type
+        # todo, not good approach. we should have the column merging
+        # as a flag and store the original type with it
+        :param q:
+        :return:
+        """
         if "$" in q:
             q = q.replace("$", "0")
         if q in self.choices:
@@ -352,12 +378,21 @@ class PrincipleRow(BaseModel):
     task_id: int
     ann_id: int
     user_id: int
+    # user: Optional[str] = None
+    ts: datetime
+    type: str
+    category: str
+    value: list[str]
+
+
+class FullAnnotationRow(BaseModel):
+    task_id: int
+    ann_id: int
+    platform_id: str
+    user_id: int
     user: Optional[str] = None
     updated_at: datetime
-    type: str = Field(alias="type")
-    question: str = Field(alias="question")
-    value_idx: int
-    value: str
+    results: dict[str, Optional[list[str]]] = Field(default_factory=dict)
 
 
 class MyProject(BaseModel):
@@ -367,9 +402,10 @@ class MyProject(BaseModel):
     annotation_structure: ResultStruct
     data_extensions: Optional[ProjectAnnotationExtension] = None
     raw_annotation_result: Optional[ProjectAnnotations] = None
-    #annotation_results: Optional[list[TaskAnnotResults]] = Field(None, deprecated="raw_annotation_df")
+    # annotation_results: Optional[list[TaskAnnotResults]] = Field(None, deprecated="raw_annotation_df")
     project_views: Optional[list[ProjectViewModel]] = None
     raw_annotation_df: Optional[pd.DataFrame] = None
+    assignment_df: Optional[pd.DataFrame] = None
 
     _extension_applied: Optional[bool] = False
 
@@ -467,7 +503,9 @@ class MyProject(BaseModel):
 
         self._extension_applied = True
 
-    def get_annotation_df(self, debug_task_limit: Optional[int] = None) -> DataFrame:
+    def get_annotation_df(self, debug_task_limit: Optional[int] = None) -> tuple[DataFrame, DataFrame]:
+
+        assignment_df_rows = []
         rows = []
 
         def var_method(k, fix):
@@ -484,15 +522,19 @@ class MyProject(BaseModel):
         for task in self.raw_annotation_result.annotations:
             # print(task.id)
             for ann in task.annotations:
-                #print(f"{task.id=} {ann.id=}")
+                # print(f"{task.id=} {ann.id=}")
                 if ann.was_cancelled:
                     # print(f"{task.id=} {ann.id=} C")
                     continue
                 # print(f"{task.id=} {ann.id=} {len(ann.result)=}")
-                rows.append(PrincipleRow.model_construct(task_id=task.id,
-                                                         ann_id=ann.id, user_id=ann.completed_by,
-                                                         updated_at=ann.updated_at,
-                                                         value_idx=-1).model_dump(by_alias=True))
+                assignment_df_rows.append(
+                    PrincipleRow.model_construct(task_id=task.id,
+                                                 ann_id=ann.id,
+                                                 user_id=ann.completed_by,
+                                                 ts=ann.updated_at,
+                                                 platform_id=task.data["platform_id"]).model_dump(by_alias=True)
+                )
+
                 for q_id, question in enumerate(ann.result):
                     new_name = q_extens[question.from_name]
                     if not new_name:
@@ -505,16 +547,69 @@ class MyProject(BaseModel):
                     else:
                         print("unknown question type")
                         type_ = "x"
-                    for v_idx, v in enumerate(question.value.direct_value):
-                        rows.append(PrincipleRow(task_id=task.id,
-                                                 ann_id=ann.id,
-                                                 user_id=ann.completed_by,
-                                                 updated_at=ann.updated_at,
-                                                 question=new_name,
-                                                 type=type_,
-                                                 value_idx=v_idx,
-                                                 value=v).model_dump(by_alias=True))
+                    rows.append(PrincipleRow(task_id=task.id,
+                                             ann_id=ann.id,
+                                             user_id=ann.completed_by,
+                                             ts=ann.updated_at,
+                                             category=new_name,
+                                             type=type_,
+                                             value=question.value.direct_value).model_dump(by_alias=True))
 
+            if debug_mode:
+                debug_task_limit -= 1
+                if debug_task_limit == 0:
+                    break
+
+        df = DataFrame(rows)
+        assignment_df = DataFrame(assignment_df_rows)
+        """
+        raw_annotation_df = df.astype(
+            {"task_id": "int32", "ann_id": "int32", 'user_id': "category", "value_idx": "int32",
+             'type': "category", 'question': "category", 'value': "string"})
+        """
+        return df, assignment_df
+
+    def get_annotation_df2(self, debug_task_limit: Optional[int] = None,
+                           insert_defaults: bool = True) -> DataFrame:
+        """
+        this one creates task_id, ann_id rows
+        :param debug_task_limit:
+        :return:
+        """
+        rows = []
+
+        def var_method(k, fix):
+            if fix.deprecated:
+                return None
+            if fix.name_fix:
+                return fix.name_fix
+            return k
+
+        q_extens = {k: var_method(k, v) for k, v in self.data_extensions.fixes.items()}
+
+        debug_mode = debug_task_limit is not None
+
+        for task in self.raw_annotation_result.annotations:
+            # print(task.id)
+            for ann in task.annotations:
+                # print(f"{task.id=} {ann.id=}")
+                if ann.was_cancelled:
+                    # print(f"{task.id=} {ann.id=} C")
+                    continue
+                # print(f"{task.id=} {ann.id=} {len(ann.result)=}")
+
+                row_data = {}
+                for q_id, question in enumerate(ann.result):
+                    new_name = q_extens.get(question.from_name, None)
+                    if not new_name:
+                        continue
+                    row_data[new_name] = question.value.direct_value
+                rows.append(FullAnnotationRow(task_id=task.id,
+                                              platform_id=task.data.get("platform_id", ""),
+                                              ann_id=ann.id,
+                                              user_id=ann.completed_by,
+                                              updated_at=ann.updated_at,
+                                              results=row_data).model_dump(by_alias=True))
             if debug_mode:
                 debug_task_limit -= 1
                 if debug_task_limit == 0:
@@ -523,11 +618,10 @@ class MyProject(BaseModel):
         df = DataFrame(rows)
 
         self.raw_annotation_df = df.astype(
-            {"task_id": "int32", "ann_id": "int32", 'user_id': "category", "value_idx": "int32",
-             'type': "category", 'question': "category", 'value': "string"})
+            {"task_id": "int32", "ann_id": "int32", 'user_id': "category"})
         return self.raw_annotation_df
 
-    def get_default_df(self, question: str) -> DataFrame:
+    def get_default_df(self, df: DataFrame, question: str) -> DataFrame:
         # todo, this should use the reverse map , as we want to work with fixed names from here on
         if "$" in question:
             question = question.replace("$", "0")
@@ -536,12 +630,8 @@ class MyProject(BaseModel):
             raise ValueError(f"unknown question: {question} options: {list(self.data_extensions.fixes.keys())}")
         if not (default := question_da.default):
             raise ValueError(f"no default: {question}")
-        return self._add_df_defaults(question, default)
-
-    def _add_df_defaults(self, question: str, default: str) -> DataFrame:
 
         # Get the valid task_id and ann_id combinations that exist in the original data
-        df = self.raw_annotation_df
         valid_combinations = df[['task_id', 'ann_id', 'user_id']].drop_duplicates()
 
         # Create a complete DataFrame with valid combinations for the specific question
@@ -640,10 +730,12 @@ class PlatformLanguageOverview(BaseModel):
         data = json.load(view_file.open())
         return [ProjectViewModel.model_validate(v) for v in data]
 
+    # THIS IS ALREADY DONE BY NEW MODEL, BUT WE WANT TO USE IDS, INSTEAD OF THIS PLATFORM-LANGUAGE FILE NAME...
     def project_data(self) -> ProjectModel:
         platform, lang = ProjectOverview.get_platform_lang_from_id(self.id)
         return ProjectModel.model_validate_json((SETTINGS.projects_dir / f"{platform}/{lang}.json").read_text())
 
+    # THIS IS ALREADY DONE BY NEW MODEL...
     def get_fixes(self) -> ProjectAnnotationExtension:
         if (fi := SETTINGS.fixes_dir / "unifixes.json").exists():
             data_extensions = ProjectAnnotationExtension.model_validate(json.load(fi.open()))
@@ -690,7 +782,8 @@ class ProjectPlatformOverview(RootModel):
             return UserInfo.model_validate(json.load(pp.open()))
 
 
-ProjectAccess = int | str | tuple[str, str]
+PlLang = tuple[str, str]
+ProjectAccess = int | str | PlLang
 
 
 @deprecated("reason, we want to use ProjectOverview2 (new_models)")

@@ -5,28 +5,36 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
+from deprecated.classic import deprecated
+from pydantic import BaseModel
 from tqdm import tqdm
 
 from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
 from ls_helper.annotations import create_annotations_results, get_recent_annotations, _reformat_for_datapipelines
+from ls_helper.anot_master2 import analyze_coder_agreement
 from ls_helper.config_helper import check_config_update
 from ls_helper.exp.build_configs import build_configs
 from ls_helper.funcs import build_view_with_filter_p_ids
-from ls_helper.models import ProjectOverview
-from ls_helper.my_labelstudio_client.annot_master import prepare_df_for_agreement, calc_agreements2, prep_multi_select, \
-    calc_agreements
-from ls_helper.my_labelstudio_client.client import LabelStudioBase
+from ls_helper.models import ProjectOverview, extract_common_params
+from ls_helper.my_labelstudio_client.annot_master import prep_single_select_agreement, prep_multi_select_agreement, \
+    calc_agreements, export_annotations2csv
+from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import ProjectViewModel
+from ls_helper.new_models import platforms_overview2
+from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
 
-app = typer.Typer(name="Labelstudio helper")
+app = typer.Typer(name="Labelstudio helper", pretty_exceptions_show_locals=True)
 
-
-def ls_client() -> LabelStudioBase:
-    return LabelStudioBase(base_url=SETTINGS.LS_HOSTNAME, api_key=SETTINGS.LS_API_KEY)
+"""
+id_ = typer.Option(None, "--id"),
+platform_ = typer.Option(None, "--platform", "-p"),
+language_ = typer.Option(None, "--language", "-l"),
+alias_ = typer.Option(None, "--alias", "-a"),
+"""
 
 
 def open_image_simple(image_path):
@@ -35,6 +43,7 @@ def open_image_simple(image_path):
     webbrowser.open(file_path)
 
 
+@deprecated("...")
 def project_selection(platform: Optional[str] = None, language: Optional[str] = None) -> list[tuple[str, str, int]]:
     projects = ProjectOverview.projects()
     selection: list[tuple[str, str, int]] = []
@@ -60,12 +69,17 @@ def project_selection(platform: Optional[str] = None, language: Optional[str] = 
 
 
 @app.command(short_help="[setup] Required for annotation result processing. needs project-data")
-def generate_result_fixes_template(platform: Annotated[str, typer.Argument()],
-                                   language: Annotated[str, typer.Argument()]):
-    project_data = ProjectOverview.project_data(platform, language)
-    project_id = project_data["id"]
+def generate_result_fixes_template(
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None
+):
+    p_a = extract_common_params(id, platform, language, alias)
+    po = platforms_overview2.get_project(p_a)
+    project_id = po.id
 
-    conf = parse_label_config_xml(project_data["label_config"],
+    conf = parse_label_config_xml(po.project_data().label_config,
                                   include_text=True)
     from ls_helper.funcs import generate_result_fixes_template as gen_fixes_template
     res_template = gen_fixes_template(conf)
@@ -79,10 +93,9 @@ def setup_project_settings(platform: Annotated[str, typer.Option()],
                            language: Annotated[str, typer.Option()]):
     project_data = ProjectOverview.project_data(platform, language)
     project_id = project_data["id"]
-    res = ls_client().patch_project(project_id, {
-        "maximum_annotations": 2,
-        "sampling": "Uniform sampling"
-    })
+    values = ProjectMgmt.default_project_values()
+    del values["color"]
+    res = ls_client().patch_project(project_id, values)
     if not res:
         print("error updating project settings")
 
@@ -105,7 +118,6 @@ def update_labeling_configs(
 ):
     # todo, if we do that. save it
     # download_project_data(platform, language)
-
     client = ls_client()
     project_to_update = project_selection(platform, language)
     for idx, (platform, lang, id) in enumerate(project_to_update):
@@ -219,8 +231,10 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
 
 @app.command(short_help="[maint]")
 def download_project_data(
+        id: Annotated[int, typer.Option()] = None,
         platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        alias: Annotated[Optional[str], typer.Argument()] = None,
 ):
     projects_to_dl = project_selection(platform, language)
 
@@ -238,36 +252,50 @@ def download_project_data(
 
 @app.command(short_help="[maint]")
 def download_project_views(
-        platform: Annotated[str, typer.Option()],
-        language: Annotated[str, typer.Option()]) -> list[
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None
+) -> list[
     ProjectViewModel]:
-    po = ProjectOverview.projects()
-    project_id = po.get_project_id(platform, language)
+    p_a = extract_common_params(id, platform, language, alias)
+    po = platforms_overview2.get_project(p_a)
 
     client = ls_client()
-    views = client.get_project_views(project_id)
-    dest = po.get_view_file(project_id)
+    views = client.get_project_views(po.id)
+    dest = po.get_view_file()
     dest.write_text(json.dumps([v.model_dump() for v in views]))
     return views
 
 
+class CommonParams(BaseModel):
+    platform: Optional[str] = None
+    language: Optional[str] = None
+    alias: Optional[str] = None
+
+
+"""
 @app.command(short_help="[plot] Plot the completed tasks over time")
-def status(platform: Annotated[str, typer.Argument()],
-           language: Annotated[str, typer.Argument()],
-           name: Annotated[Optional[str], typer.Option()] = None,
+def status(id: Annotated[int, typer.Option(None, "-i")],
            accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 6):
     from ls_helper import main_funcs
-    main_funcs.status(platform, language, name, accepted_ann_age)
+    p_a = extract_common_params(id)
+    main_funcs.status(p_a, accepted_ann_age)
+"""
 
 
 @app.command(short_help="[plot] Plot the total completed tasks over day")
-def total_over_time(platform: Annotated[str, typer.Argument()],
-                    language: Annotated[str, typer.Argument()],
-                    accepted_ann_age: Annotated[
-                        int, typer.Option(help="Download annotations if older than x hours")] = 6):
-    project_data = ProjectOverview.project_data(platform, language)
-    project_id = project_data["id"]
-    annotations = get_recent_annotations(project_id, accepted_ann_age)
+def total_over_time(
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")] = 6,
+):
+    p_a = extract_common_params(id, platform, language, alias)
+    p = platforms_overview2.get_project(p_a)
+    annotations = get_recent_annotations(p.id, accepted_ann_age)
     df = annotation_total_over_time(annotations)
     temp_file = plot_cumulative_annotations(df,
                                             f"{platform}/{language}: Cumulative Annotations Over Time")
@@ -326,12 +354,18 @@ def set_view_items(platform: Annotated[str, typer.Option()],
 
 
 @app.command(short_help=f"[ls func]")
-def update_coding_game(platform: str, language: str) -> Optional[tuple[int, int]]:
+def update_coding_game(
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None,
+) -> Optional[tuple[int, int]]:
     """
     if successful sends back project_id, view_id
 
     """
-    po = ProjectOverview.projects().get_project((platform, language))
+    p_a = extract_common_params(id, platform, language, alias)
+    po = platforms_overview2.get_project(p_a)
     view_id = po.coding_game_view_id
     if not view_id:
         print("No views found for coding game")
@@ -352,12 +386,13 @@ def update_coding_game(platform: str, language: str) -> Optional[tuple[int, int]
     project_annotations = get_recent_annotations(po.id, 0)
 
     for_coding_game = []
-
+    # todo, rather get more processed object,
     for task_res in project_annotations.annotations:
         annotations = task_res.annotations
         for annotation in annotations:
             for result in annotation.result:
-                if result.from_name == "for_coding_game":
+                # TODO: coding-game variable name, should be universal
+                if result.from_name == "coding_game":
                     if result.value.choices[0] == "Yes":
                         p_id = task_res.data["platform_id"]
                         if p_id not in for_coding_game:
@@ -384,16 +419,90 @@ def annotations_results(platform: Annotated[str, typer.Argument()],
 
 
 @app.command(short_help="[stats] calculate general agreements stats")
-def agreements(platform: Annotated[str, typer.Argument()],
-               language: Annotated[str, typer.Argument()],
-               accepted_ann_age: Annotated[
-                   int, typer.Option(help="Download annotations if older than x hours")] = 2,
-               min_num_coders: Annotated[int, typer.Option()] = 2
-               ) -> dict[str, Path]:
-    mp = create_annotations_results((platform, language), accepted_ann_age=accepted_ann_age)
-    raise NotImplementedError("New agreements not implemented")
+def agreements(
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")] = 2,
+        min_num_coders: Annotated[int, typer.Option()] = 2
+) -> dict[str, Path]:
+    p_a = extract_common_params(id, platform, language, alias)
+    mp = create_annotations_results(p_a, accepted_ann_age=accepted_ann_age)
+
+    df = mp.raw_annotation_df
+    pass
+
+    variables = {}
+
+    fixes = mp.data_extensions.fixes
+    for var, fix_info in fixes.items():
+        if new_name := fixes[var].name_fix:
+            name = new_name
+        else:
+            name = var
+
+        default = fix_info.default
+        try:
+            type = mp.annotation_structure.question_type(name)
+        except:
+            type = "text"
+        if type in ["single", "multiple"]:
+            options = mp.annotation_structure.choices[name].raw_options_list()
+
+        else:
+            options = []
+        variables[name] = {
+            "type": type,
+            "options": options,
+            "default": default
+        }
+
+    agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, variables)
+    print(agreement_report)
+    print(agreement_report["conflicts"])
+    """
+    # question_dfs = default_df.groupby("question")
+    for cat, cat_info in mp.annotation_structure.choices.items():
+        # print(cat)
+
+        
+        # # todo replace this line eventually when intern of merge-col list is stored properly
+        type_ = mp.annotation_structure.question_type(cat)
+        if type_ == "single":
+            default_df = mp.get_default_df(mp.raw_annotation_df, cat)
+            deff = prep_single_select_agreement(default_df, cat, False)
+            fleiss, gwet = calc_agreements(deff)
+            print(f"{cat=} {fleiss=} {gwet=}")
+        else:
+            print(f"M {cat}")
+            rdf = mp.raw_annotation_df
+            options = mp.annotation_structure.choices.get(cat).raw_options_list()
+            # print(options)
+            red_df = prep_multi_select_agreement(rdf, cat, options)
+            for o, df in red_df.items():
+                fleiss, gwet = calc_agreements(df)
+                print(f"{cat=}{o=} {fleiss=} {gwet=}")
+    """
+
+    # raise NotImplementedError("New agreements not implemented")
     # agreements_table_path, pid_data_file = calc_agreements(mp, min_num_coders)
     # return {"agreements": agreements_table_path, "pids": pid_data_file}
+
+
+@app.command()
+def agreements2(
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")] = 6,
+):
+    p_a = extract_common_params(id, platform, language, alias)
+    p = platforms_overview2.get_project(p_a)
+    annotations = get_recent_annotations(p.id, accepted_ann_age)
 
 
 @app.command()
@@ -418,6 +527,14 @@ def reformat_for_datapipelines(platform: Annotated[str, typer.Argument()],
 
 
 if __name__ == "__main__":
+    # download_project_views(alias="twitter-en-2")
+    update_coding_game(alias="twitter-en-2")
+
+    #enerate_result_fixes_template(alias="twitter-en-2")
+
+    #agreements(alias="twitter-en-2")
+
+    exit()
 
     # reformat_for_datapipelines("twitter", "en",
     #                            Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/temp/twitter_en_res.json"))
@@ -458,7 +575,8 @@ if __name__ == "__main__":
 
     # METHOD 3. straight to DF
     # get raw DF
-    res = create_annotations_results(("twitter", "en"))
+    res = create_annotations_results()
+    export_annotations2csv(res)
     #
     # deff = prepare_df_for_agreement(res,"framing")
     # calc_agreements2(deff)
@@ -474,7 +592,7 @@ if __name__ == "__main__":
         # print(cat)
         type_ = res.annotation_structure.question_type(cat)
         if type_ == "single":
-            deff = prepare_df_for_agreement(res, cat, False)
+            deff = prep_single_select_agreement(res, cat, False)
             fleiss, gwet = calc_agreements(deff)
             print(f"{cat=} {fleiss=} {gwet=}")
         else:
@@ -482,7 +600,7 @@ if __name__ == "__main__":
             rdf = res.raw_annotation_df
             options = res.annotation_structure.choices.get(cat).raw_options_list()
             # print(options)
-            red_df = prep_multi_select(rdf, cat, options)
+            red_df = prep_multi_select_agreement(rdf, cat, options)
             for o, df in red_df.items():
                 fleiss, gwet = calc_agreements(df)
                 print(f"{cat=}{o=} {fleiss=} {gwet=}")

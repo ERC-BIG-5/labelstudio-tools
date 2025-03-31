@@ -79,6 +79,7 @@ class Settings(BaseSettings):
         return self.fixes_dir / "unifixes.json"
 
 SETTINGS = Settings()
+DEV_SETTINGS = Settings(_env_file=".dev.env")
 
 ls_logger = getLogger("ls-helper")
 ls_logger.setLevel(logging.DEBUG)
