@@ -1,16 +1,32 @@
+import json
+import re
+import uuid
 from csv import DictWriter
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Literal, Any, Iterable, Annotated
 
+import orjson
 import pandas as pd
+from deprecated.classic import deprecated
 from pandas import DataFrame
-from pydantic import BaseModel, Field, ConfigDict, model_validator, PlainSerializer
+from pydantic import BaseModel, Field, ConfigDict, RootModel, model_validator, PlainSerializer
 
-from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel, TaskResultModel
+from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel
+from ls_helper.settings import SETTINGS
+
+# todo bring and import tools,
+SerializableDatetime = Annotated[
+    datetime, PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used='json')
+]
+
+SerializableDatetimeAlways = Annotated[
+    datetime, PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used='always')
+]
 
 PlLang = tuple[str, str]
 ProjectAccess = int | str | PlLang
+
 
 
 def find_name_fixes(orig_keys: Iterable[str],
@@ -156,6 +172,194 @@ class ProjectAnnotationExtension(BaseModel):
             return self.fixes[orig_name]
 
 
+class ProjectAnnotations(BaseModel):
+    project_id: int  # todo, out...
+    annotations: list["TaskResultModel"]
+    file_path: Optional[Path] = None
+
+
+# modelling LS structure
+class ChoicesValue(BaseModel):
+    choices: list[str]
+
+    @property
+    def str_value(self) -> str:
+        return str(",".join(self.choices))
+
+    @property
+    def direct_value(self) -> list[str]:
+        return self.choices
+
+
+# modelling LS structure
+class TextValue(BaseModel):
+    text: list[str]
+
+    @property
+    def str_value(self) -> str:
+        return str(",".join(self.text))
+
+    @property
+    def direct_value(self) -> list[str]:
+        return self.text
+
+
+# modelling LS structure
+class AnnotationResult(BaseModel):
+    id: str
+    type: str
+    value: ChoicesValue | TextValue
+    origin: str
+    to_name: str
+    from_name: str
+
+    @property
+    def str_value(self) -> str:
+        return self.value.str_value
+
+    @property
+    def direct_value(self) -> list[str]:
+        return self.value.direct_value
+
+
+class TaskAnnotationModel(BaseModel):
+    id: int
+    completed_by: int
+    result: list[AnnotationResult]
+    was_cancelled: bool
+    ground_truth: bool
+    created_at: SerializableDatetimeAlways
+    updated_at: SerializableDatetimeAlways
+    draft_created_at: Optional[SerializableDatetimeAlways] = None
+    lead_time: float
+    prediction: dict
+    result_count: int
+    unique_id: Annotated[uuid.UUID, PlainSerializer(lambda v: str(v), return_type=str, when_used='always')]
+    import_id: Optional[int] = None
+    last_action: Optional[str] = None
+    task: int
+    project: int
+    updated_by: int
+    parent_prediction: Optional[int] = None
+    parent_annotation: Optional[int] = None
+    last_created_by: Optional[int] = None
+
+
+# LS structure
+class TaskResultModel(BaseModel):
+    id: int
+    annotations: list[TaskAnnotationModel]
+    meta: dict = Field()
+    data: dict = Field(..., description="the task data")
+    created_at: SerializableDatetimeAlways
+    updated_at: SerializableDatetimeAlways
+    inner_id: int
+    total_annotations: int
+    cancelled_annotations: int
+    total_predictions: int
+    comment_count: int
+    unresolved_comment_count: int
+    last_comment_updated_at: Optional[SerializableDatetimeAlways] = None
+    project: int
+    updated_by: int
+    comment_authors: list[int]
+
+    @property
+    def num_coders(self) -> int:
+        return len(self.annotations)
+
+
+class TaskAnnotationItem(BaseModel):
+    name: str
+    type_: Literal["single", "multiple", "text", "datetime", "list-single", "list-multiple", "list-text"] = Field(None,
+                                                                                                                  alias="type")
+    num_coders: int
+    values: list[list[str]] = Field(default_factory=list)
+    value_indices: list[list[int]] = Field(default_factory=list)
+    users: list[int | str] = Field(default_factory=list)
+
+    def add(self, value: str | list[str], value_index: int | list[int], user_id: int) -> None:
+        self.values.append(value)
+        self.value_indices.append(value_index)
+        self.users.append(user_id)
+
+    def value_str(self, with_defaults: bool = True, with_user: bool = False) -> str:
+        # if with_defaults:
+        # if with_user:
+        #     comb = [f"{v} ({u})" for v, u in zip(self.values, self.users)]
+        #     return "; ".join(comb)
+        if self.type_.startswith("list"):
+            coders = []
+            for coder_resp in self.values:
+                # for item in coder_resp:
+                #     items.append(["|".join(item) for item in item])
+                coders.append(["|".join(item) for item in coder_resp])
+            coder_join = [", ".join(cv) for cv in coders]
+        else:
+            coder_join = [", ".join(cv) for cv in self.values]
+        return "; ".join(coder_join)
+
+
+class TaskAnnotResults(BaseModel):
+    task_id: int
+    items: Optional[dict[str, TaskAnnotationItem]] = Field(default_factory=dict)
+    num_coders: int
+    num_cancellations: int
+    relevant_input_data: dict[str, Any]
+    users: list[int]
+
+    def add(self, item_name: str, value: list[str] | list[list[str]], value_index: list[int] | list[list[int]],
+            user_id: int,
+            type_: Literal[
+                "single", "multiple", "text", "datetime", "list-single", "list-multiple", "list-text"]) -> None:
+        annotation_item = self.items.setdefault(item_name, TaskAnnotationItem.model_validate(
+            {"name": item_name, "type": type_, "num_coders": self.num_coders}))
+
+        annotation_item.add(value, value_index, user_id)
+
+    def apply_extension(self,
+                        annotation_extension: "ProjectAnnotationExtension",
+                        fillin_defaults: bool = True) -> None:
+        for item_name, value in self.items.items():
+            fix = annotation_extension.get_from_rev(item_name)
+            if not fix:
+                pass
+            else:
+                # print(item_name, fix)
+                if fillin_defaults:
+                    if value.type_ == "single":
+                        # fill it up with default value
+                        if len(value.values) != value.num_coders and fix.default:
+                            assert isinstance(fix.default, str), "default must be a str"
+                            value.values.extend([[fix.default] * (value.num_coders - len(value.values))])
+                    elif value.type_ == "multiple":
+                        if len(value.values) != value.num_coders and fix.default:
+                            # assert isinstance(fix.default, list), "default must be a list"
+                            value.values.extend([[fix.default] * (value.num_coders - len(value.values))])
+        # those that are missing in the row:
+        for additional in set(annotation_extension.fixes) - set(self.items):
+            fix = annotation_extension.fixes[additional]
+            new_name = getattr(fix, "name_fix")
+            if not new_name:
+                new_name = additional
+            if fix.default:
+                self.items[new_name] = TaskAnnotationItem(name=new_name, values=[[fix.default]] * self.num_coders,
+                                                          num_coders=self.num_coders)
+
+    def data(self) -> dict[str, Any]:
+        return {k: v.values for k, v in self.items.items()}
+
+    def data_str(self, with_defaults: bool = True) -> dict[str, str]:
+        return {k: v.value_str(with_defaults) for k, v in self.items.items()}
+
+    class Config:
+        validate_assignment = True
+
+    def set_all_to_pre_default(self) -> None:
+        for res in self.items.values():
+            res.set_predefaults()
+
+
 class PrincipleRow(BaseModel):
     task_id: int
     ann_id: int
@@ -184,7 +388,7 @@ class MyProject(BaseModel):
     project_data: ProjectModel
     annotation_structure: ResultStruct
     data_extensions: Optional[ProjectAnnotationExtension] = None
-    raw_annotation_result: Optional[list[TaskResultModel]] = None
+    raw_annotation_result: Optional[ProjectAnnotations] = None
     project_views: Optional[list[ProjectViewModel]] = None
     raw_annotation_df: Optional[pd.DataFrame] = None
     assignment_df: Optional[pd.DataFrame] = None
