@@ -16,13 +16,14 @@ from ls_helper.annotations import create_annotations_results, get_recent_annotat
 from ls_helper.anot_master2 import analyze_coder_agreement
 from ls_helper.config_helper import check_config_update
 from ls_helper.exp.build_configs import build_configs
-from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter
-from ls_helper.models import ProjectOverview, extract_common_params, MyProject
+from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter, get_variable_extensions
+from ls_helper.models import MyProject
+# from ls_helper.models import ProjectOverview, get_p_access, MyProject
 from ls_helper.my_labelstudio_client.annot_master import prep_single_select_agreement, prep_multi_select_agreement, \
     calc_agreements, export_annotations2csv
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectViewCreate
-from ls_helper.new_models import platforms_overview2
+from ls_helper.new_models import platforms_overview2, get_p_access
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
@@ -44,31 +45,6 @@ def open_image_simple(image_path):
     webbrowser.open(file_path)
 
 
-@deprecated("...")
-def project_selection(platform: Optional[str] = None, language: Optional[str] = None) -> list[tuple[str, str, int]]:
-    projects = ProjectOverview.projects()
-    selection: list[tuple[str, str, int]] = []
-    if not platform:
-        for pl_name, pl in projects:
-            # print(pl_name, pl)
-            for lang, pl_lang in pl.items():
-                # print(pl_lang)
-                if language and lang != language:
-                    continue
-                if pl_lang.id:
-                    selection.append((pl_name, lang, pl_lang.id))
-    elif not language:
-        pl = projects[platform]
-        for lang, lang_pl in pl.items():
-            if lang_pl.id:
-                selection.append((platform, lang, lang_pl.id))
-        # print(project_ids)
-    else:
-        project_id = ProjectOverview.projects().get_project_id(platform, language)
-        selection = [(platform, language, project_id)]
-    return selection
-
-
 @app.command(short_help="[setup] Required for annotation result processing. needs project-data")
 def generate_result_fixes_template(
         id: Annotated[int, typer.Option()] = None,
@@ -76,14 +52,11 @@ def generate_result_fixes_template(
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None
 ):
-    p_a = extract_common_params(id, platform, language, alias)
-    po = platforms_overview2.get_project(p_a)
+    po = platforms_overview2.get_project(get_p_access(id, platform, language, alias))
     project_id = po.id
 
-    conf = parse_label_config_xml(po.project_data().label_config,
-                                  include_text=True)
-    from ls_helper.funcs import generate_result_fixes_template as gen_fixes_template
-    res_template = gen_fixes_template(conf)
+    conf = po.get_structure()
+    res_template = get_variable_extensions(conf)
 
     universal_fixes = read_data(SETTINGS.unifix_file_path)
     for k in res_template.fixes:
@@ -97,13 +70,15 @@ def generate_result_fixes_template(
 
 
 @app.command(short_help="[setup] Just needs to be run once, for each new LS project")
-def setup_project_settings(platform: Annotated[str, typer.Option()],
-                           language: Annotated[str, typer.Option()]):
-    project_data = ProjectOverview.project_data(platform, language)
-    project_id = project_data["id"]
+def setup_project_settings(
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None):
+    po = platforms_overview2.get_project(get_p_access(id, platform, language, alias))
     values = ProjectMgmt.default_project_values()
     del values["color"]
-    res = ls_client().patch_project(project_id, values)
+    res = ls_client().patch_project(po.id, values)
     if not res:
         print("error updating project settings")
 
@@ -111,7 +86,11 @@ def setup_project_settings(platform: Annotated[str, typer.Option()],
 @app.command(
     short_help="[setup] run build_config function and copy it into 'labeling_configs_dir'. Run 'update_labeling_configs' afterward")
 def generate_labeling_configs(
-        platform: str, language: str):
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None,
+):
     config_files = build_configs()
     check_config_update(config_files)
     pass  # TODO
@@ -121,26 +100,28 @@ def generate_labeling_configs(
 
 @app.command(help="[ls maint] Upload labeling config")
 def update_labeling_configs(
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None,
 ):
     # todo, if we do that. save it
     # download_project_data(platform, language)
     client = ls_client()
-    project_to_update = project_selection(platform, language)
-    for idx, (platform, lang, id) in enumerate(project_to_update):
-        label_config = (SETTINGS.labeling_configs_dir / f"{platform}.xml").read_text(encoding="utf-8")
+    po = platforms_overview2.get_project(get_p_access(id, platform, language, alias))
 
-        resp = client.validate_project_labeling_config(id, label_config)
-        if resp.status_code != 200:
-            print(resp.status_code)
-            print(resp.json())
-            return
-        res = client.patch_project(id, {"label_config": label_config})
-        if not res:
-            print(f"Could not update labeling config for {platform}/{language}/{id}")
-            return
-        print(f"updated labeling config for {platform}/{language}/{id}")
+    label_config = (SETTINGS.labeling_configs_dir / f"{po.platform}.xml").read_text(encoding="utf-8")
+
+    resp = client.validate_project_labeling_config(id, label_config)
+    if resp.status_code != 200:
+        print(resp.status_code)
+        print(resp.json())
+        return
+    res = client.patch_project(id, {"label_config": label_config})
+    if not res:
+        print(f"Could not update labeling config for {platform}/{language}/{id}")
+        return
+    print(f"updated labeling config for {platform}/{language}/{id}")
 
 
 @app.command(short_help="[ls maint] Update tasks. Files must be matching lists of {id: , data:}")
@@ -244,8 +225,7 @@ def download_project_data(
         language: Annotated[Optional[str], typer.Argument()] = None,
         alias: Annotated[Optional[str], typer.Argument()] = None,
 ):
-    p_a = extract_common_params(id, platform, language, alias)
-    p = platforms_overview2.get_project(p_a)
+    p = platforms_overview2.get_project(get_p_access(id, platform, language, alias))
 
     project_data = ls_client().get_project(p.id)
     if not project_data:
@@ -263,7 +243,7 @@ def download_project_views(
         language: Annotated[str, typer.Argument()] = None
 ) -> list[
     ProjectViewModel]:
-    p_a = extract_common_params(id, platform, language, alias)
+    p_a = get_p_access(id, platform, language, alias)
     po = platforms_overview2.get_project(p_a)
 
     client = ls_client()
@@ -298,12 +278,11 @@ def total_over_time(
         accepted_ann_age: Annotated[
             int, typer.Option(help="Download annotations if older than x hours")] = 6,
 ):
-    p_a = extract_common_params(id, platform, language, alias)
-    p = platforms_overview2.get_project(p_a)
-    annotations = get_recent_annotations(p.id, accepted_ann_age)
+    po = platforms_overview2.get_project(get_p_access(id, platform, language, alias))
+    annotations = get_recent_annotations(po.id, accepted_ann_age)
     df = annotation_total_over_time(annotations)
     temp_file = plot_cumulative_annotations(df,
-                                            f"{platform}/{language}: Cumulative Annotations Over Time")
+                                            f"{po.platform}/{po.language}: Cumulative Annotations Over Time")
     dest = SETTINGS.plots_dir / f"{platform}-{language}.png"
     shutil.copy(temp_file.name, dest)
     temp_file.close()
@@ -311,10 +290,15 @@ def total_over_time(
 
 
 @app.command(short_help="[plot] Plot the total completed tasks over day")
-def annotation_lead_times(project_id: Annotated[int, typer.Option()],
+def annotation_lead_times(id: Annotated[int, typer.Option()] = None,
+                          alias: Annotated[str, typer.Option("-a")] = None,
+                          platform: Annotated[str, typer.Argument()] = None,
+                          language: Annotated[str, typer.Argument()] = None,
                           accepted_ann_age: Annotated[
                               int, typer.Option(help="Download annotations if older than x hours")] = 6):
-    project_annotations = get_recent_annotations(project_id, accepted_ann_age)
+
+    po = platforms_overview2.get_project(get_p_access(id, platform, language, alias))
+    project_annotations = get_recent_annotations(po.id, accepted_ann_age)
 
     df = get_annotation_lead_times(project_annotations)
     temp_file = plot_date_distribution(df, y_col="lead_time")
@@ -330,7 +314,7 @@ def set_view_items(platform: Annotated[str, typer.Option()],
                    platform_ids_file: Annotated[Path, typer.Option()],
                    create_view: Annotated[Optional[bool], typer.Option()] = True
                    ):
-    po = ProjectOverview.projects()
+    po = platforms_overview2.get_project(get_p_access(platform, language, language))
     views = po.get_views((platform, language))
     if not views and not create_view:
         print("No views found")
@@ -369,7 +353,7 @@ def update_coding_game(
     if successful sends back project_id, view_id
 
     """
-    p_a = extract_common_params(id, platform, language, alias)
+    p_a = get_p_access(id, platform, language, alias)
     po = platforms_overview2.get_project(p_a)
     view_id = po.coding_game_view_id
     if not view_id:
@@ -433,7 +417,7 @@ def agreements(
             int, typer.Option(help="Download annotations if older than x hours")] = 2,
         min_num_coders: Annotated[int, typer.Option()] = 2
 ) -> tuple[Path, dict]:
-    p_a = extract_common_params(id, platform, language, alias)
+    p_a = get_p_access(id, platform, language, alias)
     mp = create_annotations_results(p_a, accepted_ann_age=accepted_ann_age)
 
     variables = {}
@@ -500,7 +484,7 @@ def agreements2(
         accepted_ann_age: Annotated[
             int, typer.Option(help="Download annotations if older than x hours")] = 6,
 ):
-    p_a = extract_common_params(id, platform, language, alias)
+    p_a = get_p_access(id, platform, language, alias)
     p = platforms_overview2.get_project(p_a)
     annotations = get_recent_annotations(p.id, accepted_ann_age)
 
@@ -535,8 +519,7 @@ def create_conflict_view(
         variable: Annotated[str, typer.Option()] = None,
         variable_option: Annotated[str, typer.Option()] = None
 ):
-    p_a = extract_common_params(id, platform, language, alias)
-    p_info = platforms_overview2.get_project(p_a)
+    p_info = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
 
     # down from here till... should be somewhere...
     project_data = p_info.project_data()

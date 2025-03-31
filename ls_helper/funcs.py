@@ -200,7 +200,7 @@ def get_latest_annotation(project_id: int) -> Optional[ProjectAnnotations]:
                               file_path=annotation_file)
 
 
-def generate_result_fixes_template(annotation_struct: ResultStruct) -> ProjectAnnotationExtension:
+def get_variable_extensions(annotation_struct: ResultStruct) -> ProjectAnnotationExtension:
     data: dict[str, VariableExtension] = {}
 
     for field in annotation_struct.inputs:

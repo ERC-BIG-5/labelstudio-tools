@@ -28,20 +28,6 @@ PlLang = tuple[str, str]
 ProjectAccess = int | str | PlLang
 
 
-def extract_common_params(
-        id: Optional[int] = None,
-        platform: Optional[str] = None,
-        language: Optional[str] = None,
-        alias: Optional[str] = None,
-) -> ProjectAccess:
-    if alias:
-        return alias
-    elif id:
-        return id
-    elif platform and language:
-        return platform, language
-    raise ValueError(f"{id=} {platform=} {language=}, {alias=} no project")
-
 
 def find_name_fixes(orig_keys: Iterable[str],
                     data_extension: "ProjectAnnotationExtension",
@@ -403,7 +389,6 @@ class MyProject(BaseModel):
     annotation_structure: ResultStruct
     data_extensions: Optional[ProjectAnnotationExtension] = None
     raw_annotation_result: Optional[ProjectAnnotations] = None
-    # annotation_results: Optional[list[TaskAnnotResults]] = Field(None, deprecated="raw_annotation_df")
     project_views: Optional[list[ProjectViewModel]] = None
     raw_annotation_df: Optional[pd.DataFrame] = None
     assignment_df: Optional[pd.DataFrame] = None
@@ -550,7 +535,7 @@ class MyProject(BaseModel):
                         type_ = "x"
                     rows.append(PrincipleRow(task_id=task.id,
                                              ann_id=ann.id,
-                                             platform_id = task.data["platform_id"],
+                                             platform_id=task.data["platform_id"],
                                              user_id=ann.completed_by,
                                              ts=ann.updated_at,
                                              category=new_name,
