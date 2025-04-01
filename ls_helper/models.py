@@ -12,8 +12,9 @@ from deprecated.classic import deprecated
 from pandas import DataFrame
 from pydantic import BaseModel, Field, ConfigDict, RootModel, model_validator, PlainSerializer
 
-from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel
+from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel, TaskResultModel
 from ls_helper.settings import SETTINGS
+from tools.project_logging import get_logger
 
 # todo bring and import tools,
 SerializableDatetime = Annotated[
@@ -27,7 +28,7 @@ SerializableDatetimeAlways = Annotated[
 PlLang = tuple[str, str]
 ProjectAccess = int | str | PlLang
 
-
+logger = get_logger(__file__)
 
 def find_name_fixes(orig_keys: Iterable[str],
                     data_extension: "ProjectAnnotationExtension",
@@ -82,7 +83,6 @@ class Choices(BaseModel):
 
 
 class ResultStruct(BaseModel):
-    # project_id: int
     ordered_fields: list[str]
     choices: dict[str, Choices]
     free_text: list[str]
@@ -105,28 +105,30 @@ class ResultStruct(BaseModel):
         for k, v in self.choices.items():
             ext = data_extensions.get_from_rev(v.name)
             # catch non-existing defaults..
-            if ext and ext.default:
-                if not allow_non_existing_defaults:
-                    if v.choice == "single":
-                        if not isinstance(ext.default, str):
-                            raise ValueError(f"Choice {k} has default value {ext.default}")
-                        if ext.default not in (acc_vals := [c.annot_val for c in v.options]):
-                            raise ValueError(
-                                f"Choice {k} has default invalid value {ext.default}, options: {acc_vals}")
-                    elif v.choice == "multiple":
-                        if not isinstance(ext.default, list):
-                            raise ValueError(f"Choice {k} has default value {ext.default}")
-                        if any(d not in (acc_vals := [c.annot_val for c in v.options]) for d in ext.default):
-                            raise ValueError(
-                                f"Choice {k} has default invalid value {ext.default}, options: {acc_vals}")
-                # TODO pass actually add the default...
-                v.insert_option(0, Choice(value=ext.default, alias=ext.default))
+            if ext:
+                if ext.default:
+                    if not allow_non_existing_defaults:
+                        if v.choice == "single":
+                            if not isinstance(ext.default, str):
+                                raise ValueError(f"Choice {k} has default value {ext.default}")
+                            if ext.default not in (acc_vals := [c.annot_val for c in v.options]):
+                                raise ValueError(
+                                    f"Choice {k} has default invalid value {ext.default}, options: {acc_vals}")
+                        elif v.choice == "multiple":
+                            if not isinstance(ext.default, list):
+                                raise ValueError(f"Choice {k} has default value {ext.default}")
+                            if any(d not in (acc_vals := [c.annot_val for c in v.options]) for d in ext.default):
+                                raise ValueError(
+                                    f"Choice {k} has default invalid value {ext.default}, options: {acc_vals}")
+                    # TODO pass actually add the default...
+                    v.insert_option(0, Choice(value=ext.default, alias=ext.default))
 
+            else:
+                logger.warning(f"Choice {k} has default value {ext.default}")
         text_name_fixes = find_name_fixes(self.free_text, data_extensions, True)
         for old, new in text_name_fixes:
             self.free_text[self.free_text.index(old)] = new
 
-        pass
 
     def question_type(self, q) -> str:
         """
@@ -144,8 +146,11 @@ class ResultStruct(BaseModel):
         elif q in self.free_text:
             return "text"
         else:
-            raise ValueError("unknown question type", q)
+            print(f"ERROR: unknown question type for {q}. defaulting to text")
+            return "text"
 
+    def __contains__(self, item):
+        return item in self.ordered_fields
 
 class VariableExtension(BaseModel):
     name_fix: Optional[str] = None
@@ -170,103 +175,6 @@ class ProjectAnnotationExtension(BaseModel):
         orig_name = self.fix_reverse_map.get(new_name)
         if orig_name:
             return self.fixes[orig_name]
-
-
-class ProjectAnnotations(BaseModel):
-    project_id: int  # todo, out...
-    annotations: list["TaskResultModel"]
-    file_path: Optional[Path] = None
-
-
-# modelling LS structure
-class ChoicesValue(BaseModel):
-    choices: list[str]
-
-    @property
-    def str_value(self) -> str:
-        return str(",".join(self.choices))
-
-    @property
-    def direct_value(self) -> list[str]:
-        return self.choices
-
-
-# modelling LS structure
-class TextValue(BaseModel):
-    text: list[str]
-
-    @property
-    def str_value(self) -> str:
-        return str(",".join(self.text))
-
-    @property
-    def direct_value(self) -> list[str]:
-        return self.text
-
-
-# modelling LS structure
-class AnnotationResult(BaseModel):
-    id: str
-    type: str
-    value: ChoicesValue | TextValue
-    origin: str
-    to_name: str
-    from_name: str
-
-    @property
-    def str_value(self) -> str:
-        return self.value.str_value
-
-    @property
-    def direct_value(self) -> list[str]:
-        return self.value.direct_value
-
-
-class TaskAnnotationModel(BaseModel):
-    id: int
-    completed_by: int
-    result: list[AnnotationResult]
-    was_cancelled: bool
-    ground_truth: bool
-    created_at: SerializableDatetimeAlways
-    updated_at: SerializableDatetimeAlways
-    draft_created_at: Optional[SerializableDatetimeAlways] = None
-    lead_time: float
-    prediction: dict
-    result_count: int
-    unique_id: Annotated[uuid.UUID, PlainSerializer(lambda v: str(v), return_type=str, when_used='always')]
-    import_id: Optional[int] = None
-    last_action: Optional[str] = None
-    task: int
-    project: int
-    updated_by: int
-    parent_prediction: Optional[int] = None
-    parent_annotation: Optional[int] = None
-    last_created_by: Optional[int] = None
-
-
-# LS structure
-class TaskResultModel(BaseModel):
-    id: int
-    annotations: list[TaskAnnotationModel]
-    meta: dict = Field()
-    data: dict = Field(..., description="the task data")
-    created_at: SerializableDatetimeAlways
-    updated_at: SerializableDatetimeAlways
-    inner_id: int
-    total_annotations: int
-    cancelled_annotations: int
-    total_predictions: int
-    comment_count: int
-    unresolved_comment_count: int
-    last_comment_updated_at: Optional[SerializableDatetimeAlways] = None
-    project: int
-    updated_by: int
-    comment_authors: list[int]
-
-    @property
-    def num_coders(self) -> int:
-        return len(self.annotations)
 
 
 class TaskAnnotationItem(BaseModel):
@@ -388,7 +296,7 @@ class MyProject(BaseModel):
     project_data: ProjectModel
     annotation_structure: ResultStruct
     data_extensions: Optional[ProjectAnnotationExtension] = None
-    raw_annotation_result: Optional[ProjectAnnotations] = None
+    raw_annotation_result: Optional[list[TaskResultModel]] = None
     project_views: Optional[list[ProjectViewModel]] = None
     raw_annotation_df: Optional[pd.DataFrame] = None
     assignment_df: Optional[pd.DataFrame] = None
@@ -426,7 +334,7 @@ class MyProject(BaseModel):
 
         debug_mode = debug_task_limit is not None
 
-        for task in self.raw_annotation_result.annotations:
+        for task in self.raw_annotation_result:
             # print(task.id)
             for ann in task.annotations:
                 # print(f"{task.id=} {ann.id=}")
@@ -584,45 +492,83 @@ class MyProject(BaseModel):
 
         return result
 
-    def results2csv(self, dest: Path, with_defaults: bool = True, min_coders: int = 1):
-        if not with_defaults:
-            print("warning, result2csv with_defaults is disabled")
-        extra_cols = ["task_id", "num_coders", "users", "cancellations", "updated_at", "username", "displayname",
-                      "description"]
-        rows = []
+    def flatten_annotation_results(self, min_coders: int = 2, column_order: Optional[list[str]] = None) -> DataFrame:
+        df = self.raw_annotation_df.copy()
 
-        all_fieldnames: list[str] = []
-        # task
-        for task in self.annotation_results:
-            if task.num_coders < min_coders:
-                continue
-            # annotation
-            row_final: dict[str, str | int] = {"num_coders": task.num_coders,
-                                               "task_id": task.task_id,
-                                               "cancellations": task.num_cancellations,
-                                               "users": ", ".join(map(str, task.users))}
-            try:
-                row_final |= task.data_str(with_defaults)
-            except Exception as e:
-                print(e)
-                raise
+        # Count coders per task
+        coder_counts = df.groupby('task_id')['user_id'].nunique()
 
-            for input_name, input_value in self.annotation_structure.inputs.items():
-                # todo, crashed, when direct access. task.data is checked against, config
-                row_final[input_name] = task.relevant_input_data.get(input_value)
-            for k in row_final:
-                if k not in all_fieldnames:
-                    all_fieldnames.append(k)
-            rows.append(row_final)
+        # Filter to only include tasks with at least min_coders
+        valid_tasks = coder_counts[coder_counts >= min_coders].index.tolist()
 
-        # todo, more robust. collect. what we have.
-        final_cols = extra_cols
-        for col in self.annotation_structure.ordered_fields:
-            final_cols.append(col)
+        # Filter the dataframe to only include valid tasks
+        df = df[df['task_id'].isin(valid_tasks)]
 
-        writer = DictWriter(open(dest, 'w'), fieldnames=all_fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+        # Step 1: Create pivot table with task_id and user_id as index
+        pivot_df = df.pivot_table(index=['task_id', 'user_id', 'ts', 'platform_id'], columns='category', values='value',
+                                  aggfunc='first').reset_index()
+
+        # Step 2: First group by task_id to get user data in lists
+        result = pivot_df.groupby('task_id').apply(
+            lambda g: pd.Series({
+                # Keep platform_id (they should be the same for a task)
+                'platform_id': g['platform_id'].iloc[0],
+                # For each category column, collect all non-null values in a list
+                **{col: g[col].dropna().tolist() for col in g.columns
+                   if col not in ['task_id', 'user_id', 'ts', 'platform_id']}
+            })
+        ).reset_index()
+
+        # Add timestamps as a list ordered by user_id
+        result['timestamps'] = pivot_df.groupby('task_id').apply(
+            lambda g: g['ts'].tolist()
+        ).values
+
+        # Add user_ids as a list
+        result['user_ids'] = pivot_df.groupby('task_id').apply(
+            lambda g: g['user_id'].tolist()
+        ).values
+
+        # Step 3: Format for output - removing NaNs and joining with appropriate delimiters
+        formatted_result = result.copy()
+
+        # Simple formatting function that avoids pandas/numpy array checks
+        def format_list_for_csv(value_list):
+            formatted = []
+            for item in value_list:
+                # Handle scalars
+                if not isinstance(item, list):
+                    try:
+                        # Check if it's a NaN value using Python's direct check
+                        if item != item:  # NaN is the only value that doesn't equal itself
+                            formatted.append("")
+                        else:
+                            formatted.append(str(item))
+                    except:
+                        formatted.append("")
+                else:
+                    # Handle lists - join with commas
+                    item_str = []
+                    for subitem in item:
+                        try:
+                            if subitem != subitem:  # Check for NaN
+                                continue
+                            item_str.append(str(subitem))
+                        except:
+                            continue
+                    formatted.append(",".join(item_str))
+
+            return ";".join(formatted)
+
+        # Apply formatting only to columns that contain lists
+        for col in formatted_result.columns:
+            if col not in ['task_id', 'platform_id']:
+                formatted_result[col] = formatted_result[col].apply(
+                    lambda x: format_list_for_csv(x) if isinstance(x, list) else x
+                )
+
+        # Save results
+        return formatted_result
 
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
 

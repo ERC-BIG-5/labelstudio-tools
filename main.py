@@ -5,26 +5,26 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
-from pydantic import BaseModel
 from tqdm import tqdm
 
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
-from ls_helper.annotations import create_annotations_results, get_recent_annotations, _reformat_for_datapipelines
+from ls_helper.annotations import create_annotations_results, get_recent_annotations, reformat_for_datapipelines
 from ls_helper.anot_master2 import analyze_coder_agreement
 from ls_helper.config_helper import check_config_update
 from ls_helper.exp.build_configs import build_configs
 from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter, get_variable_extensions
 from ls_helper.models import MyProject
-from ls_helper.my_labelstudio_client.annot_master import prep_single_select_agreement, prep_multi_select_agreement, \
-    calc_agreements, export_annotations2csv
 from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectViewCreate
+from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectViewCreate, ProjectViewDataModel
 from ls_helper.new_models import platforms_overview2, get_p_access
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
 from tools.files import read_data
+from tools.project_logging import get_logger
+
+logger = get_logger(__file__)
 
 app = typer.Typer(name="Labelstudio helper", pretty_exceptions_show_locals=True)
 
@@ -49,7 +49,7 @@ def generate_result_fixes_template(
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None
 ):
-    po = platforms_overview2.get_project(get_p_access(id, platform, language, alias))
+    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
     project_id = po.id
 
     conf = po.get_structure()
@@ -151,6 +151,7 @@ def strict_update_project_tasks(new_data_file: Path,
 def clean_project_task_files(project_id: Annotated[int, typer.Option()],
                              title: Annotated[Optional[str], typer.Option()] = None,
                              just_check: Annotated[bool, typer.Option()] = False):
+    # TODO, put this away. we rather just patch tasks per api
     # 1. get project_sync folder
     # 2. get project tasks
     # remove all files that are not in a task
@@ -240,7 +241,7 @@ def download_project_views(
         language: Annotated[str, typer.Argument()] = None
 ) -> list[
     ProjectViewModel]:
-    p_a = get_p_access(id, platform, language, alias)
+    p_a = get_p_access(id, alias, platform, language)
     po = platforms_overview2.get_project(p_a)
 
     client = ls_client()
@@ -250,20 +251,15 @@ def download_project_views(
     return views
 
 
-class CommonParams(BaseModel):
-    platform: Optional[str] = None
-    language: Optional[str] = None
-    alias: Optional[str] = None
-
-
-"""
 @app.command(short_help="[plot] Plot the completed tasks over time")
-def status(id: Annotated[int, typer.Option(None, "-i")],
-           accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 6):
+def status(
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None,
+        accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 6):
     from ls_helper import main_funcs
-    p_a = extract_common_params(id)
-    main_funcs.status(p_a, accepted_ann_age)
-"""
+    main_funcs.status(get_p_access(id, alias, platform, language), accepted_ann_age)
 
 
 @app.command(short_help="[plot] Plot the total completed tasks over day")
@@ -275,7 +271,8 @@ def total_over_time(
         accepted_ann_age: Annotated[
             int, typer.Option(help="Download annotations if older than x hours")] = 6,
 ):
-    po = platforms_overview2.get_project(get_p_access(id, platform, language, alias))
+    print(get_p_access(id, alias, platform, language))
+    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
     annotations = get_recent_annotations(po.id, accepted_ann_age)
     df = annotation_total_over_time(annotations)
     temp_file = plot_cumulative_annotations(df,
@@ -293,8 +290,7 @@ def annotation_lead_times(id: Annotated[int, typer.Option()] = None,
                           language: Annotated[str, typer.Argument()] = None,
                           accepted_ann_age: Annotated[
                               int, typer.Option(help="Download annotations if older than x hours")] = 6):
-
-    po = platforms_overview2.get_project(get_p_access(id, platform, language, alias))
+    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
     project_annotations = get_recent_annotations(po.id, accepted_ann_age)
 
     df = get_annotation_lead_times(project_annotations)
@@ -305,18 +301,21 @@ def annotation_lead_times(id: Annotated[int, typer.Option()] = None,
 
 
 @app.command(short_help="[ls func]")
-def set_view_items(platform: Annotated[str, typer.Option()],
-                   language: Annotated[str, typer.Option()],
-                   view_title: Annotated[str, typer.Option(help="search for view with this name")],
-                   platform_ids_file: Annotated[Path, typer.Option()],
-                   create_view: Annotated[Optional[bool], typer.Option()] = True
-                   ):
-    po = platforms_overview2.get_project(get_p_access(platform, language, language))
-    views = po.get_views((platform, language))
+def set_view_items(
+        view_title: Annotated[str, typer.Option(help="search for view with this name")],
+        platform_ids_file: Annotated[Path, typer.Option()],
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None,
+        create_view: Annotated[Optional[bool], typer.Option()] = True
+):
+    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    views = po.get_views()
     if not views and not create_view:
         print("No views found")
         return
-    _view: ProjectViewModel = None
+    _view: Optional[ProjectViewModel] = None
     for view in views:
         if view.data.title == view_title:
             _view = view
@@ -327,7 +326,8 @@ def set_view_items(platform: Annotated[str, typer.Option()],
             print(f"No views found: '{view_title}', candidates: {views_titles}")
             return
         else:  # create the view
-            ls_client().create_view()
+            # todo, use utils func with id, title, adding in the defautl columns.
+            ProjectMgmt.create_view(ProjectViewCreate(project=po.id, data=ProjectViewDataModel(title=view_title)))
 
     # check the file:
     if not platform_ids_file.exists():
@@ -350,12 +350,12 @@ def update_coding_game(
     if successful sends back project_id, view_id
 
     """
-    p_a = get_p_access(id, platform, language, alias)
+    p_a = get_p_access(id, alias, platform, language)
     po = platforms_overview2.get_project(p_a)
     view_id = po.coding_game_view_id
     if not view_id:
         print("No views found for coding game")
-        return
+        return None
 
     views = po.get_views()
     if not views:
@@ -366,14 +366,14 @@ def update_coding_game(
     view_ = [v for v in views if v.id == view_id]
     if not view_:
         print(f"No coding game view found. Candidates: {[(v.data.title, v.id) for v in views]}")
-        return
+        return None
     view_ = view_[0]
 
     project_annotations = get_recent_annotations(po.id, 0)
 
     for_coding_game = []
     # todo, rather get more processed object,
-    for task_res in project_annotations.annotations:
+    for task_res in project_annotations:
         annotations = task_res.annotations
         for annotation in annotations:
             for result in annotation.result:
@@ -390,18 +390,23 @@ def update_coding_game(
 
 
 @app.command(short_help="[stats] Annotation basic results")
-def annotations_results(platform: Annotated[str, typer.Argument()],
-                        language: Annotated[str, typer.Argument()],
-                        accepted_ann_age: Annotated[
-                            int, typer.Option(help="Download annotations if older than x hours")] = 6,
-                        min_coders: Annotated[int, typer.Option()] = 2) -> tuple[
+def annotations_results(
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")] = 6,
+        min_coders: Annotated[int, typer.Option()] = 2) -> tuple[
     Path, str]:
-    mp = create_annotations_results((platform, language), accepted_ann_age=accepted_ann_age)
-
-    dest = SETTINGS.annotations_results_dir / f"{str(mp.project_id)}.csv"
-    mp.results2csv(dest, with_defaults=True, min_coders=min_coders)
+    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po.check_fixes()
+    mp = create_annotations_results(po, accepted_ann_age=accepted_ann_age)
+    res = mp.flatten_annotation_results(min_coders)
+    dest = SETTINGS.annotations_results_dir / f"{mp.project_id}.csv"
+    res.to_csv(dest, index=False)
     print(f"annotation results -> {dest}")
-    return dest, mp.raw_annotation_result.file_path.stem
+    return dest
 
 
 @app.command(short_help="[stats] calculate general agreements stats")
@@ -410,12 +415,11 @@ def agreements(
         alias: Annotated[str, typer.Option("-a")] = None,
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None,
-        accepted_ann_age: Annotated[
-            int, typer.Option(help="Download annotations if older than x hours")] = 2,
+        accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 2,
         min_num_coders: Annotated[int, typer.Option()] = 2
 ) -> tuple[Path, dict]:
-    p_a = get_p_access(id, platform, language, alias)
-    mp = create_annotations_results(p_a, accepted_ann_age=accepted_ann_age)
+    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    mp = create_annotations_results(po, accepted_ann_age=accepted_ann_age)
 
     variables = {}
 
@@ -427,13 +431,9 @@ def agreements(
             name = var
 
         default = fix_info.default
-        try:
-            type = mp.annotation_structure.question_type(name)
-        except:
-            type = "text"
+        type = mp.annotation_structure.question_type(name)
         if type in ["single", "multiple"]:
             options = mp.annotation_structure.choices[name].raw_options_list()
-
         else:
             options = []
         variables[name] = {
@@ -444,22 +444,10 @@ def agreements(
 
     agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, variables)
     dest: Path = (SETTINGS.agreements_dir / f"{mp.project_id}.json")
+    print(f"agreement_report -> {dest.as_posix()}")
     dest.write_text(json.dumps(agreement_report))
     return dest, agreement_report
 
-
-@app.command()
-def agreements2(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
-        accepted_ann_age: Annotated[
-            int, typer.Option(help="Download annotations if older than x hours")] = 6,
-):
-    p_a = get_p_access(id, platform, language, alias)
-    p = platforms_overview2.get_project(p_a)
-    annotations = get_recent_annotations(p.id, accepted_ann_age)
 
 
 @app.command()
@@ -468,9 +456,13 @@ def add_project():
 
 
 @app.command()
-def reformat_for_datapipelines(platform: Annotated[str, typer.Argument()],
-                               language: Annotated[str, typer.Argument()],
-                               destination: Path):
+def reformat_for_datapipelines(
+        destination: Annotated[Path, typer.Argument()],
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None,
+):
     """
     create a file with a dict platform_id: annotation, which can be ingested by the pipeline
     :param platform:
@@ -479,8 +471,9 @@ def reformat_for_datapipelines(platform: Annotated[str, typer.Argument()],
     :return:
     """
     # does extra caluculation but ok.
-    mp = create_annotations_results((platform, language), True, 0)
-    _reformat_for_datapipelines(mp, destination)
+    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    mp = create_annotations_results(po, True, 0)
+    reformat_for_datapipelines(mp, destination)
 
 
 @app.command()
@@ -494,11 +487,12 @@ def create_conflict_view(
 ):
     p_info = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
 
+    # TODO ALL THIS OUT: DONE IN CALCULATE-RESULTS
     # down from here till... should be somewhere...
-    project_data = p_info.project_data()
+    project_data = p_info.project_data
 
     conf = p_info.get_structure()
-    data_extensions = p_info.get_fixes()
+    data_extensions = p_info.data_extension
     mp = MyProject(
         platform=p_info.platform,
         language=p_info.language,
@@ -523,14 +517,38 @@ def create_conflict_view(
         "filters": build_platform_id_filter(relevant_conflicts_p_ids)}}))
 
 
+@app.command()
+def build_extension_index(
+        take_all_defaults: Annotated[bool, typer.Option()] = True,
+        project_ids: Annotated[list[int], typer.Option("-pid")] = None,
+):
+    from ls_helper.annot_extension import build_extension_index as _build_extension_index
+
+    if project_ids:
+        projects = [platforms_overview2.get_project(get_p_access(id)) for id in project_ids]
+    elif take_all_defaults:
+        projects = list(platforms_overview2.default_map.values())
+    else:
+        raise ValueError(f"Unclear parameter for build_extension_index")
+    index = _build_extension_index(projects)
+    dest = SETTINGS.temp_file_path / f"annot_ext_index_{'_'.join(str(p.id) for p in projects)}.json"
+    dest.write_text(index.model_dump_json(indent=2))
+    print(f"index saved to {dest}")
+
+
 if __name__ == "__main__":
+    build_extension_index(project_ids=[39, 43])
+    exit()
+
+    annotations_results(platform="twitter", language="en")
+    agreements(platform="twitter", language="en")
     # download_project_views(alias="twitter-en-2")
     #
     # update_coding_game(alias="twitter-en-2")
 
     # download_project_data(id=41)
     # agre = agreements(alias="twitter-en-2")
-    create_conflict_view(alias="twitter-en-2", variable="nature_any")
+    # create_conflict_view(alias="twitter-en-2", variable="nature_any")
 
     # down
     # generate_result_fixes_template(alias="twitter-en-2")
@@ -569,80 +587,3 @@ if __name__ == "__main__":
     # download_project_data("test")
     # generate_labeling_configs()
     # update_labeling_configs("test", "en")
-
-    # TODO
-    # generate_labeling_configs()
-
-    # METHOD 3. straight to DF
-    # get raw DF
-    res = create_annotations_results()
-    export_annotations2csv(res)
-    #
-    # deff = prepare_df_for_agreement(res,"framing")
-    # calc_agreements2(deff)
-
-    cats = ["nature_text", "val-expr_text", "val-expr_visual", "nep_materiality_text", "nep_biological_text",
-            "landscape-type_text", "basic-interaction_text", "media_relevant", "nep_materiality_visual_$",
-            "nep_biological_visual_$", "landscape-type_visual_$",
-            "basic-interaction_visual_$"]
-    cats = ["media_relevant"]
-    res.raw_annotation_df.to_csv("df.csv")
-    # exit()
-    for cat in cats:
-        # print(cat)
-        type_ = res.annotation_structure.question_type(cat)
-        if type_ == "single":
-            deff = prep_single_select_agreement(res, cat, False)
-            fleiss, gwet = calc_agreements(deff)
-            print(f"{cat=} {fleiss=} {gwet=}")
-        else:
-            print(f"M {cat}")
-            rdf = res.raw_annotation_df
-            options = res.annotation_structure.choices.get(cat).raw_options_list()
-            # print(options)
-            red_df = prep_multi_select_agreement(rdf, cat, options)
-            for o, df in red_df.items():
-                fleiss, gwet = calc_agreements(df)
-                print(f"{cat=}{o=} {fleiss=} {gwet=}")
-
-    exit()
-
-    # METHOD 2.... TOO LONG
-    # res = create_annotations_results(("twitter", "en"))
-    # res.results2csv(Path("t.csv"), with_defaults=True, min_coders=2)
-    # # print(json.dumps(res.calc_annotation_result.model_dump(), indent=2))
-    # # Path("d.json").write_text(res.model_dump_json(include={"annotation_results"},indent=2))
-    # df = create_df(res)
-    # df.to_csv(Path("df.csv"))
-    #
-    # multi_choice_options = {}
-    #
-    # for c_name, c in res.annotation_structure.choices.items():
-    #     if c.choice == "multiple":
-    #         multi_choice_options[c_name] = c.indices
-    #
-
-    # df.to_csv(Path("df.csv"))
-    #
-    # cats = ["nature_text", "nature_visual",
-    #         "nep_materiality_text", "nep_biological_text", "landscape-type_text", "basic-interaction_text",
-    #         "media_relevant", "nep_materiality_visual_$", "nep_biological_visual_$", "landscape-type_visual_$",
-    #         "basic-interaction_visual_$"]
-    #
-    # calc_agreements2(res, cats)
-    # END METHOD 2
-    # pp_s["nature_visual"].to_csv(Path("nature_visual.csv"))
-
-    # p_df,  mapp_ = prepare_numeric_agreement(df)
-    # print(p_df["nature_visual"].head(30))
-    # p_df["nature_visual"].to_csv(Path("p_df.csv"))
-    """
-    single_df = df[df['question_type'] == 'single']
-
-    # Pivot to get format for agreement calculation
-    pivot_single = single_df.pivot_table(
-        index=['task_id', 'item_id', 'question_id'],
-        columns='coder_id',
-        values='response'
-    )
-    """

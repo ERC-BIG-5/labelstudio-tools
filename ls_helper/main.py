@@ -67,7 +67,6 @@ if __name__ == "__main__":
     # mp.apply_extension(False)
     # mp.results2csv(Path("t-raw.csv"))
     mp.apply_extension(True)
-    mp.results2csv(Path("t.csv"), with_defaults=False)
     # ano_d = [TaskResultModel.model_validate(_) for _ in project_annotations]
 
     # hot fix: better names for inputs, json file generation

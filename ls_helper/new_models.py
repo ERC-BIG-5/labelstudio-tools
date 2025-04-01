@@ -8,10 +8,12 @@ from ls_helper.ana_res import parse_label_config_xml
 from ls_helper.models import ProjectAnnotationExtension, ResultStruct
 from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel
 from ls_helper.settings import SETTINGS
+from tools.project_logging import get_logger
 
 PlLang = tuple[str, str]
 ProjectAccess = int | str | PlLang
 
+logger = get_logger(__file__)
 
 def get_p_access(
         id: Optional[int] = None,
@@ -59,9 +61,14 @@ class ProjectCreate(BaseModel):
 
 class ProjectInfo(ProjectCreate):
     id: int
+    _project_data: Optional[ProjectModel] = None
+    _annot_structure: Optional[ResultStruct] = None
+    _annot_extension: Optional[ProjectAnnotationExtension] = None
 
+    @property
     def project_data(self) -> ProjectModel:
-        # todo transfer all to id.json
+        if self._project_data:
+            return self._project_data
         fin: Optional[Path] = None
         if (p_p_l := SETTINGS.projects_dir / f"{self.platform}/{self.language}.json").exists():
             print(f"project data file for {self.id}: platform-language... change in future")
@@ -70,15 +77,23 @@ class ProjectInfo(ProjectCreate):
             fin = p_i
         if not fin:
             raise FileNotFoundError(f"project data file for {self.id}: platform-language does not exist")
-        return ProjectModel.model_validate_json(fin.read_text())
+        self._project_data = ProjectModel.model_validate_json(fin.read_text())
+        return self._project_data
 
     def get_structure(self,
                       include_text: bool = True,
                       include_text_names: Optional[list[str]] = None) -> ResultStruct:
-        return parse_label_config_xml(self.project_data().label_config, include_text=include_text,
+        if self._annot_structure:
+            return self._annot_structure
+        self._annot_structure = parse_label_config_xml(self.project_data.label_config, include_text=include_text,
                                       include_text_names=include_text_names)
 
-    def get_fixes(self) -> ProjectAnnotationExtension:
+        return self._annot_structure
+
+    @property
+    def data_extension(self) -> ProjectAnnotationExtension:
+        if self._annot_extension:
+            return self._annot_extension
         if (fi := SETTINGS.fixes_dir / "unifixes.json").exists():
             data_extensions = ProjectAnnotationExtension.model_validate(json.load(fi.open()))
         else:
@@ -88,7 +103,7 @@ class ProjectInfo(ProjectCreate):
             p_fixes = ProjectAnnotationExtension.model_validate_json(p_fixes_file.read_text(encoding="utf-8"))
             data_extensions.fixes.update(p_fixes.fixes)
             data_extensions.fix_reverse_map.update(p_fixes.fix_reverse_map)
-
+        self._annot_extension = data_extensions
         return data_extensions
 
     def get_views(self) -> Optional[list[ProjectViewModel]]:
@@ -102,6 +117,15 @@ class ProjectInfo(ProjectCreate):
     def get_view_file(self) -> Optional[Path]:
         return SETTINGS.view_dir / f"{self.id}.json"
 
+    def check_fixes(self):
+        """
+        go through all fixes and mark those, which are not in the structure:
+        :return:
+        """
+        structure = self.get_structure()
+        for var in self.data_extension.fixes:
+            if var not in structure:
+                logger.warning(f"variable from fixes is redundant {var}")
 
 class ProjectOverView2(BaseModel):
     projects: dict[ProjectAccess, ProjectInfo]
@@ -136,7 +160,7 @@ class ProjectOverView2(BaseModel):
 
     @staticmethod
     def load() -> "ProjectOverview2":
-        pp = Path(SETTINGS.BASE_DATA_DIR / "projects2.json")
+        pp = Path(SETTINGS.BASE_DATA_DIR / "projects.json")
         if not pp.exists():
             print("projects file missing")
         # print(pp.read_text())

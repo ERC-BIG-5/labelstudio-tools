@@ -157,7 +157,7 @@ class ProjectModel(BaseModel):
 
 
 # from LS
-class ProjectViewsDataModel(BaseModel):
+class ProjectViewDataModel(BaseModel):
     type: Optional[str] = None
     title: Optional[str] = None
     target: Optional[str] = None
@@ -175,7 +175,7 @@ class ProjectViewsDataModel(BaseModel):
 
 class ProjectViewCreate(BaseModel):
     project: int
-    data: Optional[ProjectViewsDataModel] = Field(default_factory=ProjectViewsDataModel)
+    data: Optional[ProjectViewDataModel] = Field(default_factory=ProjectViewDataModel)
 
 
 class TaskCreate(BaseModel):
@@ -205,22 +205,12 @@ class UserModel(BaseModel):
     # date_joined: datetime
 
 
-class ProjectViewDataModel(BaseModel):
-    id: int
-    type: str
-    title: str
-    target: str
-    hiddenColumns: dict[str, list[str]]
-    filters: dict  # conjungtion, items
-    ordering: list[str]
-
-
 class ViewModel(BaseModel):
     id: int
     order: int
     user: int
     project: int
-    data: ProjectViewsDataModel
+    data: ProjectViewDataModel
 
 
 class ChoicesValue(BaseModel):

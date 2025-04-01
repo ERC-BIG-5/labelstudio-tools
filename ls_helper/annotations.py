@@ -8,10 +8,10 @@ import pandas as pd
 from pandas import DataFrame
 
 from ls_helper.funcs import get_latest_annotation_file, get_latest_annotation
-from ls_helper.models import ProjectAccess, MyProject, UserInfo
+from ls_helper.models import MyProject, UserInfo
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import TaskResultModel
-from ls_helper.new_models import platforms_overview2
+from ls_helper.new_models import ProjectInfo
 from ls_helper.settings import ls_logger, SETTINGS
 
 
@@ -28,17 +28,16 @@ def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[list[
     return ls_client().get_project_annotations(project_id)
 
 
-def create_annotations_results(project: ProjectAccess, add_annotations: bool = True,
+def create_annotations_results(p_info: ProjectInfo, add_annotations: bool = True,
                                accepted_ann_age: Optional[int] = 6) -> MyProject:
-    p_info = platforms_overview2.get_project(project)
-    project_data = p_info.project_data()
+    #project_data = p_info.project_data()
 
     conf = p_info.get_structure()
-    data_extensions = p_info.get_fixes()
+    data_extensions = p_info.data_extension
     mp = MyProject(
         platform=p_info.platform,
         language=p_info.language,
-        project_data=project_data,
+        project_data=p_info.project_data,
         annotation_structure=conf,
         data_extensions=data_extensions)
 
@@ -82,7 +81,7 @@ def convert_strings_to_indices(df: DataFrame, string_list: list[str]):
     return result_df
 
 
-def _reformat_for_datapipelines(mp, destinion_path: Path):
+def reformat_for_datapipelines(mp, destinion_path: Path):
     """
     in order to assign assignment results to items in the sqlite database metadata-content
     :param mp:

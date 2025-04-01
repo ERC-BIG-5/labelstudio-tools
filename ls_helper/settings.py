@@ -78,6 +78,10 @@ class Settings(BaseSettings):
     def unifix_file_path(self):
         return self.fixes_dir / "unifixes.json"
 
+    @property
+    def temp_file_path(self):
+        return self.BASE_DATA_DIR / "temp"
+
 SETTINGS = Settings()
 DEV_SETTINGS = Settings(_env_file=".dev.env")
 
