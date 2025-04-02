@@ -30,6 +30,7 @@ ProjectAccess = int | str | PlLang
 
 logger = get_logger(__file__)
 
+
 def find_name_fixes(orig_keys: Iterable[str],
                     data_extension: "ProjectAnnotationExtension",
                     report_missing: bool = False) -> list[tuple[str, str]]:
@@ -88,6 +89,7 @@ class ResultStruct(BaseModel):
     free_text: list[str]
     inputs: dict[str, str] = Field(description="Map from el.name > el.value")
 
+    @deprecated(reason="")
     def apply_extension(self, data_extensions: "ProjectAnnotationExtension", allow_non_existing_defaults: bool = True):
 
         ordered_name_fixes = find_name_fixes(self.ordered_fields, data_extensions)
@@ -105,7 +107,7 @@ class ResultStruct(BaseModel):
         for k, v in self.choices.items():
             ext = data_extensions.get_from_rev(v.name)
             # catch non-existing defaults..
-            if ext:
+            if not ext:
                 if ext.default:
                     if not allow_non_existing_defaults:
                         if v.choice == "single":
@@ -129,7 +131,6 @@ class ResultStruct(BaseModel):
         for old, new in text_name_fixes:
             self.free_text[self.free_text.index(old)] = new
 
-
     def question_type(self, q) -> str:
         """
         in some parts, we turn column indices into $, so this is the
@@ -151,6 +152,7 @@ class ResultStruct(BaseModel):
 
     def __contains__(self, item):
         return item in self.ordered_fields
+
 
 class VariableExtension(BaseModel):
     name_fix: Optional[str] = None
@@ -224,35 +226,6 @@ class TaskAnnotResults(BaseModel):
             {"name": item_name, "type": type_, "num_coders": self.num_coders}))
 
         annotation_item.add(value, value_index, user_id)
-
-    def apply_extension(self,
-                        annotation_extension: "ProjectAnnotationExtension",
-                        fillin_defaults: bool = True) -> None:
-        for item_name, value in self.items.items():
-            fix = annotation_extension.get_from_rev(item_name)
-            if not fix:
-                pass
-            else:
-                # print(item_name, fix)
-                if fillin_defaults:
-                    if value.type_ == "single":
-                        # fill it up with default value
-                        if len(value.values) != value.num_coders and fix.default:
-                            assert isinstance(fix.default, str), "default must be a str"
-                            value.values.extend([[fix.default] * (value.num_coders - len(value.values))])
-                    elif value.type_ == "multiple":
-                        if len(value.values) != value.num_coders and fix.default:
-                            # assert isinstance(fix.default, list), "default must be a list"
-                            value.values.extend([[fix.default] * (value.num_coders - len(value.values))])
-        # those that are missing in the row:
-        for additional in set(annotation_extension.fixes) - set(self.items):
-            fix = annotation_extension.fixes[additional]
-            new_name = getattr(fix, "name_fix")
-            if not new_name:
-                new_name = additional
-            if fix.default:
-                self.items[new_name] = TaskAnnotationItem(name=new_name, values=[[fix.default]] * self.num_coders,
-                                                          num_coders=self.num_coders)
 
     def data(self) -> dict[str, Any]:
         return {k: v.values for k, v in self.items.items()}
@@ -492,6 +465,80 @@ class MyProject(BaseModel):
 
         return result
 
+    # Simple formatting function that avoids pandas/numpy array checks
+    def format_df_for_csv(self, df: DataFrame) -> DataFrame:
+
+        def format_list_for_csv(value_list: list[Any]):
+            formatted = []
+            for item in value_list:
+                # Handle scalars
+                if not isinstance(item, list):
+                    try:
+                        # Check if it's a NaN value using Python's direct check
+                        if item != item:  # NaN is the only value that doesn't equal itself
+                            formatted.append("")
+                        else:
+                            formatted.append(str(item))
+                    except:
+                        formatted.append("")
+                else:
+                    # Handle lists - join with commas
+                    item_str = []
+                    for subitem in item:
+                        try:
+                            if subitem != subitem:  # Check for NaN
+                                continue
+                            item_str.append(str(subitem))
+                        except:
+                            continue
+                    formatted.append(",".join(item_str))
+
+            return ";".join(formatted)
+
+        formatted_result = df.copy()
+        # Apply formatting only to columns that contain lists
+        for col in formatted_result.columns:
+            if col not in ['task_id', 'platform_id']:
+                formatted_result[col] = formatted_result[col].apply(
+                    lambda x: format_list_for_csv(x) if isinstance(x, list) else x
+                )
+        formatted_result.attrs["format"] = "flat_csv_ready"
+        return formatted_result
+
+    def basic_flatten_results(self, min_coders: Optional[int] = 2,
+                              column_order: Optional[list[str]] = None) -> DataFrame:
+        df = self.raw_annotation_df.copy()
+
+        # Count coders per task and filter to tasks with sufficient coders
+        coder_counts = df.groupby('task_id')['user_id'].nunique()
+        valid_tasks = coder_counts[coder_counts >= min_coders].index.tolist()
+        df = df[df['task_id'].isin(valid_tasks)]
+
+        # Create pivot table with one row per task_id, user_id combination
+        # and columns for each category
+        flattened_df = df.pivot_table(
+            index=['task_id', 'user_id', 'ts', 'platform_id'],
+            columns='category',
+            values='value',
+            aggfunc='first'
+        ).reset_index()
+
+        # Reorder columns if specified
+        if column_order:
+            # Ensure required columns are included
+            required_cols = ['task_id', 'user_id', 'ts', 'platform_id']
+            ordered_cols = required_cols + [col for col in column_order if col not in required_cols]
+
+            # Add any remaining columns not specified in column_order
+            all_cols = flattened_df.columns.tolist()
+            final_cols = ordered_cols + [col for col in all_cols if col not in ordered_cols]
+
+            # Apply column ordering, keeping only existing columns
+            existing_cols = [col for col in final_cols if col in flattened_df.columns]
+            flattened_df = flattened_df[existing_cols]
+
+        return flattened_df
+
     def flatten_annotation_results(self, min_coders: int = 2, column_order: Optional[list[str]] = None) -> DataFrame:
         df = self.raw_annotation_df.copy()
 
@@ -529,46 +576,7 @@ class MyProject(BaseModel):
             lambda g: g['user_id'].tolist()
         ).values
 
-        # Step 3: Format for output - removing NaNs and joining with appropriate delimiters
-        formatted_result = result.copy()
-
-        # Simple formatting function that avoids pandas/numpy array checks
-        def format_list_for_csv(value_list):
-            formatted = []
-            for item in value_list:
-                # Handle scalars
-                if not isinstance(item, list):
-                    try:
-                        # Check if it's a NaN value using Python's direct check
-                        if item != item:  # NaN is the only value that doesn't equal itself
-                            formatted.append("")
-                        else:
-                            formatted.append(str(item))
-                    except:
-                        formatted.append("")
-                else:
-                    # Handle lists - join with commas
-                    item_str = []
-                    for subitem in item:
-                        try:
-                            if subitem != subitem:  # Check for NaN
-                                continue
-                            item_str.append(str(subitem))
-                        except:
-                            continue
-                    formatted.append(",".join(item_str))
-
-            return ";".join(formatted)
-
-        # Apply formatting only to columns that contain lists
-        for col in formatted_result.columns:
-            if col not in ['task_id', 'platform_id']:
-                formatted_result[col] = formatted_result[col].apply(
-                    lambda x: format_list_for_csv(x) if isinstance(x, list) else x
-                )
-
-        # Save results
-        return formatted_result
+        return result
 
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
 

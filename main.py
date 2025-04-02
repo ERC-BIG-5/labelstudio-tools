@@ -10,7 +10,7 @@ from tqdm import tqdm
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
 from ls_helper.annotations import create_annotations_results, get_recent_annotations, reformat_for_datapipelines
-from ls_helper.anot_master2 import analyze_coder_agreement
+from ls_helper.anot_master2 import analyze_coder_agreement, fix_users
 from ls_helper.config_helper import check_config_update
 from ls_helper.exp.build_configs import build_configs
 from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter, get_variable_extensions
@@ -50,7 +50,6 @@ def generate_result_fixes_template(
         language: Annotated[str, typer.Argument()] = None
 ):
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-    project_id = po.id
 
     conf = po.get_structure()
     res_template = get_variable_extensions(conf)
@@ -61,7 +60,7 @@ def generate_result_fixes_template(
             # todo, can delete them?
             print(k)
 
-    dest = Path(f"data/temp/result_fix_template_{project_id}.json")
+    dest = SETTINGS.temp_file_path / f"result_fix_template_{po.id}.json"
     dest.write_text(res_template.model_dump_json())
     print(f"file -> {dest.as_posix()}")
 
@@ -261,6 +260,17 @@ def status(
     from ls_helper import main_funcs
     main_funcs.status(get_p_access(id, alias, platform, language), accepted_ann_age)
 
+    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po.check_fixes()
+    mp = create_annotations_results(po, accepted_ann_age=accepted_ann_age)
+    # todo, this is not nice lookin ... lol
+    res = mp.basic_flatten_results(1)
+    # just for checking...
+    client = ls_client()
+    users = client.get_users()
+    fix_users(res,{u.id : u.username for u in users})
+    print(res["user_id"].value_counts())
+
 
 @app.command(short_help="[plot] Plot the total completed tasks over day")
 def total_over_time(
@@ -390,7 +400,7 @@ def update_coding_game(
 
 
 @app.command(short_help="[stats] Annotation basic results")
-def annotations_results(
+def annotations(
         id: Annotated[int, typer.Option()] = None,
         alias: Annotated[str, typer.Option("-a")] = None,
         platform: Annotated[str, typer.Argument()] = None,
@@ -402,7 +412,9 @@ def annotations_results(
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
     po.check_fixes()
     mp = create_annotations_results(po, accepted_ann_age=accepted_ann_age)
-    res = mp.flatten_annotation_results(min_coders)
+    # todo, this is not nice lookin ... lol
+    res = mp.flatten_annotation_results(min_coders, mp.annotation_structure.ordered_fields)
+    res = mp.format_df_for_csv(res)
     dest = SETTINGS.annotations_results_dir / f"{mp.project_id}.csv"
     res.to_csv(dest, index=False)
     print(f"annotation results -> {dest}")
@@ -447,7 +459,6 @@ def agreements(
     print(f"agreement_report -> {dest.as_posix()}")
     dest.write_text(json.dumps(agreement_report))
     return dest, agreement_report
-
 
 
 @app.command()
@@ -537,10 +548,10 @@ def build_extension_index(
 
 
 if __name__ == "__main__":
-    build_extension_index(project_ids=[39, 43])
-    exit()
-
-    annotations_results(platform="twitter", language="en")
+    # build_extension_index(project_ids=[39, 43])
+    # exit()
+    status(platform="twitter", language="en")
+    annotations(platform="twitter", language="en")
     agreements(platform="twitter", language="en")
     # download_project_views(alias="twitter-en-2")
     #

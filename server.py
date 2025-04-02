@@ -5,7 +5,7 @@ from starlette.requests import Request
 from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
 
-from main import update_coding_game, annotations_results, agreements
+from main import update_coding_game, annotations, agreements
 
 # app = FastAPI()
 app = FastAPI(root_path="/DATA")
@@ -31,7 +31,7 @@ def _update_coding_game(platform: str, language: str):
 
 @app.get("/annotations-results")
 def _annotations_results(platform: str, language: str, annotation_age: int = 2):
-    file_path, annot_orig = annotations_results(platform, language, annotation_age)
+    file_path, annot_orig = annotations(platform, language, annotation_age)
     fn = f"{file_path.stem}_{annot_orig}.csv"
     return FileResponse(
         path=file_path,
