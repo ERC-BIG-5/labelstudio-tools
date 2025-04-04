@@ -1,5 +1,9 @@
+import numpy as np
 import pandas as pd
+from irrCAC.raw import CAC
 from pandas import DataFrame
+
+from ls_helper.settings import DFFormat
 
 
 def analyze_coder_agreement(raw_annotations, assignments, variables) -> dict:
@@ -30,6 +34,9 @@ def analyze_coder_agreement(raw_annotations, assignments, variables) -> dict:
     dict
         Agreement report with metrics and conflicts
     """
+    if not raw_annotations.attrs["format"] == DFFormat.raw_annotation:
+        raise ValueError(f"wrong df format. received: {raw_annotations.attrs['format']}. expected: {DFFormat.raw_annotation}")
+
     # Step 1: Create the assignment tracking DataFrame
     assignments_df = _create_assignment_tracking(assignments)
 
@@ -68,7 +75,7 @@ def analyze_coder_agreement(raw_annotations, assignments, variables) -> dict:
         )
 
         # Store results
-        # all_variable_agreements[variable] = variable_agreement
+        all_variable_agreements[variable] = variable_agreement
 
         # Identify conflicts for this variable
         variable_conflicts = identify_conflicts(
@@ -248,7 +255,8 @@ def calculate_agreement(agreement_matrix, variable_info):
     --------
     dict with agreement metrics
     """
-    if variable_info['type'] == 'single_select':
+    print(variable_info["name"])
+    if variable_info['type'] == 'single':
         return _calculate_single_select_agreement(agreement_matrix, variable_info['options'])
     else:  # multi_select
         return _calculate_multi_select_agreement(agreement_matrix, variable_info['options'])
@@ -274,52 +282,29 @@ def _calculate_single_select_agreement(agreement_matrix, options):
     coders = agreement_matrix.columns
     n_coders = len(coders)
 
+    def transform(c):
+        if isinstance(c, list):
+            if len(c) > 0:
+                return options.index(c[0])
+            else:
+                return np.NaN
+        else:
+            if np.isnan(c):
+                return c
+        print("whaat")
+
     # Track agreements
-    total_agreements = 0
-    total_comparisons = 0
+    # turn lists of strings into single numbers
+    #agreement_matrix2 = agreement_matrix.map(
+    #    lambda c: options.index(c[0]) if isinstance(c, list) and len(c) > 0 and c[0] in options else c)
+    agreement_matrix2 = agreement_matrix.map(transform)
 
-    # Track kappa values
-    kappa_values = []
-
-    for i in range(n_coders):
-        for j in range(i + 1, n_coders):
-            coder1 = coders[i]
-            coder2 = coders[j]
-
-            # Get annotations for this pair
-            pair_data = agreement_matrix[[coder1, coder2]].dropna()
-
-            if len(pair_data) == 0:
-                continue
-
-            # Count agreements
-            agreements = (pair_data[coder1] == pair_data[coder2]).sum()
-            total_agreements += agreements
-            total_comparisons += len(pair_data)
-
-            # Calculate Cohen's kappa
-            observed_agreement = agreements / len(pair_data)
-
-            # Calculate expected agreement
-            expected_agreement = 0
-            for option in options:
-                prob_coder1 = (pair_data[coder1] == option).mean()
-                prob_coder2 = (pair_data[coder2] == option).mean()
-                expected_agreement += prob_coder1 * prob_coder2
-
-            # Calculate kappa
-            if expected_agreement < 1.0:
-                kappa = (observed_agreement - expected_agreement) / (1 - expected_agreement)
-                kappa_values.append(kappa)
-
-    # Overall metrics
-    overall_agreement = total_agreements / total_comparisons if total_comparisons > 0 else 0
-    avg_kappa = sum(kappa_values) / len(kappa_values) if kappa_values else 0
+    cac_4raters = CAC(agreement_matrix2)
 
     return {
-        'overall_agreement': overall_agreement,
-        'kappa': avg_kappa,
-        'sample_size': total_comparisons
+        #'overall_agreement': overall_agreement,
+        'fleiss': cac_4raters.fleiss()["est"]["coefficient_value"],
+        'gwet': cac_4raters.gwet()["est"]["coefficient_value"]
     }
 
 
@@ -465,7 +450,7 @@ def identify_conflicts(agreement_matrix, variable, variable_info, variable_annot
             platform_id_map[row['task_id']] = row['platform_id']
 
     # For debugging
-    #print(f"Platform ID map: {platform_id_map}")
+    # print(f"Platform ID map: {platform_id_map}")
 
     if variable_info['type'] == 'single_select':
         # For single-select, check exact matches
@@ -591,6 +576,7 @@ def generate_agreement_report(all_variable_agreements, all_conflicts, variables,
 
     return report
 
-def fix_users(df: DataFrame, usermap: dict[int,str]) -> DataFrame:
+
+def fix_users(df: DataFrame, usermap: dict[int, str]) -> DataFrame:
     df['user_id'] = df['user_id'].map(usermap)
     return df

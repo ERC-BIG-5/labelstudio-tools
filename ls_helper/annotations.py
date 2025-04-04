@@ -14,8 +14,8 @@ from ls_helper.my_labelstudio_client.models import TaskResultModel
 from ls_helper.new_models import ProjectInfo
 from ls_helper.settings import ls_logger, SETTINGS
 
-
-def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[list[TaskResultModel]]:
+# todo this should go to project_mgmt
+def _get_recent_annotations(project_id: int, accepted_age: int) -> Optional[list[TaskResultModel]]:
     latest_file = get_latest_annotation_file(project_id)
     if latest_file is not None:
         file_dt = datetime.strptime(latest_file.stem, "%Y%m%d_%H%M")
@@ -41,9 +41,11 @@ def create_annotations_results(p_info: ProjectInfo, add_annotations: bool = True
         annotation_structure=conf,
         data_extensions=data_extensions)
 
+    conf.apply_extension(p_info.data_extension)
+
     mp.apply_extension()
     if add_annotations:
-        mp.raw_annotation_result = get_recent_annotations(p_info.id, accepted_ann_age)
+        mp.raw_annotation_result = _get_recent_annotations(p_info.id, accepted_ann_age)
         raw_annotation_df, assignment_df = mp.get_annotation_df()
         mp.raw_annotation_df = raw_annotation_df
         mp.assignment_df = assignment_df
@@ -81,18 +83,6 @@ def convert_strings_to_indices(df: DataFrame, string_list: list[str]):
     return result_df
 
 
-def reformat_for_datapipelines(mp, destinion_path: Path):
-    """
-    in order to assign assignment results to items in the sqlite database metadata-content
-    :param mp:
-    :return:
-    """
-    res = {}
-
-    for task_result in mp.raw_annotation_result.annotations:
-        res[task_result.data["platform_id"]] = task_result.model_dump(exclude={"data"})
-    destinion_path.write_text(json.dumps(res))
-    print(f"annotations reformatted -> {destinion_path.as_posix()}")
 
 
 

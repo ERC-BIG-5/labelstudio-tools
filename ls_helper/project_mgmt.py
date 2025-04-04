@@ -1,10 +1,11 @@
+import json
 from typing import Any, Optional
 
 import orjson
 
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel, ProjectViewCreate
-from ls_helper.new_models import ProjectCreate, platforms_overview2
+from ls_helper.new_models import ProjectCreate, platforms_overview2, ProjectInfo
 from ls_helper.settings import SETTINGS
 from tools.env_root import root
 from tools.files import read_data
@@ -54,13 +55,19 @@ class ProjectMgmt:
         return ls_client().create_view(view)
 
     @classmethod
+    def refresh_views(self, po: ProjectInfo):
+        views = ls_client().get_project_views(po.id)
+        po.view_file.write_text(json.dumps([v.model_dump() for v in views]))
+
+
+
+    @classmethod
     def create_project(cls, p: ProjectCreate, add_coding_game_view: bool = True) -> tuple[
         ProjectModel, Optional[ProjectViewModel]]:
-        model = ProjectModel(title=p.name,
+        model = ProjectModel(title=p.title,
                              description=p.full_description,
                              **ProjectMgmt.default_project_values())
-        resp = ls_client().create_project(model)
-        project = ProjectModel.model_validate(resp.json())
+        project = ls_client().create_project(model)
         coding_game_view: Optional[ProjectViewModel] = None
         if add_coding_game_view:
             coding_game_view = cls.create_view(ProjectViewCreate.model_validate(

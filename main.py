@@ -9,15 +9,14 @@ from tqdm import tqdm
 
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
-from ls_helper.annotations import create_annotations_results, get_recent_annotations, reformat_for_datapipelines
+from ls_helper.annotations import create_annotations_results, _get_recent_annotations
 from ls_helper.anot_master2 import analyze_coder_agreement, fix_users
 from ls_helper.config_helper import check_config_update
-from ls_helper.exp.build_configs import build_configs
+from ls_helper.exp.build_configs import build_configs, BuildConfig, build_from_template
 from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter, get_variable_extensions
-from ls_helper.models import MyProject
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectViewCreate, ProjectViewDataModel
-from ls_helper.new_models import platforms_overview2, get_p_access
+from ls_helper.new_models import platforms_overview2, get_p_access, ProjectCreate
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
@@ -184,7 +183,7 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
     host_path = SETTINGS.HOST_STORAGE_BASE / rel_path
 
     existing_task_files = list(host_path.glob("*.json"))
-    existing_task_files = [f.name for f in existing_task_files]
+    existing_task_files = [f.title for f in existing_task_files]
     # print(existing_task_files)
     # print("**************")
     # print(host_path.absolute())
@@ -218,11 +217,11 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
 @app.command(short_help="[maint]")
 def download_project_data(
         id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Argument()] = None,
         platform: Annotated[Optional[str], typer.Argument()] = None,
         language: Annotated[Optional[str], typer.Argument()] = None,
-        alias: Annotated[Optional[str], typer.Argument()] = None,
 ):
-    p = platforms_overview2.get_project(get_p_access(id, platform, language, alias))
+    p = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
 
     project_data = ls_client().get_project(p.id)
     if not project_data:
@@ -242,11 +241,8 @@ def download_project_views(
     ProjectViewModel]:
     p_a = get_p_access(id, alias, platform, language)
     po = platforms_overview2.get_project(p_a)
-
-    client = ls_client()
-    views = client.get_project_views(po.id)
-    dest = po.get_view_file()
-    dest.write_text(json.dumps([v.model_dump() for v in views]))
+    views = ProjectMgmt.refresh_views(po)
+    logger.debug(f"view file -> {po.view_file}")
     return views
 
 
@@ -268,7 +264,7 @@ def status(
     # just for checking...
     client = ls_client()
     users = client.get_users()
-    fix_users(res,{u.id : u.username for u in users})
+    fix_users(res, {u.id: u.username for u in users})
     print(res["user_id"].value_counts())
 
 
@@ -283,12 +279,12 @@ def total_over_time(
 ):
     print(get_p_access(id, alias, platform, language))
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-    annotations = get_recent_annotations(po.id, accepted_ann_age)
+    annotations = _get_recent_annotations(po.id, accepted_ann_age)
     df = annotation_total_over_time(annotations)
     temp_file = plot_cumulative_annotations(df,
                                             f"{po.platform}/{po.language}: Cumulative Annotations Over Time")
     dest = SETTINGS.plots_dir / f"{platform}-{language}.png"
-    shutil.copy(temp_file.name, dest)
+    shutil.copy(temp_file.title, dest)
     temp_file.close()
     open_image_simple(dest)
 
@@ -301,7 +297,7 @@ def annotation_lead_times(id: Annotated[int, typer.Option()] = None,
                           accepted_ann_age: Annotated[
                               int, typer.Option(help="Download annotations if older than x hours")] = 6):
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-    project_annotations = get_recent_annotations(po.id, accepted_ann_age)
+    project_annotations = _get_recent_annotations(po.id, accepted_ann_age)
 
     df = get_annotation_lead_times(project_annotations)
     temp_file = plot_date_distribution(df, y_col="lead_time")
@@ -355,6 +351,8 @@ def update_coding_game(
         alias: Annotated[str, typer.Option("-a")] = None,
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None,
+        accepted_ann_age: Annotated[int, typer.Option("-age")] = 6,
+        refresh_views: Annotated[bool, typer.Option("-r")] = False,
 ) -> Optional[tuple[int, int]]:
     """
     if successful sends back project_id, view_id
@@ -362,11 +360,14 @@ def update_coding_game(
     """
     p_a = get_p_access(id, alias, platform, language)
     po = platforms_overview2.get_project(p_a)
+    logger.info(po.alias)
     view_id = po.coding_game_view_id
     if not view_id:
         print("No views found for coding game")
         return None
 
+    if refresh_views:
+        ProjectMgmt.refresh_views(po)
     views = po.get_views()
     if not views:
         download_project_views(platform, language)
@@ -375,27 +376,22 @@ def update_coding_game(
         # return
     view_ = [v for v in views if v.id == view_id]
     if not view_:
+        # todo: create view
         print(f"No coding game view found. Candidates: {[(v.data.title, v.id) for v in views]}")
         return None
     view_ = view_[0]
 
-    project_annotations = get_recent_annotations(po.id, 0)
+    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    # project_annotations = _get_recent_annotations(po.id, accepted_ann_age)
+    mp = create_annotations_results(po, accepted_ann_age=accepted_ann_age)
+    # project_annotations = _get_recent_annotations(po.id, 0)
 
-    for_coding_game = []
-    # todo, rather get more processed object,
-    for task_res in project_annotations:
-        annotations = task_res.annotations
-        for annotation in annotations:
-            for result in annotation.result:
-                # TODO: coding-game variable name, should be universal
-                if result.from_name == "coding_game":
-                    if result.value.choices[0] == "Yes":
-                        p_id = task_res.data["platform_id"]
-                        if p_id not in for_coding_game:
-                            for_coding_game.append(p_id)
-
-    build_view_with_filter_p_ids(SETTINGS.client, view_, for_coding_game)
-    print("Coding game successfully updated")
+    ann = mp.raw_annotation_df.copy()
+    ann = ann[ann["category"] == "coding-game"]
+    ann = mp.simplify_single_choices(ann)
+    platform_ids = ann[ann["single_value"] == "Yes"]["platform_id"].tolist()
+    build_view_with_filter_p_ids(SETTINGS.client, view_, platform_ids)
+    logger.info(f"Set {len(platform_ids)} to the coding game of {po.alias}")
     return po.id, view_id
 
 
@@ -449,6 +445,7 @@ def agreements(
         else:
             options = []
         variables[name] = {
+            "name": name,
             "type": type,
             "options": options,
             "default": default
@@ -462,17 +459,27 @@ def agreements(
 
 
 @app.command()
-def add_project():
-    plist = ls_client().projects_list()
+def create_project(
+        title: Annotated[str, typer.Option()],
+        platform: Annotated[str, typer.Option()],
+        language: Annotated[str, typer.Option()],
+        alias: Annotated[str, typer.Option()] = None):
+    platforms_overview2.add_project(ProjectCreate(
+        title=title,
+        platform=platform,
+        language=language,
+        alias=alias,
+        default=False
+    ))
 
 
 @app.command()
 def reformat_for_datapipelines(
-        destination: Annotated[Path, typer.Argument()],
         id: Annotated[int, typer.Option()] = None,
         alias: Annotated[str, typer.Option("-a")] = None,
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None,
+        destination: Annotated[Path, typer.Argument()] = None,
 ):
     """
     create a file with a dict platform_id: annotation, which can be ingested by the pipeline
@@ -481,51 +488,60 @@ def reformat_for_datapipelines(
     :param destination:
     :return:
     """
-    # does extra caluculation but ok.
+    # does extra calculation but ok.
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
     mp = create_annotations_results(po, True, 0)
-    reformat_for_datapipelines(mp, destination)
+    res = {}
+
+    for task_result in mp.raw_annotation_result:
+        res[task_result.data["platform_id"]] = {po.id: task_result.model_dump(exclude={"data"})}
+    if not destination:
+        destination = SETTINGS.temp_file_path / f"annotations_for_datapipelines_{po.id}.json"
+        destination.write_text(json.dumps(res))
+        print(f"annotations reformatted -> {destination.as_posix()}")
+
+
+def get_all_variable_names(
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Option()] = None,
+        language: Annotated[str, typer.Option()] = None
+):
+    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    struct = po.get_structure(include_text=False, apply_extension=True)
+    return list(struct.choices.keys()) + struct.free_text
 
 
 @app.command()
 def create_conflict_view(
+        variable: Annotated[str, typer.Option()],
         id: Annotated[int, typer.Option()] = None,
         alias: Annotated[str, typer.Option("-a")] = None,
         platform: Annotated[str, typer.Option()] = None,
         language: Annotated[str, typer.Option()] = None,
-        variable: Annotated[str, typer.Option()] = None,
         variable_option: Annotated[str, typer.Option()] = None
 ):
-    p_info = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-
-    # TODO ALL THIS OUT: DONE IN CALCULATE-RESULTS
-    # down from here till... should be somewhere...
-    project_data = p_info.project_data
-
-    conf = p_info.get_structure()
-    data_extensions = p_info.data_extension
-    mp = MyProject(
-        platform=p_info.platform,
-        language=p_info.language,
-        project_data=project_data,
-        annotation_structure=conf,
-        data_extensions=data_extensions)
-
-    mp.apply_extension()
+    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po.check_fixes()
+    mp = create_annotations_results(po)
 
     # just check existence
     _ = mp.annotation_structure.question_type(variable)
 
-    agreement_data = json.loads((SETTINGS.agreements_dir / f"{p_info.id}.json").read_text())
+    agreement_data = json.loads((SETTINGS.agreements_dir / f"{po.id}.json").read_text())
 
     conflicts = agreement_data["conflicts"]
     relevant_conflicts_p_ids = [c["platform_id"] for c in conflicts if c["variable"] == variable]
-    print(relevant_conflicts_p_ids)
+    # print(relevant_conflicts_p_ids)
 
     title = f"conflict:{variable}"
-    ProjectMgmt.create_view(ProjectViewCreate.model_validate({"project": p_info.id, "data": {
+    view = ProjectMgmt.create_view(ProjectViewCreate.model_validate({"project": po.id, "data": {
         "title": title,
         "filters": build_platform_id_filter(relevant_conflicts_p_ids)}}))
+    pass
+    url = f"{SETTINGS.LS_HOSTNAME}/projects/{po.id}/data?tab={view.id}"
+    print(url)
+    return url
 
 
 @app.command()
@@ -547,54 +563,28 @@ def build_extension_index(
     print(f"index saved to {dest}")
 
 
+@app.command()
+def build_ls_config(config_build_file_path: Path):
+    if not config_build_file_path.is_absolute():
+        config_build_file_path = SETTINGS.labeling_configs_dir / "build_configs" / config_build_file_path
+        build_config = BuildConfig.model_validate_json(config_build_file_path.read_text())
+        build_from_template(build_config)
+
+
 if __name__ == "__main__":
+    twitter = "twitter"
+    en = "en"
+    tw_en = {"platform": twitter, "language": en}
+    _default = tw_en
+
+    # generate_result_fixes_template(**_default)
+    # build_ls_config(Path("twitter-2.json"))
+    # exit()
     # build_extension_index(project_ids=[39, 43])
     # exit()
-    status(platform="twitter", language="en")
-    annotations(platform="twitter", language="en")
-    agreements(platform="twitter", language="en")
-    # download_project_views(alias="twitter-en-2")
-    #
-    # update_coding_game(alias="twitter-en-2")
-
-    # download_project_data(id=41)
-    # agre = agreements(alias="twitter-en-2")
-    # create_conflict_view(alias="twitter-en-2", variable="nature_any")
-
-    # down
-    # generate_result_fixes_template(alias="twitter-en-2")
-    exit()
-
-    # reformat_for_datapipelines("twitter", "en",
-    #                            Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/temp/twitter_en_res.json"))
-
-    # pass
-    # crashes... FIX
-    # agreements("twitter", "en")
-    # exit()
-    # download_project_data("youtube", "en")
-
-    # clean ...ON VM
-    # clean_project_task_files(33)
-    # DONE
-    # set_view_items("youtube", "en", "Old-Sentiment/Framing",
-    #                Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/temp/yt_en_problematic_tasks.json"))
-
-    # JUPP
-    # annotations_results("youtube", "en", 2)
-    # annotations_results("twitter", "en", 2)
-    # agreements("twitter", "en", 2)
-    # CODING GAME
-    # download_project_views("youtube", "en")
-    # download_project_views("youtube", "en")
-    # update_coding_game("youtube", "es")
-    # agreements("youtube", "en")
-    # generate_result_fixes_template("youtube","en")
-
-    # setup_project_settings()
-
-    #
-    # download_project_data()
-    # download_project_data("test")
-    # generate_labeling_configs()
-    # update_labeling_configs("test", "en")
+    # status(**_default)
+    # annotations(**_default)
+    download_project_data(**_default)
+    agreements(**_default)
+    # create_conflict_view("nature_text",**_default)
+    # update_coding_game(**_default)

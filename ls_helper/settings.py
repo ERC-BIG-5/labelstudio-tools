@@ -1,4 +1,7 @@
 import logging
+from dataclasses import dataclass
+from enum import Enum, auto
+
 import sys
 from logging import getLogger
 from pathlib import Path
@@ -90,3 +93,28 @@ ls_logger.setLevel(logging.DEBUG)
 ls_logger.addHandler(logging.StreamHandler(sys.stdout))
 ls_logger.propagate = False
 
+class DFFormat(Enum):
+    raw_annotation = auto()
+    flat = auto()
+    flat_csv_ready = auto()
+
+
+@dataclass
+class DFRawCols:
+    CAT: str = "category"
+    VAL: str = "value"
+    TYPE: str = "type"
+
+
+@dataclass
+class DFCols:
+    T_ID: str = "task_id"
+    A_ID: str = "annotation_id"
+    U_ID: str = "user_id"
+    P_ID: str = "platform_id"
+    TS: str = "ts"
+
+
+@dataclass
+class AllCols(DFRawCols, DFCols):
+    pass

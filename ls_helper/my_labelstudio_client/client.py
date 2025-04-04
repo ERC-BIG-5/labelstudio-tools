@@ -267,13 +267,13 @@ class LabelStudioBase:
                                                       json={"label_config": label_config})
         return resp
 
-    def create_view(self, data: ProjectViewCreate):
+    def create_view(self, data: ProjectViewCreate) -> ProjectViewModel:
         resp = self._client_wrapper.httpx_client.post(f"/api/dm/views/", json=data.model_dump(exclude_defaults=True))
         if resp.status_code != 201:
             print(resp)
             raise ValueError(resp.json())
         view = ProjectViewModel.model_validate(resp.json())
-        return data
+        return view
 
     def createTask(self, data: TaskCreate):
         resp = self._client_wrapper.httpx_client.post(f"/api/tasks/", json=data.model_dump())

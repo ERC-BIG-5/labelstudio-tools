@@ -13,7 +13,7 @@ from pandas import DataFrame
 from pydantic import BaseModel, Field, ConfigDict, RootModel, model_validator, PlainSerializer
 
 from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel, TaskResultModel
-from ls_helper.settings import SETTINGS
+from ls_helper.settings import SETTINGS, DFFormat, DFCols
 from tools.project_logging import get_logger
 
 # todo bring and import tools,
@@ -24,6 +24,9 @@ SerializableDatetime = Annotated[
 SerializableDatetimeAlways = Annotated[
     datetime, PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used='always')
 ]
+
+SerializablePath = Annotated[
+    Path, PlainSerializer(lambda p: p.as_posix(), return_type=str)]
 
 PlLang = tuple[str, str]
 ProjectAccess = int | str | PlLang
@@ -88,10 +91,12 @@ class ResultStruct(BaseModel):
     choices: dict[str, Choices]
     free_text: list[str]
     inputs: dict[str, str] = Field(description="Map from el.name > el.value")
+    _extension_applied: bool = False
 
     @deprecated(reason="")
     def apply_extension(self, data_extensions: "ProjectAnnotationExtension", allow_non_existing_defaults: bool = True):
-
+        if self._extension_applied:
+            return
         ordered_name_fixes = find_name_fixes(self.ordered_fields, data_extensions)
         for old, new in ordered_name_fixes:
             self.ordered_fields[self.ordered_fields.index(old)] = new
@@ -130,6 +135,8 @@ class ResultStruct(BaseModel):
         text_name_fixes = find_name_fixes(self.free_text, data_extensions, True)
         for old, new in text_name_fixes:
             self.free_text[self.free_text.index(old)] = new
+
+        self._extension_applied = True
 
     def question_type(self, q) -> str:
         """
@@ -291,7 +298,8 @@ class MyProject(BaseModel):
 
         self._extension_applied = True
 
-    def get_annotation_df(self, debug_task_limit: Optional[int] = None) -> tuple[DataFrame, DataFrame]:
+    def get_annotation_df(self, debug_task_limit: Optional[int] = None,
+                          drop_cancels: bool = True) -> tuple[DataFrame, DataFrame]:
 
         assignment_df_rows = []
         rows = []
@@ -311,7 +319,7 @@ class MyProject(BaseModel):
             # print(task.id)
             for ann in task.annotations:
                 # print(f"{task.id=} {ann.id=}")
-                if ann.was_cancelled:
+                if drop_cancels and ann.was_cancelled:
                     # print(f"{task.id=} {ann.id=} C")
                     continue
                 # print(f"{task.id=} {ann.id=} {len(ann.result)=}")
@@ -320,7 +328,7 @@ class MyProject(BaseModel):
                                                  ann_id=ann.id,
                                                  user_id=ann.completed_by,
                                                  ts=ann.updated_at,
-                                                 platform_id=task.data["platform_id"]).model_dump(by_alias=True)
+                                                 platform_id=task.data[DFCols.P_ID]).model_dump(by_alias=True)
                 )
 
                 for q_id, question in enumerate(ann.result):
@@ -337,7 +345,7 @@ class MyProject(BaseModel):
                         type_ = "x"
                     rows.append(PrincipleRow(task_id=task.id,
                                              ann_id=ann.id,
-                                             platform_id=task.data["platform_id"],
+                                             platform_id=task.data[DFCols.P_ID],
                                              user_id=ann.completed_by,
                                              ts=ann.updated_at,
                                              category=new_name,
@@ -350,6 +358,7 @@ class MyProject(BaseModel):
                     break
 
         df = DataFrame(rows)
+        df.attrs["format"] = DFFormat.raw_annotation
         assignment_df = DataFrame(assignment_df_rows)
         """
         raw_annotation_df = df.astype(
@@ -357,6 +366,25 @@ class MyProject(BaseModel):
              'type': "category", 'question': "category", 'value': "string"})
         """
         return df, assignment_df
+
+    def simplify_single_choices(self,df: DataFrame) -> DataFrame:
+        assert df.attrs["format"] == DFFormat.raw_annotation
+
+        result_df = df.copy()
+        # Define a function to extract the single value when type is 'single'
+        def extract_single_value(row):
+            if row['type'] == 'single':
+                # Check if value is a list and not empty
+                if isinstance(row['value'], list) and len(row['value']) > 0:
+                    return row['value'][0]
+                # If value is already a string (not a list)
+                elif isinstance(row['value'], str):
+                    return row['value']
+            return None
+
+        # Apply the function to create the new column
+        result_df['single_value'] = result_df.apply(extract_single_value, axis=1)
+        return result_df
 
     def get_annotation_df2(self, debug_task_limit: Optional[int] = None,
                            insert_defaults: bool = True) -> DataFrame:
@@ -502,7 +530,7 @@ class MyProject(BaseModel):
                 formatted_result[col] = formatted_result[col].apply(
                     lambda x: format_list_for_csv(x) if isinstance(x, list) else x
                 )
-        formatted_result.attrs["format"] = "flat_csv_ready"
+        formatted_result.attrs["format"] = DFFormat.flat_csv_ready
         return formatted_result
 
     def basic_flatten_results(self, min_coders: Optional[int] = 2,
@@ -549,26 +577,27 @@ class MyProject(BaseModel):
         valid_tasks = coder_counts[coder_counts >= min_coders].index.tolist()
 
         # Filter the dataframe to only include valid tasks
-        df = df[df['task_id'].isin(valid_tasks)]
+        df = df[df[DFCols.T_ID].isin(valid_tasks)]
 
         # Step 1: Create pivot table with task_id and user_id as index
-        pivot_df = df.pivot_table(index=['task_id', 'user_id', 'ts', 'platform_id'], columns='category', values='value',
+        pivot_df = df.pivot_table(index=[DFCols.T_ID, DFCols.U_ID, DFCols.TS, DFCols.P_ID], columns='category',
+                                  values='value',
                                   aggfunc='first').reset_index()
 
         # Step 2: First group by task_id to get user data in lists
-        result = pivot_df.groupby('task_id').apply(
+        result = pivot_df.groupby(DFCols.T_ID).apply(
             lambda g: pd.Series({
                 # Keep platform_id (they should be the same for a task)
-                'platform_id': g['platform_id'].iloc[0],
+                DFCols.P_ID: g[DFCols.P_ID].iloc[0],
                 # For each category column, collect all non-null values in a list
                 **{col: g[col].dropna().tolist() for col in g.columns
-                   if col not in ['task_id', 'user_id', 'ts', 'platform_id']}
+                   if col not in [DFCols.T_ID, DFCols.U_ID, DFCols.TS, DFCols.P_ID]}
             })
         ).reset_index()
 
         # Add timestamps as a list ordered by user_id
-        result['timestamps'] = pivot_df.groupby('task_id').apply(
-            lambda g: g['ts'].tolist()
+        result['timestamps'] = pivot_df.groupby(DFCols.T_ID).apply(
+            lambda g: g[DFCols.TS].tolist()
         ).values
 
         # Add user_ids as a list
@@ -576,6 +605,7 @@ class MyProject(BaseModel):
             lambda g: g['user_id'].tolist()
         ).values
 
+        result.attrs["format"] = DFFormat.flat
         return result
 
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)

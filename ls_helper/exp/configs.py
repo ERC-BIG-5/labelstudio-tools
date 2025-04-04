@@ -1,10 +1,9 @@
-import pystache
 from pathlib import Path
 from typing import Any
+
 from lxml import etree
 
 from ls_helper.models import ProjectAnnotationExtension
-import json
 
 
 def find_duplicate_names(root) -> dict[str, list[Any]]:

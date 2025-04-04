@@ -9,8 +9,7 @@ def get_config_project_project_data(project_data: dict):
 
 
 def parse_label_config_xml(xml_string,
-                           include_text: bool = True,
-                           include_text_names: Optional[list[str]] = None) -> ResultStruct:
+                           include_text: bool = True) -> ResultStruct:
     root: ET.Element = ET.fromstring(xml_string)
 
     ordered_fields: list[str] = []
@@ -33,9 +32,9 @@ def parse_label_config_xml(xml_string,
             value = el.get('value')
             if value and value.startswith('$'):
                 name = el.get('name')
-                if not include_text_names or name in include_text_names:
-                    variable_text_fields[name] = value[1:]
-                    ordered_fields.append(name)
+                # keep the $ so we know its a ref to data.
+                variable_text_fields[name] = value[1:]
+                ordered_fields.append(name)
 
     return ResultStruct(
         ordered_fields=ordered_fields,

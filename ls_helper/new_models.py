@@ -15,6 +15,7 @@ ProjectAccess = int | str | PlLang
 
 logger = get_logger(__file__)
 
+
 def get_p_access(
         id: Optional[int] = None,
         alias: Optional[str] = None,
@@ -31,7 +32,7 @@ def get_p_access(
 
 
 class ProjectCreate(BaseModel):
-    name: str
+    title: str
     platform: Optional[str] = "xx"
     language: Optional[str] = "xx"
     description: Optional[str] = None
@@ -44,12 +45,12 @@ class ProjectCreate(BaseModel):
     @model_validator(mode="after")
     def post_build(cls, data: "ProjectInfo") -> "ProjectInfo":
         if not data.alias:
-            data.alias = data.name.lower().replace(" ", "_")
+            data.alias = data.title.lower().replace(" ", "_")
         return data
 
     @property
     def full_description(self) -> str:
-        return f"{self.name}\n{self.platform}:{self.language}\n{self.description}"
+        return f"{self.title}\n{self.platform}:{self.language}\n{self.description}"
 
     @property
     def pl_lang(self) -> PlLang:
@@ -82,12 +83,19 @@ class ProjectInfo(ProjectCreate):
 
     def get_structure(self,
                       include_text: bool = True,
-                      include_text_names: Optional[list[str]] = None) -> ResultStruct:
-        if self._annot_structure:
+                      apply_extension: bool = True) -> ResultStruct:
+        """
+        caches the structure.
+        :param include_text:
+        :param apply_extension:
+        :return:
+        """
+        if self._annot_structure and apply_extension == self._annot_structure._extension_applied:
             return self._annot_structure
-        self._annot_structure = parse_label_config_xml(self.project_data.label_config, include_text=include_text,
-                                      include_text_names=include_text_names)
 
+        self._annot_structure = parse_label_config_xml(self.project_data.label_config, include_text=include_text)
+        if apply_extension:
+            self._annot_structure.apply_extension(self.data_extension)
         return self._annot_structure
 
     @property
@@ -113,8 +121,8 @@ class ProjectInfo(ProjectCreate):
         data = json.load(view_file.open())
         return [ProjectViewModel.model_validate(v) for v in data]
 
-    # todo out?
-    def get_view_file(self) -> Optional[Path]:
+    @property
+    def view_file(self) -> Optional[Path]:
         return SETTINGS.view_dir / f"{self.id}.json"
 
     def check_fixes(self):
@@ -126,6 +134,7 @@ class ProjectInfo(ProjectCreate):
         for var in self.data_extension.fixes:
             if var not in structure:
                 logger.warning(f"variable from fixes is redundant {var}")
+
 
 class ProjectOverView2(BaseModel):
     projects: dict[ProjectAccess, ProjectInfo]
@@ -150,7 +159,7 @@ class ProjectOverView2(BaseModel):
                 # check if the already set default, actually has the flat
                 if set_default := overview.default_map.get(pl_l, None):
                     if set_default.default:
-                        print(f"warning: default {pl_l} already exists. Not setting {project.name} as default")
+                        print(f"warning: default {pl_l} already exists. Not setting {project.title} as default")
                         continue
                 overview.default_map[pl_l] = project
             # just set the first pl_l into the default map
@@ -187,7 +196,7 @@ class ProjectOverView2(BaseModel):
                 if default_.default:
                     raise ValueError(f"default {p.pl_lang} already exists")
 
-        project_model = ProjectMgmt.create_project(p)
+        project_model, view_model = ProjectMgmt.create_project(p)
 
         p_i = ProjectInfo(id=project_model.id, **p.model_dump())
 

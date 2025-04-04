@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from enum import Enum
 from typing import Optional, Any, TypedDict, Literal, Annotated
 
 from pydantic import BaseModel, Field, PlainSerializer, ConfigDict
@@ -164,7 +165,7 @@ class ProjectViewDataModel(BaseModel):
     gridWidth: Optional[int] = None
     columnWidth: Optional[int] = None
     hiddenColumns: Optional[
-        TypedDict("hiddenColumns", {"explore": list["str"], "labeling": Optional[list[str]]})] = None
+        TypedDict("hiddenColumns", {"explore": Optional[list["str"]], "labeling": Optional[list[str]]})] = None
     semantic_search: Optional[list] = None
     columnsDisplay: Optional[dict] = None
     filters: TypedDict("filters", {"conjunction": Literal["and", "or"], "items": list[TypedDict("items", {
@@ -178,9 +179,16 @@ class ProjectViewCreate(BaseModel):
     data: Optional[ProjectViewDataModel] = Field(default_factory=ProjectViewDataModel)
 
 
+class ViewType(str, Enum):
+    conflict = "conflict"
+    coding_game = "coding-game"
+
+
 class TaskCreate(BaseModel):
     project: int
     data: dict[str, Any]
+    #
+    meta_view_type: Optional[ViewType] = None
 
 
 # from LS
