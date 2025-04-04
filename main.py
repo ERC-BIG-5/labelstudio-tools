@@ -420,7 +420,7 @@ def annotations(
     po.validate_extensions()
     mp = po.create_annotations_results( accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
-    res = mp.flatten_annotation_results(min_coders, mp.annotation_structure.ordered_fields)
+    res = mp.flatten_annotation_results(min_coders, mp.interface.ordered_fields)
     res = mp.format_df_for_csv(res)
     dest = SETTINGS.annotations_results_dir / f"{mp.id}.csv"
     res.to_csv(dest, index=False)
@@ -500,7 +500,7 @@ def get_all_variable_names(
 ):
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
     struct = po.interface(include_text=False, apply_extension=True)
-    return list(struct.choices.keys()) + struct.free_text
+    return list(struct.orig_choices.keys()) + struct.free_text
 
 
 @app.command()
@@ -517,7 +517,7 @@ def create_conflict_view(
     mp = po.create_annotations_results()
 
     # just check existence
-    _ = mp.annotation_structure.question_type(variable)
+    _ = mp.interface.question_type(variable)
 
     agreement_data = json.loads((SETTINGS.agreements_dir / f"{po.id}.json").read_text())
 

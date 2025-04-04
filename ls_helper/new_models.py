@@ -117,7 +117,7 @@ class ProjectData(ProjectCreate):
 
         return InterfaceData(
             ordered_fields=ordered_fields,
-            choices=choices,
+            orig_choices=choices,
             free_text=free_text,
             inputs=input_text_fields)
 
@@ -186,9 +186,7 @@ class ProjectData(ProjectCreate):
 
         from ls_helper.project_mgmt import ProjectMgmt
         mp.raw_annotation_result = ProjectMgmt.get_recent_annotations(mp.id, accepted_ann_age)
-        raw_annotation_df, assignment_df = mp.get_annotation_df()
-        mp.raw_annotation_df = raw_annotation_df
-        mp.assignment_df = assignment_df
+        mp.raw_annotation_df, mp.assignment_df = mp.get_annotation_df()
         return mp
 
     # todo, move somewhere else?
@@ -298,7 +296,7 @@ class ProjectResult(BaseModel):
         return self.project_data.id
 
     @property
-    def annotation_structure(self) -> InterfaceData:
+    def interface(self) -> InterfaceData:
         return self.project_data.interface()
 
     def get_annotation_df(self, debug_task_limit: Optional[int] = None,
@@ -340,7 +338,7 @@ class ProjectResult(BaseModel):
                         continue
                     # print(question)
                     if question.type == "choices":
-                        type_ = self.annotation_structure.choices[new_name].choice
+                        type_ = self.interface.choices[new_name].choice
                     elif question.type == "textarea":
                         type_ = "text"
                     else:
@@ -622,15 +620,15 @@ class ProjectResult(BaseModel):
             else:
                 name = var
 
-            if name not in self.annotation_structure.ordered_fields:
+            if name not in self.interface.ordered_fields:
                 continue
 
             default = fix_info.default
-            if name in self.annotation_structure.inputs:
+            if name in self.interface.inputs:
                 continue
-            type = self.annotation_structure.question_type(name)
+            type = self.interface.question_type(name)
             if type in ["single", "multiple"]:
-                options = self.annotation_structure.choices[name].raw_options_list()
+                options = self.interface.orig_choices[name].raw_options_list()
             else:
                 options = []
             variables[name] = {

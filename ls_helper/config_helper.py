@@ -122,7 +122,7 @@ def check_against_fixes(label_config: str | InterfaceData, fixes: ProjectFieldsE
         conf = ProjectData.parse_label_config_xml(label_config)
     else:
         conf = label_config
-    columns = set(list(conf.choices.keys()) + list(conf.free_text))
+    columns = set(list(conf.orig_choices.keys()) + list(conf.free_text))
     fixes_set = set(fixes.extensions)
     print(f"columns missing in fixes: {columns - fixes_set}")
     print(f"obsolete fixes: {columns - fixes_set}")

@@ -5,8 +5,8 @@ from typing import Optional, Literal, Any, Iterable, Annotated
 from deprecated.classic import deprecated
 from pydantic import BaseModel, Field, model_validator, PlainSerializer
 
+from tools import fast_levenhstein
 from tools.project_logging import get_logger
-
 
 # todo bring and import tools,
 SerializableDatetime = Annotated[
@@ -18,10 +18,9 @@ SerializableDatetimeAlways = Annotated[
 ]
 
 PlLang = tuple[str, str]
-#ProjectAccess = int | str | PlLang
+# ProjectAccess = int | str | PlLang
 
 logger = get_logger(__file__)
-
 
 
 class Choice(BaseModel):
@@ -60,10 +59,13 @@ class Choices(BaseModel):
     def raw_options_list(self) -> list[str]:
         return [c.annot_val for c in self.options]
 
+
 class InterfaceData(BaseModel):
     ordered_fields: list[str]
     #
-    choices: dict[str, Choices]
+    orig_choices: dict[str, Choices]
+    choices: Optional[dict[str, Choices]] = Field(default_factory=dict)
+
     free_text: list[str]
     #
     inputs: dict[str, str] = Field(description="Map from el.name > el.value")
@@ -81,7 +83,6 @@ class InterfaceData(BaseModel):
 
         return result
 
-
     def apply_extension(self,
                         data_extensions: "ProjectFieldsExtensions",
                         allow_non_existing_defaults: bool = True):
@@ -91,19 +92,16 @@ class InterfaceData(BaseModel):
         ordered_name_fixes = self.find_name_fixes(self.ordered_fields, name_fixes)
         for old, new in ordered_name_fixes.items():
             self.ordered_fields[self.ordered_fields.index(old)] = new
-        choices_name_fixes = self.find_name_fixes(self.choices.keys(), name_fixes, True)
+        choices_name_fixes = self.find_name_fixes(self.orig_choices.keys(), name_fixes, True)
 
         for old, new in choices_name_fixes.items():
-            choice = self.choices[old]
-            choice.name = new
-            self.choices[new] = choice
-            del self.choices[old]
+            self.choices[new] = self.orig_choices[old]
 
         # check if defaults are correct
-        for k, v in self.choices.items():
-            ext = data_extensions.get_from_new_name(v.name)
+        for k, v in self.orig_choices.items():
+            ext = data_extensions.extensions[v.name]
             # catch non-existing defaults...
-            if not ext:
+            if ext:
                 if ext.default:
                     if not allow_non_existing_defaults:
                         if v.choice == "single":
@@ -120,14 +118,16 @@ class InterfaceData(BaseModel):
                                     f"Choice {k} has default invalid value {ext.default}, options: {v.raw_options_list()}")
                     # TODO pass actually add the default...
                     v.insert_option(0, Choice(value=ext.default, alias=ext.default))
-
             else:
-                logger.warning(
-                    f"Choice {k} has no default value: {ext.default}. Options would be {v.raw_options_list()}")
+                field_extensions = list(data_extensions.extension_reverse_map.keys())
+                logger.error(
+                    f"Choice '{k}' has no extension:. Maybe...: >>> {(fast_levenhstein.find_closest_matches(k, field_extensions))}"
+                    f"Download the latest project-data(or check it on the page). check it against your project-data."
+                    f"Fix your extensions.")
+
         text_name_fixes = self.find_name_fixes(self.free_text, name_fixes, True)
         for old, new in text_name_fixes.items():
             self.free_text[self.free_text.index(old)] = new
-
         self._extension_applied = True
 
     def question_type(self, q) -> str:
@@ -141,8 +141,8 @@ class InterfaceData(BaseModel):
         """
         if "$" in q:
             q = q.replace("$", "0")
-        if q in self.choices:
-            return self.choices[q].choice
+        if q in self.orig_choices:
+            return self.orig_choices[q].choice
         elif q in self.free_text:
             return "text"
         else:
@@ -179,7 +179,7 @@ class ProjectFieldsExtensions(BaseModel):
 
     @property
     def name_fixes(self) -> dict[str, str]:
-        return {f: d.name_fix for f, d in self.extensions.items()}
+        return {f: d.name_fix or f for f, d in self.extensions.items()}
 
 
 class PrincipleRow(BaseModel):
@@ -202,4 +202,3 @@ class FullAnnotationRow(BaseModel):
     user: Optional[str] = None
     updated_at: datetime
     results: dict[str, Optional[list[str]]] = Field(default_factory=dict)
-
