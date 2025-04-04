@@ -440,7 +440,7 @@ def agreements(
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
     mp = po.create_annotations_results( accepted_ann_age=accepted_ann_age)
 
-    variables = mp.collect_variable_infos()
+    variables = po.variable_infos()
 
     agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df,variables)
     dest: Path = (SETTINGS.agreements_dir / f"{mp.id}.json")
@@ -576,11 +576,11 @@ if __name__ == "__main__":
 
     #generate_result_fixes_template(**_default)
     #build_ls_labeling_interface(Path("twitter-2.json"))
-    build_extension_index(project_ids=[39, 43])
+    #build_extension_index(project_ids=[39, 43])
     # exit()
     # status(**_default)
-    annotations(**_default)
+    #annotations(**_default)
     #download_project_data(**_default)
-    #agreements(**_default)
+    agreements(**_default)
     # create_conflict_view("nature_text",**_default)
     # update_coding_game(**_default)

@@ -121,8 +121,37 @@ class ProjectData(ProjectCreate):
             free_text=free_text,
             inputs=input_text_fields)
 
-    def interface(self,
-                  include_text: bool = True) -> InterfaceData:
+    def variable_infos(self) -> dict[str, dict[str, Any]]:
+        variables = {}
+
+        fixes = self.field_extensions.extensions
+        for var, fix_info in fixes.items():
+            if new_name := fixes[var].name_fix:
+                name = new_name
+            else:
+                name = var
+
+            if name not in self.interface.ordered_fields:
+                continue
+
+            default = fix_info.default
+            if name in self.interface.inputs:
+                continue
+            type = self.interface.question_type(name)
+            if type in ["single", "multiple"]:
+                options = self.interface.orig_choices[name].raw_options_list()
+            else:
+                options = []
+            variables[name] = {
+                "name": name,
+                "type": type,
+                "options": options,
+                "default": default
+            }
+        return variables
+
+    @property
+    def interface(self) -> InterfaceData:
         """
         caches the structure.
         :param include_text:
@@ -135,7 +164,7 @@ class ProjectData(ProjectCreate):
         return self._interface_data
 
     @property
-    def data_extension(self) -> ProjectFieldsExtensions:
+    def field_extensions(self) -> ProjectFieldsExtensions:
         if self._field_extensions:
             return self._field_extensions
         if (fi := SETTINGS.fixes_dir / "unifixes.json").exists():
@@ -169,7 +198,7 @@ class ProjectData(ProjectCreate):
         """
         interface = self.interface()
         redundant_extensions = []
-        for var in self.data_extension.extensions:
+        for var in self.field_extensions.extensions:
             if var not in interface:
                 redundant_extensions.append(var)
                 #logger.warning(f"variable from fixes is redundant {var}")
@@ -179,9 +208,8 @@ class ProjectData(ProjectCreate):
                                    accepted_ann_age: Optional[int] = 6) -> "ProjectResult":
         # project_data = p_info.project_data()
 
-        conf = self.interface()
-        data_extensions = self.data_extension
-        conf.apply_extension(data_extensions)
+        data_extensions = self.field_extensions
+        self.interface.apply_extension(data_extensions)
         mp = ProjectResult(project_data=self)
 
         from ls_helper.project_mgmt import ProjectMgmt
@@ -297,7 +325,7 @@ class ProjectResult(BaseModel):
 
     @property
     def interface(self) -> InterfaceData:
-        return self.project_data.interface()
+        return self.project_data.interface
 
     def get_annotation_df(self, debug_task_limit: Optional[int] = None,
                           drop_cancels: bool = True) -> tuple[DataFrame, DataFrame]:
@@ -312,7 +340,7 @@ class ProjectResult(BaseModel):
                 return fix.name_fix
             return k
 
-        q_extens = {k: var_method(k, v) for k, v in self.project_data.data_extension.extensions.items()}
+        q_extens = {k: var_method(k, v) for k, v in self.project_data.field_extensions.extensions.items()}
 
         debug_mode = debug_task_limit is not None
 
@@ -610,33 +638,6 @@ class ProjectResult(BaseModel):
         result.attrs["format"] = DFFormat.flat
         return result
 
-    def variable_infos(self) -> dict[str, dict[str, Any]]:
-        variables = {}
 
-        fixes = self.data_extensions.extensions
-        for var, fix_info in fixes.items():
-            if new_name := fixes[var].name_fix:
-                name = new_name
-            else:
-                name = var
-
-            if name not in self.interface.ordered_fields:
-                continue
-
-            default = fix_info.default
-            if name in self.interface.inputs:
-                continue
-            type = self.interface.question_type(name)
-            if type in ["single", "multiple"]:
-                options = self.interface.orig_choices[name].raw_options_list()
-            else:
-                options = []
-            variables[name] = {
-                "name": name,
-                "type": type,
-                "options": options,
-                "default": default
-            }
-        return variables
 
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
