@@ -4,6 +4,7 @@ import webbrowser
 from pathlib import Path
 from typing import Annotated, Optional
 
+import pandas as pd
 import typer
 from tqdm import tqdm
 
@@ -452,6 +453,22 @@ def agreements(
         }
 
     agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, variables)
+    data = agreement_report['agreement_metrics']["by_variable"]
+
+    variable_names = []
+    kappa_values = []
+
+    for key, value in data.items():
+        variable_names.append(key)
+        kappa_values.append(value.get("kappa"))  # Use get() to handle missing kappa values
+
+    # Create the DataFrame
+    df = pd.DataFrame({
+        'variable_name': variable_names,
+        'kappa': kappa_values
+    })
+
+
     dest: Path = (SETTINGS.agreements_dir / f"{mp.project_id}.json")
     print(f"agreement_report -> {dest.as_posix()}")
     dest.write_text(json.dumps(agreement_report))
