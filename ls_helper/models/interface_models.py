@@ -1,0 +1,205 @@
+from datetime import datetime
+from pathlib import Path
+from typing import Optional, Literal, Any, Iterable, Annotated
+
+from deprecated.classic import deprecated
+from pydantic import BaseModel, Field, model_validator, PlainSerializer
+
+from tools.project_logging import get_logger
+
+
+# todo bring and import tools,
+SerializableDatetime = Annotated[
+    datetime, PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used='json')
+]
+
+SerializableDatetimeAlways = Annotated[
+    datetime, PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used='always')
+]
+
+PlLang = tuple[str, str]
+#ProjectAccess = int | str | PlLang
+
+logger = get_logger(__file__)
+
+
+
+class Choice(BaseModel):
+    value: str
+    alias: Optional[str] = None
+
+    @property
+    def annot_val(self) -> str:
+        if self.alias:
+            return self.alias
+        return self.value
+
+
+class Choices(BaseModel):
+    name: str
+    toName: str
+    options: list[Choice]
+    choice: Literal["single", "multiple"] = "single"
+    indices: Optional[list[str]] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def create_indices(cls, data: "Choices"):
+        data.indices = [c.annot_val for c in data.options]
+        return data
+
+    def get_index(self, value: str | list[str]) -> int | list[int]:
+        if isinstance(value, str):
+            return self.indices.index(value)
+        else:
+            return [self.indices.index(v) for v in value]
+
+    def insert_option(self, index, choice: Choice):
+        self.options.insert(index, choice)
+        self.indices = [c.annot_val for c in self.options]
+
+    def raw_options_list(self) -> list[str]:
+        return [c.annot_val for c in self.options]
+
+class InterfaceData(BaseModel):
+    ordered_fields: list[str]
+    #
+    choices: dict[str, Choices]
+    free_text: list[str]
+    #
+    inputs: dict[str, str] = Field(description="Map from el.name > el.value")
+    _extension_applied: bool = False
+
+    def find_name_fixes(self, orig_keys: Iterable[str],
+                        name_fixes: dict[str, str],
+                        report_missing: bool = False) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for k in orig_keys:
+            if new_name := name_fixes.get(k):
+                result[k] = new_name
+            elif report_missing:
+                print(f"Missing name.fix for {k}")
+
+        return result
+
+
+    def apply_extension(self,
+                        data_extensions: "ProjectFieldsExtensions",
+                        allow_non_existing_defaults: bool = True):
+        if self._extension_applied:
+            return
+        name_fixes = data_extensions.name_fixes
+        ordered_name_fixes = self.find_name_fixes(self.ordered_fields, name_fixes)
+        for old, new in ordered_name_fixes.items():
+            self.ordered_fields[self.ordered_fields.index(old)] = new
+        choices_name_fixes = self.find_name_fixes(self.choices.keys(), name_fixes, True)
+
+        for old, new in choices_name_fixes.items():
+            choice = self.choices[old]
+            choice.name = new
+            self.choices[new] = choice
+            del self.choices[old]
+
+        # check if defaults are correct
+        for k, v in self.choices.items():
+            ext = data_extensions.get_from_new_name(v.name)
+            # catch non-existing defaults...
+            if not ext:
+                if ext.default:
+                    if not allow_non_existing_defaults:
+                        if v.choice == "single":
+                            if not isinstance(ext.default, str):
+                                raise ValueError(f"Choice {k} has default value {ext.default}")
+                            if ext.default not in v.raw_options_list():
+                                raise ValueError(
+                                    f"Choice {k} has default invalid value {ext.default}, options: {v.raw_options_list()}")
+                        elif v.choice == "multiple":
+                            if not isinstance(ext.default, list):
+                                raise ValueError(f"Choice {k} has default value {ext.default}")
+                            if any(d not in v.raw_options_list() for d in ext.default):
+                                raise ValueError(
+                                    f"Choice {k} has default invalid value {ext.default}, options: {v.raw_options_list()}")
+                    # TODO pass actually add the default...
+                    v.insert_option(0, Choice(value=ext.default, alias=ext.default))
+
+            else:
+                logger.warning(
+                    f"Choice {k} has no default value: {ext.default}. Options would be {v.raw_options_list()}")
+        text_name_fixes = self.find_name_fixes(self.free_text, name_fixes, True)
+        for old, new in text_name_fixes.items():
+            self.free_text[self.free_text.index(old)] = new
+
+        self._extension_applied = True
+
+    def question_type(self, q) -> str:
+        """
+        in some parts, we turn column indices into $, so this is the
+        way to get the original type
+        # todo, not good approach. we should have the column merging
+        # as a flag and store the original type with it
+        :param q:
+        :return:
+        """
+        if "$" in q:
+            q = q.replace("$", "0")
+        if q in self.choices:
+            return self.choices[q].choice
+        elif q in self.free_text:
+            return "text"
+        else:
+            print(f"ERROR: unknown question type for {q}. defaulting to text")
+            return "text"
+
+    def __contains__(self, item):
+        return item in self.ordered_fields
+
+
+class FieldExtension(BaseModel):
+    name_fix: Optional[str] = None
+    description: Optional[str] = None
+    default: Optional[str | list[str]] = None
+    deprecated: Optional[bool] = None
+
+
+class ProjectFieldsExtensions(BaseModel):
+    extensions: dict[str, FieldExtension] = Field(alias="fixes")
+    extension_reverse_map: dict[str, str] = Field(description="fixes[k].name_fix = fixes[k]", default_factory=dict,
+                                                  exclude=True)
+
+    def model_post_init(self, __context: Any) -> None:
+        for k, v in self.extensions.items():
+            if v.name_fix:
+                self.extension_reverse_map[v.name_fix] = k
+            else:
+                self.extension_reverse_map[k] = k
+
+    def get_from_new_name(self, new_name: str) -> Optional[FieldExtension]:
+        orig_name = self.extension_reverse_map.get(new_name)
+        if orig_name:
+            return self.extensions[orig_name]
+
+    @property
+    def name_fixes(self) -> dict[str, str]:
+        return {f: d.name_fix for f, d in self.extensions.items()}
+
+
+class PrincipleRow(BaseModel):
+    task_id: int
+    ann_id: int
+    user_id: int
+    # user: Optional[str] = None
+    platform_id: str
+    ts: datetime
+    type: str
+    category: str
+    value: list[str]
+
+
+class FullAnnotationRow(BaseModel):
+    task_id: int
+    ann_id: int
+    platform_id: str
+    user_id: int
+    user: Optional[str] = None
+    updated_at: datetime
+    results: dict[str, Optional[list[str]]] = Field(default_factory=dict)
+

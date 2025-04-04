@@ -3,8 +3,8 @@ from pathlib import Path
 
 from deepdiff import DeepDiff
 
-from ls_helper.ana_res import parse_label_config_xml
-from ls_helper.models import ProjectAnnotationExtension, ResultStruct
+from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions
+from ls_helper.new_models import ProjectData
 from ls_helper.settings import SETTINGS
 
 
@@ -101,29 +101,29 @@ def check_config_update(platform_configs: dict[str, Path]):
     for platform, fp in platform_configs.items():
         # todo, maybe diff the languages...
         next_file = SETTINGS.labeling_configs_dir / f"{platform}-next.xml"
-        next_conf = parse_label_config_xml(fp.read_text())
+        next_conf = ProjectData.parse_label_config_xml(fp.read_text())
 
         # shutil.copy(fp, next_file)
 
         current_file = SETTINGS.labeling_configs_dir / f"{platform}.xml"
-        current_conf = parse_label_config_xml(current_file.read_text())
+        current_conf = ProjectData.parse_label_config_xml(current_file.read_text())
 
         diff = DeepDiff(current_conf, next_conf)
         print(diff)
 
 
-def check_against_fixes(label_config: str | ResultStruct, fixes: ProjectAnnotationExtension):
+def check_against_fixes(label_config: str | InterfaceData, fixes: ProjectFieldsExtensions):
     """
     Do
     :param label_config: xml config string
     :return:
     """
     if isinstance(label_config, str):
-        conf = parse_label_config_xml(label_config)
+        conf = ProjectData.parse_label_config_xml(label_config)
     else:
         conf = label_config
     columns = set(list(conf.choices.keys()) + list(conf.free_text))
-    fixes_set = set(fixes.fixes)
+    fixes_set = set(fixes.extensions)
     print(f"columns missing in fixes: {columns - fixes_set}")
     print(f"obsolete fixes: {columns - fixes_set}")
 

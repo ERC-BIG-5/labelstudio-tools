@@ -3,7 +3,7 @@ from typing import Any
 
 from lxml import etree
 
-from ls_helper.models import ProjectAnnotationExtension
+from ls_helper.models.interface_models import ProjectFieldsExtensions
 
 
 def find_duplicate_names(root) -> dict[str, list[Any]]:
@@ -32,14 +32,14 @@ def find_names(root) -> dict[str, Any]:
 
 
 def config_file_name_changes(config_path: Path,
-                             fixes: ProjectAnnotationExtension,
+                             fixes: ProjectFieldsExtensions,
                              dest_path: Path):
     tree = etree.parse(config_path)
     root = tree.getroot()
     all_names = find_names(root, "name")
     fixes_count = 0
     for name, elem in all_names.items():
-        if name in fixes.fixes and (n_r := fixes.fixes[name].name_fix):
+        if name in fixes.extensions and (n_r := fixes.extensions[name].name_fix):
             elem.attrib["name"] = n_r
             title_elem = list(filter(lambda n: n == f"{name}_t", all_names))
             if title_elem:

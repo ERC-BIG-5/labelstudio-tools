@@ -1,15 +1,24 @@
 import json
+from datetime import datetime, timedelta
+from enum import Enum, auto
+from pathlib import Path
 from typing import Any, Optional
 
 import orjson
 
+from ls_helper.funcs import get_latest_annotation_file, get_latest_annotation
 from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel, ProjectViewCreate
-from ls_helper.new_models import ProjectCreate, platforms_overview2, ProjectInfo
-from ls_helper.settings import SETTINGS
+from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel, ProjectViewCreate, TaskResultModel
+from ls_helper.new_models import ProjectCreate, platforms_overview2, ProjectData
+from ls_helper.settings import SETTINGS, ls_logger
 from tools.env_root import root
 from tools.files import read_data
 
+class FileType(Enum):
+    LSProject = auto()
+    LSAnnotation = auto()
+    LSView = auto()
+    Extension = auto()
 
 class ProjectMgmt:
     DEFAULT_VIEW_HIDDEN_COLUMNS_FP = root() / "data/ls_data/default/ls_project_view_hiddenColumns.json"
@@ -21,6 +30,10 @@ class ProjectMgmt:
             "maximum_annotations": 2,
             "sampling": "Uniform sampling"
         }
+
+    @staticmethod
+    def get_latest_file(p_id: int, file_type: FileType) -> Optional[Path]:
+        raise NotImplemented
 
 
     @staticmethod
@@ -55,7 +68,7 @@ class ProjectMgmt:
         return ls_client().create_view(view)
 
     @classmethod
-    def refresh_views(self, po: ProjectInfo):
+    def refresh_views(self, po: ProjectData):
         views = ls_client().get_project_views(po.id)
         po.view_file.write_text(json.dumps([v.model_dump() for v in views]))
 
@@ -74,6 +87,19 @@ class ProjectMgmt:
                 {"project": project.id, "data": {}}))
 
         return project, coding_game_view
+
+    @staticmethod
+    def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[list[TaskResultModel]]:
+        latest_file = get_latest_annotation_file(project_id)
+        if latest_file is not None:
+            file_dt = datetime.strptime(latest_file.stem, "%Y%m%d_%H%M")
+            # print(file_dt, datetime.now(), datetime.now() - file_dt)
+            if datetime.now() - file_dt < timedelta(hours=accepted_age):
+                ls_logger.info("Get recent, gets latest annotation")
+                return get_latest_annotation(project_id)
+
+        print("downloading annotations")
+        return ls_client().get_project_annotations(project_id)
 
     # @staticmethod
     # def get_annotations(platform: str, language: str):

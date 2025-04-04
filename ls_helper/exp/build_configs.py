@@ -11,11 +11,11 @@ from pydantic import BaseModel, field_validator, Field
 
 from ls_helper.config_helper import check_references
 from ls_helper.exp.configs import find_elem_with_attribute_value, find_duplicate_names
-from ls_helper.models import SerializablePath
 from ls_helper.settings import SETTINGS
+from tools.pydantic_annotated_types import SerializablePath
 
 
-class BuildConfig(BaseModel):
+class LabelingInterfaceBuildConfig(BaseModel):
     template: SerializablePath = Field(...,
                                        description="the fundamental template. relative to 'labelling_configs/templates'")
     platform_data_view: Path = Field(...,
@@ -298,7 +298,7 @@ def build_configs() -> dict[str, Path]:
     return result_dict
 
 
-def build_from_template(config: BuildConfig):
+def build_from_template(config: LabelingInterfaceBuildConfig):
     """
     Include platform_data as a {{{var:platform_data}}}
 

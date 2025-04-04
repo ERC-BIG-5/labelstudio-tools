@@ -1,56 +1,11 @@
-import json
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
+from deprecated.classic import deprecated
 from pandas import DataFrame
 
-from ls_helper.funcs import get_latest_annotation_file, get_latest_annotation
-from ls_helper.models import MyProject, UserInfo
-from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.my_labelstudio_client.models import TaskResultModel
-from ls_helper.new_models import ProjectInfo
-from ls_helper.settings import ls_logger, SETTINGS
-
-# todo this should go to project_mgmt
-def _get_recent_annotations(project_id: int, accepted_age: int) -> Optional[list[TaskResultModel]]:
-    latest_file = get_latest_annotation_file(project_id)
-    if latest_file is not None:
-        file_dt = datetime.strptime(latest_file.stem, "%Y%m%d_%H%M")
-        # print(file_dt, datetime.now(), datetime.now() - file_dt)
-        if datetime.now() - file_dt < timedelta(hours=accepted_age):
-            ls_logger.info("Get recent, gets latest annotation")
-            return get_latest_annotation(project_id)
-
-    print("downloading annotations")
-    return ls_client().get_project_annotations(project_id)
-
-
-def create_annotations_results(p_info: ProjectInfo, add_annotations: bool = True,
-                               accepted_ann_age: Optional[int] = 6) -> MyProject:
-    #project_data = p_info.project_data()
-
-    conf = p_info.get_structure()
-    data_extensions = p_info.data_extension
-    mp = MyProject(
-        platform=p_info.platform,
-        language=p_info.language,
-        project_data=p_info.project_data,
-        annotation_structure=conf,
-        data_extensions=data_extensions)
-
-    conf.apply_extension(p_info.data_extension)
-
-    mp.apply_extension()
-    if add_annotations:
-        mp.raw_annotation_result = _get_recent_annotations(p_info.id, accepted_ann_age)
-        raw_annotation_df, assignment_df = mp.get_annotation_df()
-        mp.raw_annotation_df = raw_annotation_df
-        mp.assignment_df = assignment_df
-    return mp
-
+from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions
 
 
 def convert_strings_to_indices(df: DataFrame, string_list: list[str]):
@@ -82,15 +37,33 @@ def convert_strings_to_indices(df: DataFrame, string_list: list[str]):
 
     return result_df
 
+@deprecated(reason="somewhere else...")
+def collect_variable_infos(annotation_structure: InterfaceData,
+                           data_extensions: ProjectFieldsExtensions) -> dict[str,dict[str, Any]] :
+    variables = {}
 
+    fixes = data_extensions.extensions
+    for var, fix_info in fixes.items():
+        if new_name := fixes[var].name_fix:
+            name = new_name
+        else:
+            name = var
 
+        if name not in annotation_structure.ordered_fields:
+            continue
 
-
-def users() -> "UserInfo":
-    pp = Path(SETTINGS.BASE_DATA_DIR / "users.json")
-    if not pp.exists():
-        users = UserInfo(**{})
-        json.dump(users.model_dump(), pp.open("w"), indent=2)
-        return users
-    else:
-        return UserInfo.model_validate(json.load(pp.open()))
+        default = fix_info.default
+        if name in annotation_structure.inputs:
+            continue
+        type = annotation_structure.question_type(name)
+        if type in ["single", "multiple"]:
+            options = annotation_structure.choices[name].raw_options_list()
+        else:
+            options = []
+        variables[name] = {
+            "name": name,
+            "type": type,
+            "options": options,
+            "default": default
+        }
+    return variables

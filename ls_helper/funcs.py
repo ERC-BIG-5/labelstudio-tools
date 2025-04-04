@@ -6,7 +6,6 @@ from typing import Optional
 import httpx
 import jsonpath_ng
 
-from ls_helper.models import VariableExtension, ResultStruct, ProjectAnnotationExtension, MyProject
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
 from ls_helper.my_labelstudio_client.models import UserModel, ProjectViewModel, TaskResultModel
 from ls_helper.settings import SETTINGS, ls_logger
@@ -199,15 +198,7 @@ def get_latest_annotation(project_id: int) -> Optional[list[TaskResultModel]]:
     return [TaskResultModel.model_validate(t) for t in json.load(annotation_file.open(encoding="utf-8"))]
 
 
-def get_variable_extensions(annotation_struct: ResultStruct) -> ProjectAnnotationExtension:
-    data: dict[str, VariableExtension] = {}
 
-    for field in annotation_struct.inputs:
-        data[field] = VariableExtension()
-    for field in annotation_struct.ordered_fields:
-        data[field] = VariableExtension()
-
-    return ProjectAnnotationExtension(fixes=data)
 
 
 
@@ -225,14 +216,6 @@ def download_project_views(project_id: int, store: bool = True):
     return data
 
 
-def update_project_view(p: MyProject,
-                        view_id: Optional[int],
-                        view_name: Optional[str] = None):
-    if not p.project_views:
-        resp = httpx.get(f"{SETTINGS.LS_HOSTNAME}/api/dm/views/project={p.project_id}", headers={
-            "Authorization": f"Token {SETTINGS.LS_API_KEY}"
-        })
-        # raise NotImplemented("get the view through api")
 
 
 def update_user_nicknames(refresh_users: bool = True):

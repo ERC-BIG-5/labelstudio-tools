@@ -1,10 +1,10 @@
-from pydantic import Field, RootModel, BaseModel
+from pydantic import Field, BaseModel
 
-from ls_helper.models import VariableExtension
-from ls_helper.new_models import ProjectInfo
+from ls_helper.models.interface_models import FieldExtension
+from ls_helper.new_models import ProjectData
 
 
-class VariableExtensionIndex(VariableExtension):
+class VariableExtensionIndex(FieldExtension):
     projects: list[int] = Field(default_factory=list)
 
 
@@ -17,7 +17,7 @@ class DataExtensionIndex(BaseModel):
         return {v: e for v, e in self.variables.items() if len(e.projects) == len(self.projects)}
 
 
-def build_extension_index(projects: list[ProjectInfo]) -> DataExtensionIndex:
+def build_extension_index(projects: list[ProjectData]) -> DataExtensionIndex:
     """
     Goes through all projects fixes and build an index:
     key -> fix +  projects (which is a list of project ids)
@@ -31,7 +31,7 @@ def build_extension_index(projects: list[ProjectInfo]) -> DataExtensionIndex:
     for p in projects:
         # annot_results[p.id] = create_annotations_results(p, False)
         ext = p.data_extension
-        for k, v in ext.fixes.items():
+        for k, v in ext.extensions.items():
             if k not in variables:
                 variables[k] = VariableExtensionIndex.model_validate(v.model_dump())
                 variables[k].projects.append(p.id)

@@ -9,11 +9,11 @@ from tqdm import tqdm
 
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
-from ls_helper.annotations import create_annotations_results, _get_recent_annotations
 from ls_helper.anot_master2 import analyze_coder_agreement, fix_users
 from ls_helper.config_helper import check_config_update
-from ls_helper.exp.build_configs import build_configs, BuildConfig, build_from_template
-from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter, get_variable_extensions
+from ls_helper.exp.build_configs import build_configs, LabelingInterfaceBuildConfig, build_from_template
+from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter
+from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, FieldExtension
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectViewCreate, ProjectViewDataModel
 from ls_helper.new_models import platforms_overview2, get_p_access, ProjectCreate
@@ -50,11 +50,22 @@ def generate_result_fixes_template(
 ):
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
 
-    conf = po.get_structure()
+    conf = po.interface()
+
+    def get_variable_extensions(annotation_struct: InterfaceData) -> ProjectFieldsExtensions:
+        data: dict[str, FieldExtension] = {}
+
+        for field in annotation_struct.inputs:
+            data[field] = FieldExtension()
+        for field in annotation_struct.ordered_fields:
+            data[field] = FieldExtension()
+
+        return ProjectFieldsExtensions(extensions=data)
+
     res_template = get_variable_extensions(conf)
 
     universal_fixes = read_data(SETTINGS.unifix_file_path)
-    for k in res_template.fixes:
+    for k in res_template.extensions:
         if k in universal_fixes:
             # todo, can delete them?
             print(k)
@@ -257,8 +268,8 @@ def status(
     main_funcs.status(get_p_access(id, alias, platform, language), accepted_ann_age)
 
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-    po.check_fixes()
-    mp = create_annotations_results(po, accepted_ann_age=accepted_ann_age)
+    po.validate_extensions()
+    mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
     res = mp.basic_flatten_results(1)
     # just for checking...
@@ -279,7 +290,7 @@ def total_over_time(
 ):
     print(get_p_access(id, alias, platform, language))
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-    annotations = _get_recent_annotations(po.id, accepted_ann_age)
+    annotations = ProjectMgmt.get_recent_annotations(po.id, accepted_ann_age)
     df = annotation_total_over_time(annotations)
     temp_file = plot_cumulative_annotations(df,
                                             f"{po.platform}/{po.language}: Cumulative Annotations Over Time")
@@ -297,7 +308,7 @@ def annotation_lead_times(id: Annotated[int, typer.Option()] = None,
                           accepted_ann_age: Annotated[
                               int, typer.Option(help="Download annotations if older than x hours")] = 6):
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-    project_annotations = _get_recent_annotations(po.id, accepted_ann_age)
+    project_annotations = ProjectMgmt.get_recent_annotations(po.id, accepted_ann_age)
 
     df = get_annotation_lead_times(project_annotations)
     temp_file = plot_date_distribution(df, y_col="lead_time")
@@ -383,7 +394,7 @@ def update_coding_game(
 
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
     # project_annotations = _get_recent_annotations(po.id, accepted_ann_age)
-    mp = create_annotations_results(po, accepted_ann_age=accepted_ann_age)
+    mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
     # project_annotations = _get_recent_annotations(po.id, 0)
 
     ann = mp.raw_annotation_df.copy()
@@ -406,12 +417,12 @@ def annotations(
         min_coders: Annotated[int, typer.Option()] = 2) -> tuple[
     Path, str]:
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-    po.check_fixes()
-    mp = create_annotations_results(po, accepted_ann_age=accepted_ann_age)
+    po.validate_extensions()
+    mp = po.create_annotations_results( accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
     res = mp.flatten_annotation_results(min_coders, mp.annotation_structure.ordered_fields)
     res = mp.format_df_for_csv(res)
-    dest = SETTINGS.annotations_results_dir / f"{mp.project_id}.csv"
+    dest = SETTINGS.annotations_results_dir / f"{mp.id}.csv"
     res.to_csv(dest, index=False)
     print(f"annotation results -> {dest}")
     return dest
@@ -427,32 +438,12 @@ def agreements(
         min_num_coders: Annotated[int, typer.Option()] = 2
 ) -> tuple[Path, dict]:
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-    mp = create_annotations_results(po, accepted_ann_age=accepted_ann_age)
+    mp = po.create_annotations_results( accepted_ann_age=accepted_ann_age)
 
-    variables = {}
+    variables = mp.collect_variable_infos()
 
-    fixes = mp.data_extensions.fixes
-    for var, fix_info in fixes.items():
-        if new_name := fixes[var].name_fix:
-            name = new_name
-        else:
-            name = var
-
-        default = fix_info.default
-        type = mp.annotation_structure.question_type(name)
-        if type in ["single", "multiple"]:
-            options = mp.annotation_structure.choices[name].raw_options_list()
-        else:
-            options = []
-        variables[name] = {
-            "name": name,
-            "type": type,
-            "options": options,
-            "default": default
-        }
-
-    agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, variables)
-    dest: Path = (SETTINGS.agreements_dir / f"{mp.project_id}.json")
+    agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df,variables)
+    dest: Path = (SETTINGS.agreements_dir / f"{mp.id}.json")
     print(f"agreement_report -> {dest.as_posix()}")
     dest.write_text(json.dumps(agreement_report))
     return dest, agreement_report
@@ -490,7 +481,7 @@ def reformat_for_datapipelines(
     """
     # does extra calculation but ok.
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-    mp = create_annotations_results(po, True, 0)
+    mp = po.create_annotations_results(  0)
     res = {}
 
     for task_result in mp.raw_annotation_result:
@@ -508,7 +499,7 @@ def get_all_variable_names(
         language: Annotated[str, typer.Option()] = None
 ):
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-    struct = po.get_structure(include_text=False, apply_extension=True)
+    struct = po.interface(include_text=False, apply_extension=True)
     return list(struct.choices.keys()) + struct.free_text
 
 
@@ -522,8 +513,8 @@ def create_conflict_view(
         variable_option: Annotated[str, typer.Option()] = None
 ):
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-    po.check_fixes()
-    mp = create_annotations_results(po)
+    po.validate_extensions()
+    mp = po.create_annotations_results()
 
     # just check existence
     _ = mp.annotation_structure.question_type(variable)
@@ -549,6 +540,12 @@ def build_extension_index(
         take_all_defaults: Annotated[bool, typer.Option()] = True,
         project_ids: Annotated[list[int], typer.Option("-pid")] = None,
 ):
+    """
+
+    :param take_all_defaults:
+    :param project_ids:
+    :return:
+    """
     from ls_helper.annot_extension import build_extension_index as _build_extension_index
 
     if project_ids:
@@ -564,10 +561,10 @@ def build_extension_index(
 
 
 @app.command()
-def build_ls_config(config_build_file_path: Path):
+def build_ls_labeling_interface(config_build_file_path: Path):
     if not config_build_file_path.is_absolute():
         config_build_file_path = SETTINGS.labeling_configs_dir / "build_configs" / config_build_file_path
-        build_config = BuildConfig.model_validate_json(config_build_file_path.read_text())
+        build_config = LabelingInterfaceBuildConfig.model_validate_json(config_build_file_path.read_text())
         build_from_template(build_config)
 
 
@@ -577,14 +574,13 @@ if __name__ == "__main__":
     tw_en = {"platform": twitter, "language": en}
     _default = tw_en
 
-    # generate_result_fixes_template(**_default)
-    # build_ls_config(Path("twitter-2.json"))
-    # exit()
-    # build_extension_index(project_ids=[39, 43])
+    #generate_result_fixes_template(**_default)
+    #build_ls_labeling_interface(Path("twitter-2.json"))
+    build_extension_index(project_ids=[39, 43])
     # exit()
     # status(**_default)
-    # annotations(**_default)
-    download_project_data(**_default)
-    agreements(**_default)
+    annotations(**_default)
+    #download_project_data(**_default)
+    #agreements(**_default)
     # create_conflict_view("nature_text",**_default)
     # update_coding_game(**_default)

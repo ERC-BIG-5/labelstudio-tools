@@ -1,5 +1,18 @@
 # Readme
 
+## main.py
+
+main uses typer, so we can run comands from the comandline
+projects of labelstudio are identified through the first 4 options: id, alias, platform, language.
+
+All projects are stored in data/ls_data
+
+## ls_data folder
+
+- annotations: annotations downloaded from the ls api. 
+
+
+
 ### Keeping the configs right
 
 People decide on changing the configs while data is coming in.

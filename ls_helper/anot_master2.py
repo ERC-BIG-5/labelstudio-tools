@@ -1,6 +1,7 @@
 import pandas as pd
 import re
 import numpy as np
+from irrCAC.raw import CAC
 from pandas import DataFrame
 
 
@@ -111,6 +112,7 @@ def analyze_coder_agreement(raw_annotations, assignments, variables) -> dict:
             variable_annotations = annotations_df[annotations_df['variable'] == variable]
 
             if len(variable_annotations) == 0:
+                print(f"No data on {variable}")
                 continue
 
             # Apply defaults
@@ -127,10 +129,11 @@ def analyze_coder_agreement(raw_annotations, assignments, variables) -> dict:
                 columns='user_id',
                 values='value'
             )
-
+            agreement_matrix_assertions(agreement_matrix, variable_info)
+            cleared_agreement_matrix = clear_agreement_matrix(agreement_matrix, variable_info)
             # Calculate agreement
             variable_agreement = calculate_agreement(
-                agreement_matrix,
+                cleared_agreement_matrix,
                 variable_info
             )
 
@@ -157,6 +160,16 @@ def analyze_coder_agreement(raw_annotations, assignments, variables) -> dict:
     )
 
     return agreement_report
+
+
+def agreement_matrix_assertions(agreement_matrix: DataFrame, variable_info: dict):
+    # (index, data)
+    for row in agreement_matrix.iterrows():
+        # cell: (col, value)
+        for idx, cell in enumerate(row[1]):
+            if isinstance(cell, list) and len(cell) == 0:
+                print(row[0], row[1].index[idx])
+
 
 def add_image_index_column(df):
     """
@@ -223,6 +236,28 @@ def add_image_index_column(df):
             print(f"  {base}: indices {sorted(idxs)}")
 
     return base_to_indices
+
+
+def clear_agreement_matrix(agreement_matrix: DataFrame, variable_info):
+    def single_val(c):
+        if isinstance(c, list):
+            if len(c) == 0:
+                if variable_info["type"] == "multiple":
+                    return []
+                else:
+                    print(f"something strange {variable_info}: {c}. Filling in default")
+                    return variable_info["options"].index(variable_info["default"])
+            elif len(c) == 1:
+                return variable_info["options"].index(c[0])
+            else:
+                assert variable_info["type"] == "multiple"
+                return list(map(variable_info["options"].index, c))
+
+        else:
+            return c
+
+    cleared_agreement_matrix = agreement_matrix.map(single_val)
+    return cleared_agreement_matrix
 
 
 def create_indexed_agreement_matrix(variable_annotations):
@@ -465,84 +500,21 @@ def calculate_agreement(agreement_matrix, variable_info):
     --------
     dict with agreement metrics
     """
-    variable_type = variable_info.get('type', '')
 
     # Standardize variable type strings
-    if variable_type in ['single_select', 'single']:
+    if variable_info["type"] in ['single']:
         return _calculate_single_select_agreement(agreement_matrix, variable_info['options'])
-    elif variable_type in ['multi_select', 'multi']:
+    elif variable_info["type"] in ['multiple']:
         return _calculate_multi_select_agreement(agreement_matrix, variable_info['options'])
     else:
-        print(f"Warning: Unknown variable type {variable_info['name']}'{variable_type}', treating as single_select")
-        return _calculate_single_select_agreement(agreement_matrix, variable_info.get('options', []))
+        raise ValueError(f"Unknown variable type: {variable_info}")
 
 
 def _calculate_single_select_agreement(agreement_matrix, options):
     """Calculate agreement for single-select variables."""
     # Get coder pairs
-    coders = agreement_matrix.columns
-    n_coders = len(coders)
 
-    # Track metrics
-    total_agreements = 0
-    total_comparisons = 0
-    kappa_values = []
-
-    # Compare each pair of coders
-    for i in range(n_coders):
-        for j in range(i + 1, n_coders):
-            coder1 = coders[i]
-            coder2 = coders[j]
-
-            # Get rows where both coders provided answers
-            pair_data = agreement_matrix[[coder1, coder2]].dropna()
-
-            if len(pair_data) == 0:
-                continue
-
-            # Count exact agreements
-            agreements = (pair_data[coder1] == pair_data[coder2]).sum()
-            total_agreements += agreements
-            total_comparisons += len(pair_data)
-
-            # Calculate Cohen's kappa
-            observed_agreement = agreements / len(pair_data)
-
-            # Calculate expected agreement by chance
-            expected_agreement = 0
-            for option in options:
-                prob_coder1 = (pair_data[coder1] == option).mean()
-                prob_coder2 = (pair_data[coder2] == option).mean()
-                expected_agreement += prob_coder1 * prob_coder2
-
-            # Compute kappa if possible
-            if expected_agreement < 1.0:
-                kappa = (observed_agreement - expected_agreement) / (1 - expected_agreement)
-                kappa_values.append(kappa)
-
-    # Calculate overall metrics
-    overall_agreement = total_agreements / total_comparisons if total_comparisons > 0 else 0
-    avg_kappa = sum(kappa_values) / len(kappa_values) if kappa_values else 0
-
-    def single_val(c):
-        if isinstance(c, list):
-            if len(c) == 0:
-                return np.nan
-            elif len(c) == 1:
-                if c[0] not in options:
-                    return c[0]
-                return options.index(c[0])
-        else:
-            return c
-
-    """"
-    agreement_matrix.map(
-        lambda c: options.index(c[0]) if isinstance(c, list) and len(c) > 0 and c[0] in options else np.nan)
-    """
-    agreement_matrix2 = agreement_matrix.map(single_val)
-
-    from irrCAC.raw import CAC
-    cac = CAC(agreement_matrix2)
+    cac = CAC(agreement_matrix)
 
     try:
         fk = cac.fleiss()
