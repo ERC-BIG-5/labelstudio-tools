@@ -157,6 +157,11 @@ class ProjectModel(BaseModel):
     pass
 
 
+class HiddenColumns(BaseModel):
+    explore: Optional[list["str"]] = Field(default_factory=list)
+    labeling: Optional[list["str"]] = Field(default_factory=list)
+
+
 # from LS
 class ProjectViewDataModel(BaseModel):
     type: Optional[str] = None
@@ -164,8 +169,8 @@ class ProjectViewDataModel(BaseModel):
     target: Optional[str] = None
     gridWidth: Optional[int] = None
     columnWidth: Optional[int] = None
-    hiddenColumns: Optional[
-        TypedDict("hiddenColumns", {"explore": Optional[list["str"]], "labeling": Optional[list[str]]})] = None
+    hiddenColumns: Optional[HiddenColumns] = Field(default_factory=HiddenColumns)
+
     semantic_search: Optional[list] = None
     columnsDisplay: Optional[dict] = None
     filters: TypedDict("filters", {"conjunction": Literal["and", "or"], "items": list[TypedDict("items", {

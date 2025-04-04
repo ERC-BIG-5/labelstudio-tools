@@ -20,12 +20,12 @@ def add_image_index_column(df):
         Dictionary mapping base variable names to their indices
     """
     # Determine which column to use
-    if 'variable' not in df.columns and 'category' in df.columns:
-        df['variable'] = df['category']
-
-    if 'variable' not in df.columns:
-        print("Warning: No variable column found")
-        return {}
+    # if 'variable' not in df.columns and 'category' in df.columns:
+    #     df['variable'] = df['category']
+    #
+    # if 'variable' not in df.columns:
+    #     print("Warning: No variable column found")
+    #     return {}
 
     # Extract base names and indices
     base_names = []
@@ -34,13 +34,17 @@ def add_image_index_column(df):
     for var_name in df['variable']:
         var_str = str(var_name)
         # Look for _NUMBER at the end of the string
-        match = re.search(r'_(\d+)$', var_str)
+        match = re.search(r'_(\d+)(?:$|_)', var_str)
 
         if match:
-            idx = int(match.group(1))
+            idx = int(match.group(0).strip("_"))
             # Remove the _NUMBER suffix to get base name
-            base = var_str[:var_str.rfind('_')]
+            if match.group(0)[0] == "_" and match.group(0)[-1] == "_":
+                base = re.sub(r'_(\d+)(?:$|_)', '', var_str)
+            else:
+                base = re.sub(r'_(\d+)(?:$|_)', '', var_str)
             base_names.append(base)
+
             indices.append(idx)
         else:
             base_names.append(var_str)
@@ -86,37 +90,35 @@ def analyze_coder_agreement(raw_annotations, assignments, variables):
         Agreement report
     """
     # Convert inputs to DataFrames if needed
-    if not isinstance(raw_annotations, pd.DataFrame):
-        annotations_df = pd.DataFrame(raw_annotations)
-    else:
-        annotations_df = raw_annotations.copy()
+    annotations_df = raw_annotations.copy()
 
-    if not isinstance(assignments, pd.DataFrame):
-        assignments_df = pd.DataFrame(assignments)
-    else:
-        assignments_df = assignments.copy()
+    # if not isinstance(assignments, pd.DataFrame):
+    #     assignments_df = pd.DataFrame(assignments)
+    # else:
+    #     assignments_df = assignments.copy()
 
     # Ensure required columns
+    assert annotations_df.columns.to_list() == ['task_id', 'ann_id', 'user_id', 'platform_id', 'ts', 'type', 'category','value']
     if 'category' in annotations_df.columns and 'variable' not in annotations_df.columns:
         annotations_df = annotations_df.rename(columns={'category': 'variable'})
 
-    if 'coder_id' in annotations_df.columns and 'user_id' not in annotations_df.columns:
-        annotations_df = annotations_df.rename(columns={'coder_id': 'user_id'})
+    # if 'coder_id' in annotations_df.columns and 'user_id' not in annotations_df.columns:
+    #     annotations_df = annotations_df.rename(columns={'coder_id': 'user_id'})
 
     # Add index information to variables
-    base_to_indices = add_image_index_column(annotations_df)
-    #print(base_to_indices)
+    add_image_index_column(annotations_df)
+    # print(base_to_indices)
     # Create results containers
     all_agreements = {}
     all_conflicts = []
 
     # Group variables by base name for consolidation
     indexed_variables = {}
-    if 'variable_base' in annotations_df.columns:
-        # Get all variables with indices > 0
-        indexed_vars = annotations_df[annotations_df['image_idx'] > 0]
-        for base_name in indexed_vars['variable_base'].unique():
-            indexed_variables[base_name] = indexed_vars[indexed_vars['variable_base'] == base_name]['variable'].unique()
+    pass
+    # Get all variables with indices > 0
+    indexed_vars = annotations_df[annotations_df['image_idx'] > 0]
+    for base_name in indexed_vars['variable_base'].unique():
+       indexed_variables[base_name] = indexed_vars[indexed_vars['variable_base'] == base_name]['variable'].unique()
 
     # Process consolidated variables first
     for base_var, indexed_vars_list in indexed_variables.items():
@@ -299,9 +301,8 @@ def calculate_single_select_agreement(agreement_matrix, options):
     overall_agreement = total_agreements / total_comparisons if total_comparisons > 0 else 0
     avg_kappa = sum(kappa_values) / len(kappa_values) if kappa_values else 0
 
-
     def single_val(c):
-        if isinstance(c,list):
+        if isinstance(c, list):
             if len(c) == 0:
                 return np.nan
             elif len(c) == 1:
@@ -326,9 +327,9 @@ def calculate_single_select_agreement(agreement_matrix, options):
     except:
         res = 1
     return {
-        #'overall_agreement': overall_agreement,
+        # 'overall_agreement': overall_agreement,
         'kappa': res,
-        #'sample_size': total_comparisons
+        # 'sample_size': total_comparisons
     }
 
 
@@ -410,8 +411,8 @@ def calculate_binary_agreement(binary_matrix):
 
     return {
         'agreement_rate': overall_agreement
-        #'kappa': avg_kappa,
-        #'sample_size': total_comparisons
+        # 'kappa': avg_kappa,
+        # 'sample_size': total_comparisons
     }
 
 

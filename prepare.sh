@@ -1,5 +1,6 @@
 #!/bin/bash
-#. .venv/bin/activate
+
+. ../platforms-clients/.venv/bin/activate
 
 MAIN_DIR="/home/rsoleyma/projects"
 databases_REPO_NAME=Databases

@@ -1,6 +1,7 @@
 import json
 import shutil
 import webbrowser
+from collections import Counter
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -455,6 +456,10 @@ def agreements(
     agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, variables)
     data = agreement_report['agreement_metrics']["by_variable"]
 
+    counter = Counter(t["variable"] for t in agreement_report["conflicts"])
+    #print(counter)
+    conflict_counts = pd.DataFrame({"variable":list(counter.keys()), "val":list(counter.values())})
+
     variable_names = []
     kappa_values = []
 
@@ -467,7 +472,8 @@ def agreements(
         'variable_name': variable_names,
         'kappa': kappa_values
     })
-
+    conflict_counts.to_csv(SETTINGS.agreements_dir / f"conflicts_{mp.project_id}.csv")
+    df.to_csv(SETTINGS.agreements_dir / f"{mp.project_id}.csv")
 
     dest: Path = (SETTINGS.agreements_dir / f"{mp.project_id}.json")
     print(f"agreement_report -> {dest.as_posix()}")
@@ -601,7 +607,7 @@ if __name__ == "__main__":
     # exit()
     # status(**_default)
     # annotations(**_default)
-    download_project_data(**_default)
+    #download_project_data(**_default)
     agreements(**_default)
-    # create_conflict_view("nature_text",**_default)
+    #create_conflict_view("nature_text",**_default)
     # update_coding_game(**_default)
