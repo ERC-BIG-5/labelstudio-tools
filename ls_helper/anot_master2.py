@@ -4,8 +4,10 @@ import numpy as np
 from irrCAC.raw import CAC
 from pandas import DataFrame
 
+from ls_helper.models.field_models import FieldModel
 
-def analyze_coder_agreement(raw_annotations, assignments, variables) -> dict:
+
+def analyze_coder_agreement(raw_annotations, assignments, variables: dict[str, FieldModel]) -> dict:
     """
     End-to-end function to analyze coder agreement across annotations.
 
@@ -58,7 +60,7 @@ def analyze_coder_agreement(raw_annotations, assignments, variables) -> dict:
     # Process each variable individually
     for variable, variable_info in variables.items():
         # Skip text variables
-        if variable_info["type"] == "text":
+        if variable_info:
             continue
 
         # Check if this is a base variable name that has indexed versions

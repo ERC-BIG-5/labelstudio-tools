@@ -440,7 +440,7 @@ def agreements(
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
     mp = po.create_annotations_results( accepted_ann_age=accepted_ann_age)
 
-    variables = po.variable_infos()
+    variables = po.fields()
 
     agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df,variables)
     dest: Path = (SETTINGS.agreements_dir / f"{mp.id}.json")
@@ -517,7 +517,7 @@ def create_conflict_view(
     mp = po.create_annotations_results()
 
     # just check existence
-    _ = mp.interface.question_type(variable)
+    _ = mp.interface.field_type(variable)
 
     agreement_data = json.loads((SETTINGS.agreements_dir / f"{po.id}.json").read_text())
 

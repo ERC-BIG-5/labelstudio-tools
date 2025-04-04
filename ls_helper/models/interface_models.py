@@ -1,10 +1,12 @@
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Optional, Literal, Any, Iterable, Annotated
 
 from deprecated.classic import deprecated
 from pydantic import BaseModel, Field, model_validator, PlainSerializer
 
+from ls_helper.models.field_models import FieldType
 from tools import fast_levenhstein
 from tools.project_logging import get_logger
 
@@ -34,11 +36,15 @@ class Choice(BaseModel):
         return self.value
 
 
+class ChoicesType(str,Enum):
+    single = "single"
+    multiple = "multiple"
+
 class Choices(BaseModel):
     name: str
     toName: str
     options: list[Choice]
-    choice: Literal["single", "multiple"] = "single"
+    choice: ChoicesType = "single"
     indices: Optional[list[str]] = Field(default_factory=list)
 
     @model_validator(mode="after")
@@ -130,7 +136,7 @@ class InterfaceData(BaseModel):
             self.free_text[self.free_text.index(old)] = new
         self._extension_applied = True
 
-    def question_type(self, q) -> str:
+    def field_type(self, q) -> FieldType:
         """
         in some parts, we turn column indices into $, so this is the
         way to get the original type
@@ -142,12 +148,12 @@ class InterfaceData(BaseModel):
         if "$" in q:
             q = q.replace("$", "0")
         if q in self.orig_choices:
-            return self.orig_choices[q].choice
+            return FieldType.choice
         elif q in self.free_text:
-            return "text"
+            return FieldType.text
         else:
             print(f"ERROR: unknown question type for {q}. defaulting to text")
-            return "text"
+            return FieldType.text
 
     def __contains__(self, item):
         return item in self.ordered_fields

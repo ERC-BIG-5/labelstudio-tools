@@ -1,5 +1,21 @@
+from enum import auto, Enum
+from typing import Optional
+
 from pydantic import BaseModel
 
+class FieldType(Enum):
+    input= auto()
+    choice= auto()
+    text= auto()
 
-class Field(BaseModel):
-    pass
+class FieldModel(BaseModel):
+    orig_name: str
+    name: str
+    type: FieldType
+
+class ChoiceFieldModel(FieldModel):
+    options: list[str]
+    default: Optional[str]
+    choice: str # single, multiple
+
+    # todo, a way to hand in inputs.

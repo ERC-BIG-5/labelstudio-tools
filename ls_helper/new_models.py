@@ -7,7 +7,7 @@ import pandas as pd
 from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, Choice, Choices, PrincipleRow
 from pandas import DataFrame
 from pydantic import BaseModel, Field, model_validator, ConfigDict
-
+from ls_helper.models.field_models import FieldModel as FieldModel, ChoiceFieldModel as FieldModelChoice, FieldType
 from ls_helper.models.interface_models import FullAnnotationRow
 from ls_helper.my_labelstudio_client.models import ProjectModel as LSProjectModel, ProjectViewModel, TaskResultModel
 
@@ -37,6 +37,7 @@ def get_p_access(
 
 class UserInfo(BaseModel):
     users: dict[int, str]
+
 
 class ProjectCreate(BaseModel):
     title: str
@@ -121,33 +122,38 @@ class ProjectData(ProjectCreate):
             free_text=free_text,
             inputs=input_text_fields)
 
-    def variable_infos(self) -> dict[str, dict[str, Any]]:
+    def fields(self) -> dict[str, FieldModel]:
         variables = {}
 
-        fixes = self.field_extensions.extensions
-        for var, fix_info in fixes.items():
-            if new_name := fixes[var].name_fix:
+        extensions = self.field_extensions.extensions
+        for var, fix_info in extensions.items():
+            if new_name := extensions[var].name_fix:
                 name = new_name
             else:
                 name = var
 
             if name not in self.interface.ordered_fields:
+                logger.warning(f"{var=} is not in extensions")
                 continue
 
-            default = fix_info.default
             if name in self.interface.inputs:
                 continue
-            type = self.interface.question_type(name)
-            if type in ["single", "multiple"]:
-                options = self.interface.orig_choices[name].raw_options_list()
-            else:
-                options = []
-            variables[name] = {
+            type = self.interface.field_type(name)
+
+            data = {
+                "orig_name": var,
                 "name": name,
-                "type": type,
-                "options": options,
-                "default": default
+                "type": type
             }
+
+            if type == FieldType.choice:
+                data["choice"] = self.interface.orig_choices[name].choice
+                data["options"] = self.interface.orig_choices[name].raw_options_list()
+                data["default"] = fix_info.default
+                variables[name] = FieldModelChoice.model_validate(data)
+            else:
+                variables[name] = FieldModel.model_validate(data)
+
         return variables
 
     @property
@@ -201,7 +207,7 @@ class ProjectData(ProjectCreate):
         for var in self.field_extensions.extensions:
             if var not in interface:
                 redundant_extensions.append(var)
-                #logger.warning(f"variable from fixes is redundant {var}")
+                # logger.warning(f"variable from fixes is redundant {var}")
         return redundant_extensions
 
     def create_annotations_results(self,
@@ -227,6 +233,7 @@ class ProjectData(ProjectCreate):
             return users
         else:
             return UserInfo.model_validate(json.load(pp.open()))
+
 
 class ProjectOverView2(BaseModel):
     projects: dict[ProjectAccess, ProjectData]
@@ -637,7 +644,5 @@ class ProjectResult(BaseModel):
 
         result.attrs["format"] = DFFormat.flat
         return result
-
-
 
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
