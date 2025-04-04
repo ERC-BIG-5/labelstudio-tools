@@ -158,72 +158,71 @@ def analyze_coder_agreement(raw_annotations, assignments, variables) -> dict:
 
     return agreement_report
 
-
-def add_image_index_column(df: DataFrame):
+def add_image_index_column(df):
     """
-    Extracts image indices from the variable column and adds
-    image_idx and variable_base columns to the dataframe.
+    Extract indices from variable names and add columns for base variable name and index.
+    For example: "nep_materiality_visual_0" -> base: "nep_materiality_visual", idx: 0
 
     Parameters:
     -----------
     df : DataFrame
-        DataFrame containing a 'variable' column with potential index information
+        DataFrame containing 'variable' or 'category' column
 
     Returns:
     --------
-    None (modifies the dataframe in place)
+    dict
+        Dictionary mapping base variable names to their indices
     """
-    # If the dataframe doesn't have a 'variable' column, try 'category'
-    variable_col = 'variable'
-    if variable_col not in df.columns and 'category' in df.columns:
-        variable_col = 'category'
-        df = df.rename(columns={'category': 'variable'})
+    # Determine which column to use
+    # if 'variable' not in df.columns and 'category' in df.columns:
+    #     df['variable'] = df['category']
+    #
+    # if 'variable' not in df.columns:
+    #     print("Warning: No variable column found")
+    #     return {}
 
-    if variable_col not in df.columns:
-        print("Warning: Neither 'variable' nor 'category' column found - cannot extract image indices")
-        return
+    # Extract base names and indices
+    base_names = []
+    indices = []
 
-    def extract_image_indices(col_text):
-        if pd.isna(col_text):
-            return 0, "NaN"
-
-        # Pattern to match _NUMBER at the end or _NUMBER_ in the middle
-        pattern = r'_(\d+)(?:_|$)'
-        match = re.search(pattern, str(col_text))
+    for var_name in df['variable']:
+        var_str = str(var_name)
+        # Look for _NUMBER at the end of the string
+        match = re.search(r'_(\d+)(?:$|_)', var_str)
 
         if match:
-            # Extract the number
-            number = int(match.group(1))
+            idx = int(match.group(0).strip("_"))
+            # Remove the _NUMBER suffix to get base name
+            if match.group(0)[0] == "_" and match.group(0)[-1] == "_":
+                base = re.sub(r'_(\d+)(?:$|_)', '', var_str)
+            else:
+                base = re.sub(r'_(\d+)(?:$|_)', '', var_str)
+            base_names.append(base)
 
-            # Remove the underscore and number to get the base name
-            base_name = re.sub(pattern, "", str(col_text))
-
-            # If we had a trailing underscore from the pattern, remove it
-            if base_name.endswith('_'):
-                base_name = base_name[:-1]
-
-            return number, base_name
+            indices.append(idx)
         else:
-            return 0, col_text
+            base_names.append(var_str)
+            indices.append(0)  # 0 indicates no index
 
-    # Apply the extraction to each variable name
-    indices = []
-    base_names = []
+    # Add new columns
+    df['variable_base'] = base_names
+    df['image_idx'] = indices
 
-    for value in df[variable_col]:
-        idx, base = extract_image_indices(value)
-        indices.append(idx)
-        base_names.append(base)
+    # Create mapping of base variables to their indices
+    base_to_indices = {}
+    for base, idx in zip(base_names, indices):
+        if idx > 0:  # Only track variables with indices
+            if base not in base_to_indices:
+                base_to_indices[base] = []
+            base_to_indices[base].append(idx)
 
-    # Add the new columns to the dataframe
-    df["variable_base"] = base_names
-    df["image_idx"] = indices
+    # Print summary
+    if base_to_indices:
+        print(f"Found {len(base_to_indices)} variables with indices:")
+        for base, idxs in base_to_indices.items():
+            print(f"  {base}: indices {sorted(idxs)}")
 
-    # Print summary of indexed variables found
-    indexed_count = sum(1 for idx in indices if idx > 0)
-    if indexed_count > 0:
-        print(
-            f"Found {indexed_count} variables with indices across {len(set(base for idx, base in zip(indices, base_names) if idx > 0))} base variables")
+    return base_to_indices
 
 
 def create_indexed_agreement_matrix(variable_annotations):
@@ -479,44 +478,29 @@ def calculate_agreement(agreement_matrix, variable_info):
 
 
 def _calculate_single_select_agreement(agreement_matrix, options):
-    """
-    Calculate agreement for single-select variables.
-
-    Parameters:
-    -----------
-    agreement_matrix : DataFrame
-        Matrix with tasks as rows and coders as columns
-
-    options : list
-        List of allowed options for this variable
-
-    Returns:
-    --------
-    dict with agreement metrics
-    """
+    """Calculate agreement for single-select variables."""
     # Get coder pairs
     coders = agreement_matrix.columns
     n_coders = len(coders)
 
-    # Track agreements
+    # Track metrics
     total_agreements = 0
     total_comparisons = 0
-
-    # Track kappa values
     kappa_values = []
 
+    # Compare each pair of coders
     for i in range(n_coders):
         for j in range(i + 1, n_coders):
             coder1 = coders[i]
             coder2 = coders[j]
 
-            # Get annotations for this pair
+            # Get rows where both coders provided answers
             pair_data = agreement_matrix[[coder1, coder2]].dropna()
 
             if len(pair_data) == 0:
                 continue
 
-            # Count agreements
+            # Count exact agreements
             agreements = (pair_data[coder1] == pair_data[coder2]).sum()
             total_agreements += agreements
             total_comparisons += len(pair_data)
@@ -524,26 +508,51 @@ def _calculate_single_select_agreement(agreement_matrix, options):
             # Calculate Cohen's kappa
             observed_agreement = agreements / len(pair_data)
 
-            # Calculate expected agreement
+            # Calculate expected agreement by chance
             expected_agreement = 0
             for option in options:
                 prob_coder1 = (pair_data[coder1] == option).mean()
                 prob_coder2 = (pair_data[coder2] == option).mean()
                 expected_agreement += prob_coder1 * prob_coder2
 
-            # Calculate kappa
+            # Compute kappa if possible
             if expected_agreement < 1.0:
                 kappa = (observed_agreement - expected_agreement) / (1 - expected_agreement)
                 kappa_values.append(kappa)
 
-    # Overall metrics
+    # Calculate overall metrics
     overall_agreement = total_agreements / total_comparisons if total_comparisons > 0 else 0
     avg_kappa = sum(kappa_values) / len(kappa_values) if kappa_values else 0
 
+    def single_val(c):
+        if isinstance(c, list):
+            if len(c) == 0:
+                return np.nan
+            elif len(c) == 1:
+                if c[0] not in options:
+                    return c[0]
+                return options.index(c[0])
+        else:
+            return c
+
+    """"
+    agreement_matrix.map(
+        lambda c: options.index(c[0]) if isinstance(c, list) and len(c) > 0 and c[0] in options else np.nan)
+    """
+    agreement_matrix2 = agreement_matrix.map(single_val)
+
+    from irrCAC.raw import CAC
+    cac = CAC(agreement_matrix2)
+
+    try:
+        fk = cac.fleiss()
+        res = fk["est"]["coefficient_value"]
+    except:
+        res = 1
     return {
-        'overall_agreement': overall_agreement,
-        'kappa': avg_kappa,
-        'sample_size': total_comparisons
+        # 'overall_agreement': overall_agreement,
+        'kappa': res,
+        # 'sample_size': total_comparisons
     }
 
 
