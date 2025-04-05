@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
-from ls_helper.anot_master2 import analyze_coder_agreement, fix_users, export_agreement_metrics_to_csv
+from ls_helper.anot_master2 import analyze_coder_agreement, fix_users, export_agreement_metrics_to_csv, AgreementReport
 from ls_helper.config_helper import check_config_update
 from ls_helper.exp.build_configs import build_configs, LabelingInterfaceBuildConfig, build_from_template
 from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter
@@ -437,12 +437,12 @@ def agreements(
         language: Annotated[str, typer.Argument()] = None,
         accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 2,
         min_num_coders: Annotated[int, typer.Option()] = 2
-) -> tuple[Path, dict]:
+) -> tuple[Path, AgreementReport]:
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
     mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
     agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, po.choices, )
     dest: Path = (SETTINGS.agreements_dir / f"{mp.id}.json")
-    dest.write_text(json.dumps(agreement_report, indent=2))
+    dest.write_text(agreement_report.model_dump_json(indent=2))
     print(f"agreement_report -> {dest.as_posix()}")
     dest2 = SETTINGS.agreements_dir / f"{mp.id}.csv"
     export_agreement_metrics_to_csv(agreement_report, dest2)

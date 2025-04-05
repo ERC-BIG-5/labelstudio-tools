@@ -1,16 +1,741 @@
-from typing import Optional
-
-import numpy as np
-import pandas as pd
 import re
-from irrCAC.raw import CAC
-from numpy import isnan
+
 from pandas import DataFrame
 
-from ls_helper.models.field_models import FieldModel, FieldType, ChoiceFieldModel, NO_SINGLE_CHOICE
+from ls_helper.models.field_models import ChoiceFieldModel, NO_SINGLE_CHOICE
 from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
+
+from typing import Optional, List, Dict, Union, Any
+from pydantic import BaseModel
+import pandas as pd
+import numpy as np
+import csv
+from irrCAC.raw import CAC
+
+
+# Pydantic Models for Agreement Metrics
+class OptionAgreement(BaseModel):
+    """Model for option-level agreement metrics"""
+    error: Optional[str] = None
+    kappa: float = 1.0
+    gwet: float = 1.0
+    percent_agreement: float = 1.0
+    number: int = 0  # For single-choice: number of rows with this option
+    agreement_count: int = 0
+    disagreement_count: int = 0
+    total_selections: Optional[int] = None  # For single-choice
+    # For multi-select
+    total_rows_selected: Optional[int] = None
+    total_tasks_analyzed: Optional[int] = None
+    all_present_count: Optional[int] = None
+    all_absent_count: Optional[int] = None
+    conflicts: Optional[List[str]] = None
+
+
+class AnnotationInfo(BaseModel):
+    """Model for annotation information in conflicts"""
+    user_id: str | int
+    value: str
+    option: Optional[str] = None
+
+
+class ConflictInfo(BaseModel):
+    """Model for conflict information"""
+    task_id: int
+    platform_id: Optional[str] = None
+    variable: Optional[str] = None
+    option: Optional[str] = None
+    agreement_score: float = 0.0
+    annotations: List[AnnotationInfo]
+    image_idx: Optional[int] = None
+    conflict_type: Optional[str] = None
+
+
+class SingleChoiceAgreement(BaseModel):
+    """Model for single-choice variable agreement results"""
+    kappa: float
+    gwet: float
+    percent_agreement: float
+    total_rows: int
+    agreement_count: int
+    disagreement_count: int
+    counts: Dict[str, int]
+    option_results: Dict[str, OptionAgreement]
+    conflicts: Optional[List[str]] = None
+
+
+class MultiChoiceAgreement(BaseModel):
+    """Model for multi-choice variable agreement results"""
+    counts: Dict[str, int]
+    option_results: Dict[str, OptionAgreement]
+    conflicts: List[ConflictInfo]
+
+
+class VariableTypeAgreement(BaseModel):
+    """Model for agreement metrics by variable type"""
+    average_kappa: float
+    average_gwet: float
+    variables: Dict[str, Union[SingleChoiceAgreement, MultiChoiceAgreement]]
+    conflict_rate: float
+    conflict_count: int
+
+
+class OverallAgreement(BaseModel):
+    """Model for overall agreement metrics"""
+    kappa: float
+    gwet: float
+
+
+class AgreementMetrics(BaseModel):
+    """Model for all agreement metrics"""
+    overall: OverallAgreement
+    single_choice: VariableTypeAgreement
+    multiple_choice: VariableTypeAgreement
+
+
+class SummaryStats(BaseModel):
+    """Model for summary statistics"""
+    total_tasks: int
+    total_coders: int
+    total_variables: int
+    total_annotations: int
+    total_conflicts: int
+    single_choice_variables: int
+    multiple_choice_variables: int
+    indexed_variables_count: int
+    base_variables_count: int
+    conflict_rate: float
+
+
+class AgreementReport(BaseModel):
+    """Model for the complete agreement report"""
+    summary_stats: SummaryStats
+    agreement_metrics: AgreementMetrics
+    conflicts: List[ConflictInfo]
+
+
+# CSV Export Model for flattened representation
+class AgreementCsvRow(BaseModel):
+    """Model for a row in the agreement metrics CSV"""
+    variable_type: str
+    variable: str
+    option: str = ""
+    kappa: Optional[float] = None
+    gwet: Optional[float] = None
+    percent_agreement: Optional[float] = None
+    total_tasks: Optional[int] = None
+    agreement_count: Optional[int] = None
+    disagreement_count: Optional[int] = None
+    option_selected_count: Optional[int] = None
+    all_present_count: Optional[int] = None
+    all_absent_count: Optional[int] = None
+
+
+def _calculate_single_select_agreement2(agreement_matrix,
+                                        variable_info,
+                                        counts: bool = True,
+                                        collect_conflicts_agreements: bool = True) -> SingleChoiceAgreement:
+    """Calculate agreement for single-select variables with improved metrics."""
+    # Convert list values to single values
+    agreement_matrix = agreement_matrix.map(lambda v: v[0] if isinstance(v, list) else np.NaN)
+
+    # Calculate total valid rows (rows with at least one non-NaN value)
+    valid_rows = agreement_matrix.dropna(how='all')
+    total_valid_rows = len(valid_rows)
+
+    # Calculate rows with agreement (all coders chose the same option)
+    agreement_mask = valid_rows.apply(lambda row: row.dropna().nunique() == 1, axis=1)
+    agreement_rows = valid_rows[agreement_mask]
+    agreement_count = len(agreement_rows)
+
+    # Calculate rows with disagreement
+    disagreement_mask = valid_rows.apply(lambda row: row.dropna().nunique() > 1, axis=1)
+    disagreement_rows = valid_rows[disagreement_mask]
+    disagreement_count = len(disagreement_rows)
+
+    # Calculate percent agreement (simpler metric than kappa)
+    percent_agreement = agreement_count / total_valid_rows if total_valid_rows > 0 else 1.0
+    # Round to 4 digits
+    percent_agreement = round(percent_agreement, 4)
+
+    # Calculate Fleiss' kappa
+    try:
+        cac = CAC(agreement_matrix)
+        fk = cac.fleiss()
+        kappa = fk["est"]["coefficient_value"]
+        gwet = cac.gwet()["est"]["coefficient_value"]
+        # Round to 4 digits
+        kappa = round(kappa, 4)
+        gwet = round(gwet, 4)
+    except Exception as e:
+        logger.error(f"Kappa calculation error for {variable_info.name}: {str(e)}")
+        kappa = 1 if agreement_count == total_valid_rows else 0
+        gwet = 0
+
+    # Option counts - count exactly how many times each option was selected
+    option_counts = {}
+    flat_values = agreement_matrix.values.flatten()
+    series_counts = pd.Series(flat_values).value_counts().to_dict()
+
+    for option in variable_info.options:
+        option_idx = variable_info.option_index(option)
+        # Convert NumPy types to Python native types
+        count = series_counts.get(option_idx, 0)
+        option_counts[option] = int(count) if hasattr(count, 'item') else count
+
+    # Get conflicts if needed
+    conflicts = None
+    if collect_conflicts_agreements:
+        conflicts = disagreement_rows.index.tolist()
+
+    # Per-option detailed analysis
+    option_results = {}
+    for option in variable_info.options:
+        option_idx = variable_info.option_index(option)
+
+        # Rows where this option appears at least once
+        option_mask = (agreement_matrix == option_idx).any(axis=1)
+        option_rows = agreement_matrix[option_mask]
+        option_row_count = len(option_rows)
+
+        # Rows with complete agreement on this option
+        agreement_on_option_mask = option_rows.apply(
+            lambda row: row.dropna().nunique() == 1 and row.dropna().iloc[0] == option_idx,
+            axis=1
+        )
+        agreement_on_option_count = agreement_on_option_mask.sum()
+
+        # Rows with disagreement involving this option
+        disagreement_on_option_count = option_row_count - agreement_on_option_count
+
+        # Calculate option-level percent agreement
+        option_percent_agreement = agreement_on_option_count / option_row_count if option_row_count > 0 else 1.0
+        # Round to 4 digits
+        option_percent_agreement = round(option_percent_agreement, 4)
+
+        error = None
+        # Option-specific kappa
+        try:
+            if len(option_rows) > 0:
+                cac = CAC(option_rows)
+                option_kappa = cac.fleiss()["est"]["coefficient_value"]
+                option_gwet = cac.gwet()["est"]["coefficient_value"]
+                # Round to 4 digits
+                option_kappa = round(option_kappa, 4)
+                option_gwet = round(option_gwet, 4)
+            else:
+                option_kappa = 1.0
+                option_gwet = 1.0
+        except Exception as e:
+            option_kappa = 1.0 if disagreement_on_option_count == 0 else 0.0
+            option_gwet = 1.0
+            error = str(e)
+
+        # Use Pydantic model for option results
+        option_results[option] = OptionAgreement(
+            error=error,
+            kappa=float(option_kappa),
+            gwet=float(option_gwet),
+            percent_agreement=float(option_percent_agreement),
+            number=int(option_row_count) if hasattr(option_row_count, 'item') else option_row_count,
+            agreement_count=int(agreement_on_option_count) if hasattr(agreement_on_option_count,
+                                                                      'item') else agreement_on_option_count,
+            disagreement_count=int(disagreement_on_option_count) if hasattr(disagreement_on_option_count,
+                                                                            'item') else disagreement_on_option_count,
+            total_selections=option_counts[option]
+        )
+
+    # Use Pydantic model for the result
+    return SingleChoiceAgreement(
+        kappa=float(kappa) if hasattr(kappa, 'item') else kappa,
+        gwet=float(gwet) if hasattr(gwet, 'item') else gwet,
+        percent_agreement=float(percent_agreement) if hasattr(percent_agreement, 'item') else percent_agreement,
+        total_rows=int(total_valid_rows) if hasattr(total_valid_rows, 'item') else total_valid_rows,
+        agreement_count=int(agreement_count) if hasattr(agreement_count, 'item') else agreement_count,
+        disagreement_count=int(disagreement_count) if hasattr(disagreement_count, 'item') else disagreement_count,
+        counts=option_counts,
+        option_results=option_results,
+        conflicts=[str(c) for c in conflicts] if conflicts is not None else None
+    )
+
+
+def _calculate_multi_select_agreement(agreement_matrix, variable_info,
+                                      counts: bool = True,
+                                      collect_conflicts_agreements: bool = True) -> MultiChoiceAgreement:
+    """
+    Calculate agreement for multi-select variables by creating
+    binary matrices for each option.
+    """
+    options = variable_info.options
+
+    # Track agreement metrics for each option
+    option_results = {}
+    all_conflicts = []
+
+    # Get overall counts if needed
+    option_counts = {}
+    if counts:
+        # Count how many times each option was selected
+        for option in options:
+            count = 0
+            for _, row in agreement_matrix.iterrows():
+                for value in row.dropna():
+                    if isinstance(value, list) and option in value:
+                        count += 1
+            option_counts[option] = count
+
+    # Process each option separately as a binary choice
+    for option in options:
+        # SIMPLEST FIX: Use the map function with a safe lambda that handles NaN values correctly
+        binary_matrix = agreement_matrix.map(
+            lambda x: 1 if isinstance(x, list) and option in x else (
+                0 if isinstance(x, list) else np.nan
+            )
+        )
+
+        # Only look at rows with at least 2 annotators
+        multiple_annotator_mask = binary_matrix.count(axis=1) >= 2
+        rows_with_multiple_annotators = binary_matrix[multiple_annotator_mask]
+
+        # Skip the rest of processing if no rows have multiple annotators
+        if len(rows_with_multiple_annotators) == 0:
+            option_results[option] = OptionAgreement(
+                error=None,
+                kappa=1.0,
+                gwet=1.0,
+                percent_agreement=1.0,
+                total_rows_selected=0,
+                total_tasks_analyzed=0,
+                agreement_count=0,
+                disagreement_count=0,
+                all_present_count=0,
+                all_absent_count=0,
+                conflicts=None
+            )
+            continue
+
+        # Count rows where all coders agreed this option was present
+        all_present_mask = rows_with_multiple_annotators.apply(
+            lambda row: row.dropna().nunique() == 1 and row.dropna().iloc[0] == 1,
+            axis=1
+        )
+        all_present_count = all_present_mask.sum()
+
+        # Count rows where all coders agreed this option was absent
+        all_absent_mask = rows_with_multiple_annotators.apply(
+            lambda row: row.dropna().nunique() == 1 and row.dropna().iloc[0] == 0,
+            axis=1
+        )
+        all_absent_count = all_absent_mask.sum()
+
+        # Total agreement count (all present OR all absent)
+        agreement_count = all_present_count + all_absent_count
+
+        # Calculate disagreements (rows where some coders say present and others say absent)
+        disagreement_mask = rows_with_multiple_annotators.apply(
+            lambda row: row.dropna().nunique() > 1,  # Must have both 0 and 1 in the row
+            axis=1
+        )
+        disagreement_rows = rows_with_multiple_annotators[disagreement_mask]
+        disagreement_count = len(disagreement_rows)
+
+        # Rows where this option was selected at least once
+        rows_with_option = rows_with_multiple_annotators[rows_with_multiple_annotators.eq(1).any(axis=1)]
+        option_presence_count = len(rows_with_option)
+
+        # Calculate percent agreement based on rows with multiple annotators
+        total_analyzed = len(rows_with_multiple_annotators)
+        percent_agreement = agreement_count / total_analyzed if total_analyzed > 0 else 1.0
+        # Round to 4 digits
+        percent_agreement = round(percent_agreement, 4)
+
+        # Calculate kappa and gwet for this option
+        kappa = 1.0
+        gwet = 1.0
+        error = None
+
+        try:
+            if len(rows_with_multiple_annotators) > 0:
+                cac = CAC(rows_with_multiple_annotators)
+                kappa = cac.fleiss()["est"]["coefficient_value"]
+                gwet = cac.gwet()["est"]["coefficient_value"]
+                # Round to 4 digits
+                kappa = round(kappa, 4)
+                gwet = round(gwet, 4)
+        except Exception as e:
+            error = str(e)
+            logger.error(f"Agreement calculation error for option {option}: {error}")
+
+        # Get conflicts for this option if needed
+        option_conflicts = []
+        if collect_conflicts_agreements:
+            # Only collect ACTUAL disagreements (where some coders say present and others say absent)
+            for task_id in disagreement_rows.index:
+                row_data = binary_matrix.loc[task_id].dropna()
+
+                # Check if there's a mix of 0s and 1s (true disagreement)
+                values_set = set(row_data)
+                if len(values_set) > 1:  # Must have both 0 and 1 to be a true disagreement
+                    option_conflicts.append(task_id)
+
+                    # Create annotations list using Pydantic model
+                    annotations = [
+                        AnnotationInfo(
+                            user_id=coder,
+                            value='present' if value == 1 else 'absent'
+                        )
+                        for coder, value in row_data.items()
+                    ]
+
+                    # Create conflict info using Pydantic model
+                    conflict_info = ConflictInfo(
+                        task_id=task_id,
+                        option=option,
+                        agreement_score=0,
+                        annotations=annotations,
+                        conflict_type='multiple_choice'
+                    )
+                    all_conflicts.append(conflict_info)
+
+        # Store metrics for this option using Pydantic model
+        option_results[option] = OptionAgreement(
+            error=error,
+            kappa=float(kappa),
+            gwet=float(gwet),
+            percent_agreement=float(percent_agreement),
+            total_rows_selected=int(option_presence_count),
+            total_tasks_analyzed=int(total_analyzed),
+            agreement_count=int(agreement_count),
+            disagreement_count=int(disagreement_count),
+            all_present_count=int(all_present_count),
+            all_absent_count=int(all_absent_count),
+            conflicts=[str(c) for c in option_conflicts] if option_conflicts else None
+        )
+
+    # Final result using Pydantic model
+    return MultiChoiceAgreement(
+        counts=option_counts,
+        option_results=option_results,
+        conflicts=all_conflicts
+    )
+
+
+def export_agreement_metrics_to_csv(agreement_report: AgreementReport, output_file: str):
+    """
+    Export agreement metrics to a CSV file using Pydantic models.
+
+    Parameters:
+    -----------
+    agreement_report : AgreementReport
+        The agreement report returned by analyze_coder_agreement
+
+    output_file : str
+        Path to the output CSV file
+    """
+    # Prepare data for CSV using our CSV model
+    rows = []
+
+    # Process single-choice variables
+    single_choice_vars = agreement_report.agreement_metrics.single_choice.variables
+    for var_name, var_data in single_choice_vars.items():
+        # Basic variable info
+        row = AgreementCsvRow(
+            variable_type="single_choice",
+            variable=var_name,
+            option="VARIABLE_LEVEL",
+            kappa=var_data.kappa,
+            gwet=var_data.gwet,
+            percent_agreement=var_data.percent_agreement,
+            total_tasks=var_data.total_rows,
+            agreement_count=var_data.agreement_count,
+            disagreement_count=var_data.disagreement_count
+        )
+        rows.append(row)
+
+        # Add option-level data for single choice
+        if var_data.option_results:
+            for opt_name, opt_data in var_data.option_results.items():
+                opt_row = AgreementCsvRow(
+                    variable_type="single_choice",
+                    variable=var_name,
+                    option=opt_name,
+                    kappa=opt_data.kappa,
+                    gwet=opt_data.gwet,
+                    percent_agreement=opt_data.percent_agreement,
+                    total_tasks=opt_data.number,
+                    agreement_count=opt_data.agreement_count,
+                    disagreement_count=opt_data.disagreement_count,
+                    option_selected_count=opt_data.total_selections
+                )
+                rows.append(opt_row)
+
+    # Process multiple-choice variables
+    multiple_choice_vars = agreement_report.agreement_metrics.multiple_choice.variables
+    for var_name, var_data in multiple_choice_vars.items():
+        # Add option-level data
+        if var_data.option_results:
+            for opt_name, opt_data in var_data.option_results.items():
+                opt_row = AgreementCsvRow(
+                    variable_type="multiple_choice",
+                    variable=var_name,
+                    option=opt_name,
+                    kappa=opt_data.kappa,
+                    gwet=opt_data.gwet,
+                    percent_agreement=opt_data.percent_agreement,
+                    total_tasks=opt_data.total_tasks_analyzed,
+                    agreement_count=opt_data.agreement_count,
+                    disagreement_count=opt_data.disagreement_count,
+                    option_selected_count=opt_data.total_rows_selected,
+                    all_present_count=opt_data.all_present_count,
+                    all_absent_count=opt_data.all_absent_count
+                )
+                rows.append(opt_row)
+
+    # Add summary rows
+    rows.append(AgreementCsvRow(
+        variable_type="SUMMARY",
+        variable="ALL_SINGLE_CHOICE",
+        kappa=round(agreement_report.agreement_metrics.single_choice.average_kappa, 4),
+        gwet=round(agreement_report.agreement_metrics.single_choice.average_gwet, 4),
+        disagreement_count=agreement_report.agreement_metrics.single_choice.conflict_count
+    ))
+
+    rows.append(AgreementCsvRow(
+        variable_type="SUMMARY",
+        variable="ALL_MULTIPLE_CHOICE",
+        kappa=round(agreement_report.agreement_metrics.multiple_choice.average_kappa, 4),
+        gwet=round(agreement_report.agreement_metrics.multiple_choice.average_gwet, 4),
+        disagreement_count=agreement_report.agreement_metrics.multiple_choice.conflict_count
+    ))
+
+    # Add overall summary
+    rows.append(AgreementCsvRow(
+        variable_type="SUMMARY",
+        variable="OVERALL",
+        kappa=round(agreement_report.agreement_metrics.overall.kappa, 4),
+        gwet=round(agreement_report.agreement_metrics.overall.gwet, 4),
+        total_tasks=agreement_report.summary_stats.total_tasks,
+        disagreement_count=agreement_report.summary_stats.total_conflicts
+    ))
+
+    # Directly use model's fields for CSV headers
+    fieldnames = list(AgreementCsvRow.__annotations__.keys())
+
+    # Write to CSV
+    with open(output_file, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        # Convert Pydantic models to dictionaries for CSV writing
+        writer.writerows([row.model_dump() for row in rows])
+
+    print(f"Agreement metrics exported to {output_file}")
+
+
+def export_agreement_report(agreement_report: AgreementReport, output_file: Optional[str] = None) -> str:
+    """
+    Export the agreement report to a CSV file.
+
+    Parameters:
+    -----------
+    agreement_report : AgreementReport
+        The agreement report returned by analyze_coder_agreement
+
+    output_file : str, optional
+        Path to the output CSV file. If not provided, a default name will be used.
+
+    Returns:
+    --------
+    str
+        Path to the created CSV file
+    """
+    import os
+    from datetime import datetime
+
+    # Generate a default filename if none provided
+    if output_file is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = f"agreement_metrics_{timestamp}.csv"
+
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(os.path.abspath(output_file)) or '.', exist_ok=True)
+
+    # Export the metrics
+    export_agreement_metrics_to_csv(agreement_report, output_file)
+
+    return output_file
+
+
+def analyze_coder_agreement(raw_annotations, assignments, choices,
+                            field_names: Optional[List[str]] = None) -> AgreementReport:
+    """
+    End-to-end function to analyze coder agreement across annotations.
+
+    Parameters:
+    -----------
+    raw_annotations : list of dict or DataFrame
+        List of annotation objects with keys:
+        task_id, ann_id, coder_id, ts, platform_id, category (variable name), type, value
+
+    assignments : list of dict or DataFrame
+        List of task-coder assignments with metadata
+
+    choices : dict
+        Dictionary mapping variable_ids to their ChoiceFieldModel objects
+
+    field_names : Optional[list[str]]
+        Optional list of field names to analyze (if None, analyze all fields)
+
+    Returns:
+    --------
+    AgreementReport
+        Agreement report with metrics and conflicts
+    """
+    # Step 0: Kickout tasks with less than 2 coders
+    initial_task_count = raw_annotations['task_id'].nunique()
+    task_annotation_counts = raw_annotations.groupby('task_id')['ann_id'].nunique()
+    tasks_with_multiple_anns = task_annotation_counts[task_annotation_counts > 1].index
+    filtered_df = raw_annotations[raw_annotations['task_id'].isin(tasks_with_multiple_anns)]
+    remaining_task_count = filtered_df['task_id'].nunique()
+    print(f"Initial tasks: {initial_task_count}, Remaining tasks: {remaining_task_count}, "
+          f"Removed tasks: {initial_task_count - remaining_task_count}")
+
+    # Step 1: Create the assignment tracking DataFrame
+    assignments_df = _create_assignment_tracking(assignments)
+
+    # Step 2: Create annotations DataFrame without defaults
+    annotations_df = create_annotations_dataframe(filtered_df)
+
+    # Add image index information to identify indexed variables
+    add_image_index_column(annotations_df)
+
+    # Initialize results containers
+    all_variable_agreements = {}
+    all_conflicts = []
+
+    # Create a mapping of base variable names to the original variables with indices
+    base_to_indexed = {}
+    if 'variable_base' in annotations_df.columns and 'image_idx' in annotations_df.columns:
+        indexed_vars = annotations_df[annotations_df['image_idx'] > 0]
+        for base_name in indexed_vars['variable_base'].unique():
+            matching_vars = indexed_vars[indexed_vars['variable_base'] == base_name]['variable'].unique()
+            if len(matching_vars) > 0:
+                base_to_indexed[base_name] = list(matching_vars)
+
+    # Process each variable individually
+    for variable, variable_info in choices.items():
+        if field_names and variable not in field_names:
+            continue
+
+        # Check if this is a base variable name that has indexed versions
+        if variable in base_to_indexed:
+            # We'll create a consolidated variable for all indexed versions
+            consolidated_name = f"{variable}_$"
+
+            # Get all annotations for the indexed versions of this variable
+            all_indices_annotations = []
+            for indexed_var in base_to_indexed[variable]:
+                var_annotations = annotations_df[annotations_df['variable'] == indexed_var]
+                if len(var_annotations) > 0:
+                    all_indices_annotations.append(var_annotations)
+
+            if all_indices_annotations:
+                # Combine all indexed annotations
+                variable_annotations = pd.concat(all_indices_annotations)
+
+                # Apply defaults
+                variable_with_defaults = apply_defaults_for_variable(
+                    variable_annotations,
+                    assignments_df,
+                    consolidated_name,  # Use consolidated name
+                    variable_info
+                )
+
+                # Create agreement matrix with task+index as the row identifier
+                agreement_matrix = create_indexed_agreement_matrix(variable_with_defaults)
+
+                # Calculate agreement using Pydantic models
+                variable_agreement = calculate_agreement(
+                    agreement_matrix,
+                    variable_info
+                )
+
+                # Store results under the consolidated name
+                all_variable_agreements[consolidated_name] = variable_agreement
+
+                # Identify conflicts
+                variable_conflicts = identify_conflicts(
+                    agreement_matrix,
+                    consolidated_name,
+                    variable_info,
+                    variable_with_defaults
+                )
+
+                all_conflicts.extend(variable_conflicts)
+
+        # Standard processing for regular variables
+        else:
+            variable_annotations = annotations_df[annotations_df['variable'] == variable]
+
+            if len(variable_annotations) == 0:
+                print(f"No data on {variable}")
+                continue
+
+            # Apply defaults
+            variable_with_defaults = apply_defaults_for_variable(
+                variable_annotations,
+                assignments_df,
+                variable,
+                variable_info
+            )
+
+            # Create standard agreement matrix
+            agreement_matrix = variable_with_defaults.pivot(
+                index='task_id',
+                columns='user_id',
+                values='value'
+            )
+
+            # For single-choice, clear the agreement matrix
+            if variable_info.choice == 'single':
+                cleared_agreement_matrix = clear_agreement_matrix(agreement_matrix, variable_info)
+                # Calculate agreement using Pydantic-returning function
+                variable_agreement = calculate_agreement(
+                    cleared_agreement_matrix,
+                    variable_info
+                )
+            else:
+                # For multiple-choice, use the original matrix
+                variable_agreement = calculate_agreement(
+                    agreement_matrix,
+                    variable_info
+                )
+
+            # Store results
+            all_variable_agreements[variable] = variable_agreement
+
+            # Identify conflicts
+            variable_conflicts = identify_conflicts(
+                agreement_matrix,
+                variable,
+                variable_info,
+                variable_with_defaults
+            )
+
+            all_conflicts.extend(variable_conflicts)
+
+    # Generate the final report using Pydantic models
+    agreement_report_dict = generate_agreement_report(
+        all_variable_agreements,
+        all_conflicts,
+        choices,
+        annotations_df,
+        base_to_indexed
+    )
+
+    # Convert to Pydantic model
+    return AgreementReport.model_validate(agreement_report_dict)
 
 
 def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info: ChoiceFieldModel,
@@ -106,7 +831,7 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
                     label = str(value)
 
                 labeled_annotations.append({
-                    'user_id': coders[i],
+                    'user_id':coders[i],
                     'value': label
                 })
 
@@ -186,176 +911,6 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
                 conflicts.append(conflict)
 
     return conflicts
-
-
-def analyze_coder_agreement(raw_annotations, assignments, choices: dict[str, ChoiceFieldModel],
-                            field_names: Optional[list[str]] = None) -> dict:
-    """
-    End-to-end function to analyze coder agreement across annotations.
-
-    Parameters:
-    -----------
-    raw_annotations : list of dict or DataFrame
-        List of annotation objects with keys:
-        task_id, ann_id, coder_id, ts, platform_id, category (variable name), type, value
-
-    assignments : list of dict or DataFrame
-        List of task-coder assignments with metadata
-
-    choices : dict
-        Dictionary mapping variable_ids to their ChoiceFieldModel objects
-
-    field_names : Optional[list[str]]
-        Optional list of field names to analyze (if None, analyze all fields)
-
-    Returns:
-    --------
-    dict
-        Agreement report with metrics and conflicts
-    """
-    # Step 0: Kickout tasks with less than 2 coders
-    initial_task_count = raw_annotations['task_id'].nunique()
-    task_annotation_counts = raw_annotations.groupby('task_id')['ann_id'].nunique()
-    tasks_with_multiple_anns = task_annotation_counts[task_annotation_counts > 1].index
-    filtered_df = raw_annotations[raw_annotations['task_id'].isin(tasks_with_multiple_anns)]
-    remaining_task_count = filtered_df['task_id'].nunique()
-    print(f"Initial tasks: {initial_task_count}, Remaining tasks: {remaining_task_count}, "
-          f"Removed tasks: {initial_task_count - remaining_task_count}")
-
-    # Step 1: Create the assignment tracking DataFrame
-    assignments_df = _create_assignment_tracking(assignments)
-
-    # Step 2: Create annotations DataFrame without defaults
-    annotations_df = create_annotations_dataframe(filtered_df)
-
-    # Add image index information to identify indexed variables
-    add_image_index_column(annotations_df)
-
-    # Initialize results containers
-    all_variable_agreements = {}
-    all_conflicts = []
-
-    # Create a mapping of base variable names to the original variables with indices
-    base_to_indexed = {}
-    if 'variable_base' in annotations_df.columns and 'image_idx' in annotations_df.columns:
-        indexed_vars = annotations_df[annotations_df['image_idx'] > 0]
-        for base_name in indexed_vars['variable_base'].unique():
-            matching_vars = indexed_vars[indexed_vars['variable_base'] == base_name]['variable'].unique()
-            if len(matching_vars) > 0:
-                base_to_indexed[base_name] = list(matching_vars)
-
-    # Process each variable individually
-    for variable, variable_info in choices.items():
-        if field_names and variable not in field_names:
-            continue
-
-        # Check if this is a base variable name that has indexed versions
-        if variable in base_to_indexed:
-            # We'll create a consolidated variable for all indexed versions
-            consolidated_name = f"{variable}_$"
-
-            # Get all annotations for the indexed versions of this variable
-            all_indices_annotations = []
-            for indexed_var in base_to_indexed[variable]:
-                var_annotations = annotations_df[annotations_df['variable'] == indexed_var]
-                if len(var_annotations) > 0:
-                    all_indices_annotations.append(var_annotations)
-
-            if all_indices_annotations:
-                # Combine all indexed annotations
-                variable_annotations = pd.concat(all_indices_annotations)
-
-                # Apply defaults
-                variable_with_defaults = apply_defaults_for_variable(
-                    variable_annotations,
-                    assignments_df,
-                    consolidated_name,  # Use consolidated name
-                    variable_info
-                )
-
-                # Create agreement matrix with task+index as the row identifier
-                agreement_matrix = create_indexed_agreement_matrix(variable_with_defaults)
-
-                # Calculate agreement
-                variable_agreement = calculate_agreement(
-                    agreement_matrix,
-                    variable_info
-                )
-
-                # Store results under the consolidated name
-                all_variable_agreements[consolidated_name] = variable_agreement
-
-                # Identify conflicts
-                variable_conflicts = identify_conflicts(
-                    agreement_matrix,
-                    consolidated_name,
-                    variable_info,
-                    variable_with_defaults
-                )
-
-                all_conflicts.extend(variable_conflicts)
-
-        # Standard processing for regular variables
-        else:
-            variable_annotations = annotations_df[annotations_df['variable'] == variable]
-
-            if len(variable_annotations) == 0:
-                print(f"No data on {variable}")
-                continue
-
-            # Apply defaults
-            variable_with_defaults = apply_defaults_for_variable(
-                variable_annotations,
-                assignments_df,
-                variable,
-                variable_info
-            )
-
-            # Create standard agreement matrix
-            agreement_matrix = variable_with_defaults.pivot(
-                index='task_id',
-                columns='user_id',
-                values='value'
-            )
-
-            # For single-choice, clear the agreement matrix
-            if variable_info.choice == 'single':
-                cleared_agreement_matrix = clear_agreement_matrix(agreement_matrix, variable_info)
-                # Calculate agreement
-                variable_agreement = calculate_agreement(
-                    cleared_agreement_matrix,
-                    variable_info
-                )
-            else:
-                # For multiple-choice, use the original matrix
-                variable_agreement = calculate_agreement(
-                    agreement_matrix,
-                    variable_info
-                )
-
-            # Store results
-            all_variable_agreements[variable] = variable_agreement
-
-            # Identify conflicts
-            variable_conflicts = identify_conflicts(
-                agreement_matrix,
-                variable,
-                variable_info,
-                variable_with_defaults
-            )
-
-            all_conflicts.extend(variable_conflicts)
-
-    # Generate the final report
-    agreement_report = generate_agreement_report(
-        all_variable_agreements,
-        all_conflicts,
-        choices,
-        annotations_df,
-        base_to_indexed
-    )
-
-    return agreement_report
 
 
 def fix_users(df: DataFrame, usermap: dict) -> DataFrame:
@@ -884,469 +1439,3 @@ def calculate_agreement(agreement_matrix, variable_info):
     else:
         raise ValueError(f"Unknown variable type: {variable_info}")
 
-
-def _calculate_single_select_agreement2(agreement_matrix,
-                                        variable_info: ChoiceFieldModel,
-                                        counts: bool = True,
-                                        collect_conflicts_agreements: bool = True) -> dict:
-    """Calculate agreement for single-select variables with improved metrics."""
-    # Convert list values to single values
-    agreement_matrix = agreement_matrix.map(lambda v: v[0] if isinstance(v, list) else np.NaN)
-
-    # Calculate total valid rows (rows with at least one non-NaN value)
-    valid_rows = agreement_matrix.dropna(how='all')
-    total_valid_rows = len(valid_rows)
-
-    # Calculate rows with agreement (all coders chose the same option)
-    agreement_mask = valid_rows.apply(lambda row: row.dropna().nunique() == 1, axis=1)
-    agreement_rows = valid_rows[agreement_mask]
-    agreement_count = len(agreement_rows)
-
-    # Calculate rows with disagreement
-    disagreement_mask = valid_rows.apply(lambda row: row.dropna().nunique() > 1, axis=1)
-    disagreement_rows = valid_rows[disagreement_mask]
-    disagreement_count = len(disagreement_rows)
-
-    # Calculate percent agreement (simpler metric than kappa)
-    percent_agreement = agreement_count / total_valid_rows if total_valid_rows > 0 else 1.0
-    # Round to 4 digits
-    percent_agreement = round(percent_agreement, 4)
-
-    # Calculate Fleiss' kappa
-    try:
-        cac = CAC(agreement_matrix)
-        fk = cac.fleiss()
-        kappa = fk["est"]["coefficient_value"]
-        gwet = cac.gwet()["est"]["coefficient_value"]
-        # Round to 4 digits
-        kappa = round(kappa, 4)
-        gwet = round(gwet, 4)
-    except Exception as e:
-        logger.error(f"Kappa calculation error for {variable_info.name}: {str(e)}")
-        kappa = 1 if agreement_count == total_valid_rows else 0
-        gwet = 0
-
-    # Option counts - count exactly how many times each option was selected
-    option_counts = {}
-    flat_values = agreement_matrix.values.flatten()
-    series_counts = pd.Series(flat_values).value_counts().to_dict()
-
-    for option in variable_info.options:
-        option_idx = variable_info.option_index(option)
-        # Convert NumPy types to Python native types
-        count = series_counts.get(option_idx, 0)
-        option_counts[option] = int(count) if hasattr(count, 'item') else count
-
-    # Get conflicts if needed
-    conflicts = None
-    if collect_conflicts_agreements:
-        conflicts = disagreement_rows.index.tolist()
-
-    # Per-option detailed analysis
-    option_results = {}
-    for option in variable_info.options:
-        option_idx = variable_info.option_index(option)
-
-        # Rows where this option appears at least once
-        option_mask = (agreement_matrix == option_idx).any(axis=1)
-        option_rows = agreement_matrix[option_mask]
-        option_row_count = len(option_rows)
-
-        # Rows with complete agreement on this option
-        agreement_on_option_mask = option_rows.apply(
-            lambda row: row.dropna().nunique() == 1 and row.dropna().iloc[0] == option_idx,
-            axis=1
-        )
-        agreement_on_option_count = agreement_on_option_mask.sum()
-
-        # Rows with disagreement involving this option
-        disagreement_on_option_count = option_row_count - agreement_on_option_count
-
-        # Calculate option-level percent agreement
-        option_percent_agreement = agreement_on_option_count / option_row_count if option_row_count > 0 else 1.0
-        # Round to 4 digits
-        option_percent_agreement = round(option_percent_agreement, 4)
-
-        error = None
-        # Option-specific kappa
-        try:
-            if len(option_rows) > 0:
-                cac = CAC(option_rows)
-                option_kappa = cac.fleiss()["est"]["coefficient_value"]
-                option_gwet = cac.gwet()["est"]["coefficient_value"]
-                # Round to 4 digits
-                option_kappa = round(option_kappa, 4)
-                option_gwet = round(option_gwet, 4)
-            else:
-                option_kappa = 1.0
-                option_gwet = 1.0
-        except Exception as e:
-            option_kappa = 1.0 if disagreement_on_option_count == 0 else 0.0
-            option_gwet = 1.0
-            error = str(e)
-
-        # Convert any NumPy types to native Python types
-        option_results[option] = {
-            "error": error,
-            "kappa": float(option_kappa),
-            "gwet": float(option_gwet),
-            "percent_agreement": float(option_percent_agreement),  # Add percent agreement at option level
-            "number": int(option_row_count) if hasattr(option_row_count, 'item') else option_row_count,
-            "agreement_count": int(agreement_on_option_count) if hasattr(agreement_on_option_count,
-                                                                         'item') else agreement_on_option_count,
-            "disagreement_count": int(disagreement_on_option_count) if hasattr(disagreement_on_option_count,
-                                                                               'item') else disagreement_on_option_count,
-            "total_selections": option_counts[option]
-        }
-
-    # Final conversion of all values to JSON-serializable types
-    return {
-        'kappa': float(kappa) if hasattr(kappa, 'item') else kappa,
-        "gwet": float(gwet) if hasattr(gwet, 'item') else gwet,
-        'percent_agreement': float(percent_agreement) if hasattr(percent_agreement, 'item') else percent_agreement,
-        'total_rows': int(total_valid_rows) if hasattr(total_valid_rows, 'item') else total_valid_rows,
-        'agreement_count': int(agreement_count) if hasattr(agreement_count, 'item') else agreement_count,
-        'disagreement_count': int(disagreement_count) if hasattr(disagreement_count, 'item') else disagreement_count,
-        'counts': option_counts,
-        'option_results': option_results,
-        'conflicts': [str(c) for c in conflicts] if conflicts is not None else None
-    }
-
-
-def _calculate_multi_select_agreement(agreement_matrix, variable_info: ChoiceFieldModel,
-                                      counts: bool = True, collect_conflicts_agreements: bool = True):
-    """
-    Calculate agreement for multi-select variables by creating
-    binary matrices for each option.
-    """
-    options = variable_info.options
-
-    # Track agreement metrics for each option
-    option_results = {}
-    all_conflicts = []
-
-    # Get overall counts if needed
-    option_counts = {}
-    if counts:
-        # Count how many times each option was selected
-        for option in options:
-            count = 0
-            for _, row in agreement_matrix.iterrows():
-                for value in row.dropna():
-                    if isinstance(value, list) and option in value:
-                        count += 1
-            option_counts[option] = count
-
-    # Process each option separately as a binary choice
-    for option in options:
-        # SIMPLEST FIX: Use the map function with a safe lambda that handles NaN values correctly
-        binary_matrix = agreement_matrix.map(
-            lambda x: 1 if isinstance(x, list) and option in x else (
-                0 if isinstance(x, list) else np.nan
-            )
-        )
-
-        # Only look at rows with at least 2 annotators
-        multiple_annotator_mask = binary_matrix.count(axis=1) >= 2
-        rows_with_multiple_annotators = binary_matrix[multiple_annotator_mask]
-
-        # Skip the rest of processing if no rows have multiple annotators
-        if len(rows_with_multiple_annotators) == 0:
-            option_results[option] = {
-                'error': None,
-                'kappa': 1.0,
-                'gwet': 1.0,
-                'percent_agreement': 1.0,
-                'total_rows_selected': 0,
-                'total_tasks_analyzed': 0,
-                'agreement_count': 0,
-                'disagreement_count': 0,
-                'all_present_count': 0,
-                'all_absent_count': 0,
-                'conflicts': None
-            }
-            continue
-
-        # Count rows where all coders agreed this option was present
-        all_present_mask = rows_with_multiple_annotators.apply(
-            lambda row: row.dropna().nunique() == 1 and row.dropna().iloc[0] == 1,
-            axis=1
-        )
-        all_present_count = all_present_mask.sum()
-
-        # Count rows where all coders agreed this option was absent
-        all_absent_mask = rows_with_multiple_annotators.apply(
-            lambda row: row.dropna().nunique() == 1 and row.dropna().iloc[0] == 0,
-            axis=1
-        )
-        all_absent_count = all_absent_mask.sum()
-
-        # Total agreement count (all present OR all absent)
-        agreement_count = all_present_count + all_absent_count
-
-        # Calculate disagreements (rows where some coders say present and others say absent)
-        disagreement_mask = rows_with_multiple_annotators.apply(
-            lambda row: row.dropna().nunique() > 1,  # Must have both 0 and 1 in the row
-            axis=1
-        )
-        disagreement_rows = rows_with_multiple_annotators[disagreement_mask]
-        disagreement_count = len(disagreement_rows)
-
-        # Rows where this option was selected at least once
-        rows_with_option = rows_with_multiple_annotators[rows_with_multiple_annotators.eq(1).any(axis=1)]
-        option_presence_count = len(rows_with_option)
-
-        # Calculate percent agreement based on rows with multiple annotators
-        total_analyzed = len(rows_with_multiple_annotators)
-        percent_agreement = agreement_count / total_analyzed if total_analyzed > 0 else 1.0
-        # Round to 4 digits
-        percent_agreement = round(percent_agreement, 4)
-
-        # Calculate kappa and gwet for this option
-        kappa = 1.0
-        gwet = 1.0
-        error = None
-
-        try:
-            if len(rows_with_multiple_annotators) > 0:
-                cac = CAC(rows_with_multiple_annotators)
-                kappa = cac.fleiss()["est"]["coefficient_value"]
-                gwet = cac.gwet()["est"]["coefficient_value"]
-                # Round to 4 digits
-                kappa = round(kappa, 4)
-                gwet = round(gwet, 4)
-        except Exception as e:
-            error = str(e)
-            logger.error(f"Agreement calculation error for option {option}: {error}")
-
-        # Get conflicts for this option if needed
-        option_conflicts = []
-        if collect_conflicts_agreements:
-            # Only collect ACTUAL disagreements (where some coders say present and others say absent)
-            for task_id in disagreement_rows.index:
-                row_data = binary_matrix.loc[task_id].dropna()
-
-                # Check if there's a mix of 0s and 1s (true disagreement)
-                values_set = set(row_data)
-                if len(values_set) > 1:  # Must have both 0 and 1 to be a true disagreement
-                    option_conflicts.append(task_id)
-
-                    # Only add users who actually coded
-                    conflict_info = {
-                        'task_id': task_id,
-                        'option': option,
-                        'agreement_score': 0,
-                        'annotations': [
-                            {'user_id': coder, 'value': 'present' if value == 1 else 'absent'}
-                            for coder, value in row_data.items()
-                        ]
-                    }
-                    all_conflicts.append(conflict_info)
-
-        # Store metrics for this option
-        option_results[option] = {
-            'error': error,
-            'kappa': float(kappa),
-            'gwet': float(gwet),
-            'percent_agreement': float(percent_agreement),
-            'total_rows_selected': int(option_presence_count),  # Rows where option was selected
-            'total_tasks_analyzed': int(total_analyzed),  # Only rows with multiple annotators
-            'agreement_count': int(agreement_count),
-            'disagreement_count': int(disagreement_count),
-            'all_present_count': int(all_present_count),
-            'all_absent_count': int(all_absent_count),
-            'conflicts': [str(c) for c in option_conflicts] if option_conflicts else None
-        }
-
-    # Final result
-    return {
-        'counts': option_counts,
-        'option_results': option_results,
-        'conflicts': all_conflicts
-    }
-
-
-def export_agreement_metrics_to_csv(agreement_report, output_file):
-    """
-    Export agreement metrics to a CSV file.
-
-    Parameters:
-    -----------
-    agreement_report : dict
-        The agreement report returned by analyze_coder_agreement
-
-    output_file : str
-        Path to the output CSV file
-    """
-    import csv
-    from datetime import datetime
-
-    # Prepare data for CSV
-    rows = []
-
-    # Process single-choice variables
-    single_choice_vars = agreement_report["agreement_metrics"]["single_choice"]["variables"]
-    for var_name, var_data in single_choice_vars.items():
-        # Basic variable info
-        row = {
-            "variable_type": "single_choice",
-            "variable": var_name,
-            "option": "VARIABLE_LEVEL",
-            "kappa": var_data.get("kappa", ""),
-            "gwet": var_data.get("gwet", ""),
-            "percent_agreement": var_data.get("percent_agreement", ""),
-            "total_tasks": var_data.get("total_rows", ""),
-            "agreement_count": var_data.get("agreement_count", ""),
-            "disagreement_count": var_data.get("disagreement_count", ""),
-            "option_selected_count": "",
-            "all_present_count": "",
-            "all_absent_count": "",
-        }
-        rows.append(row)
-
-        # Add option-level data for single choice
-        if "option_results" in var_data and var_data["option_results"]:
-            for opt_name, opt_data in var_data["option_results"].items():
-                opt_row = {
-                    "variable_type": "single_choice",
-                    "variable": var_name,
-                    "option": opt_name,
-                    "kappa": opt_data.get("kappa", ""),
-                    "gwet": opt_data.get("gwet", ""),
-                    "percent_agreement": opt_data.get("percent_agreement", ""),  # Include percent agreement for options
-                    "total_tasks": opt_data.get("number", ""),
-                    "agreement_count": opt_data.get("agreement_count", ""),
-                    "disagreement_count": opt_data.get("disagreement_count", ""),
-                    "option_selected_count": opt_data.get("total_selections", ""),
-                    "all_present_count": "",
-                    "all_absent_count": "",
-                }
-                rows.append(opt_row)
-
-    # Process multiple-choice variables
-    multiple_choice_vars = agreement_report["agreement_metrics"]["multiple_choice"]["variables"]
-    for var_name, var_data in multiple_choice_vars.items():
-        # Add option-level data
-        if "option_results" in var_data and var_data["option_results"]:
-            for opt_name, opt_data in var_data["option_results"].items():
-                opt_row = {
-                    "variable_type": "multiple_choice",
-                    "variable": var_name,
-                    "option": opt_name,
-                    "kappa": opt_data.get("kappa", ""),
-                    "gwet": opt_data.get("gwet", ""),
-                    "percent_agreement": opt_data.get("percent_agreement", ""),
-                    "total_tasks": opt_data.get("total_tasks_analyzed", opt_data.get("total_rows", "")),
-                    "agreement_count": opt_data.get("agreement_count", ""),
-                    "disagreement_count": opt_data.get("disagreement_count", ""),
-                    "option_selected_count": opt_data.get("total_rows_selected",
-                                                          opt_data.get("option_presence_count", "")),
-                    "all_present_count": opt_data.get("all_present_count", ""),
-                    "all_absent_count": opt_data.get("all_absent_count", ""),
-                }
-                rows.append(opt_row)
-
-    # Add summary rows
-    rows.append({
-        "variable_type": "SUMMARY",
-        "variable": "ALL_SINGLE_CHOICE",
-        "option": "",
-        "kappa": round(agreement_report["agreement_metrics"]["single_choice"]["average_kappa"], 4),
-        "gwet": round(agreement_report["agreement_metrics"]["single_choice"]["average_gwet"], 4),
-        "percent_agreement": "",
-        "total_tasks": "",
-        "agreement_count": "",
-        "disagreement_count": agreement_report["agreement_metrics"]["single_choice"]["conflict_count"],
-        "option_selected_count": "",
-        "all_present_count": "",
-        "all_absent_count": "",
-    })
-
-    rows.append({
-        "variable_type": "SUMMARY",
-        "variable": "ALL_MULTIPLE_CHOICE",
-        "option": "",
-        "kappa": round(agreement_report["agreement_metrics"]["multiple_choice"]["average_kappa"], 4),
-        "gwet": round(agreement_report["agreement_metrics"]["multiple_choice"]["average_gwet"], 4),
-        "percent_agreement": "",
-        "total_tasks": "",
-        "agreement_count": "",
-        "disagreement_count": agreement_report["agreement_metrics"]["multiple_choice"]["conflict_count"],
-        "option_selected_count": "",
-        "all_present_count": "",
-        "all_absent_count": "",
-    })
-
-    # Add overall summary
-    rows.append({
-        "variable_type": "SUMMARY",
-        "variable": "OVERALL",
-        "option": "",
-        "kappa": round(agreement_report["agreement_metrics"]["overall"]["kappa"], 4),
-        "gwet": round(agreement_report["agreement_metrics"]["overall"]["gwet"], 4),
-        "percent_agreement": "",
-        "total_tasks": agreement_report["summary_stats"]["total_tasks"],
-        "agreement_count": "",
-        "disagreement_count": agreement_report["summary_stats"]["total_conflicts"],
-        "option_selected_count": "",
-        "all_present_count": "",
-        "all_absent_count": "",
-    })
-
-    # Write to CSV
-    with open(output_file, 'w', newline='') as f:
-        # Define the fieldnames in a specific order for better readability
-        fieldnames = [
-            "variable_type",
-            "variable",
-            "option",
-            "kappa",
-            "gwet",
-            "percent_agreement",
-            "total_tasks",
-            "agreement_count",
-            "disagreement_count",
-            "option_selected_count",
-            "all_present_count",
-            "all_absent_count"
-        ]
-
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
-
-    print(f"Agreement metrics exported to {output_file}")
-
-
-def export_agreement_report(agreement_report, output_file=None):
-    """
-    Export the agreement report to a CSV file.
-
-    Parameters:
-    -----------
-    agreement_report : dict
-        The agreement report returned by analyze_coder_agreement
-
-    output_file : str, optional
-        Path to the output CSV file. If not provided, a default name will be used.
-
-    Returns:
-    --------
-    str
-        Path to the created CSV file
-    """
-    import os
-    from datetime import datetime
-
-    # Generate a default filename if none provided
-    if output_file is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file = f"agreement_metrics_{timestamp}.csv"
-
-    # Ensure the directory exists
-    os.makedirs(os.path.dirname(os.path.abspath(output_file)) or '.', exist_ok=True)
-
-    # Export the metrics
-    export_agreement_metrics_to_csv(agreement_report, output_file)
-
-    return output_file
