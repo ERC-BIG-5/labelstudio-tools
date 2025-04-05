@@ -13,6 +13,181 @@ from tools.project_logging import get_logger
 logger = get_logger(__file__)
 
 
+def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info: ChoiceFieldModel,
+                       variable_annotations):
+    """
+    Identify conflicts for this variable.
+
+    Parameters:
+    -----------
+    agreement_matrix : DataFrame
+        Matrix with tasks as rows and coders as columns
+
+    variable : str
+        ID of the variable
+
+    variable_info : ChoiceFieldModel
+        Variable metadata including type
+
+    variable_annotations : DataFrame
+        Annotations for this variable with all metadata
+
+    Returns:
+    --------
+    list of conflict dictionaries
+    """
+    conflicts = []
+
+    # Get a mapping of task_id to platform_id from the annotations
+    platform_id_map = {}
+    for _, row in variable_annotations.iterrows():
+        if 'task_id' in row and 'platform_id' in row:
+            platform_id_map[row['task_id']] = row['platform_id']
+
+    # Check if we're using composite keys (for indexed variables)
+    has_composite_key = False
+    if len(agreement_matrix.index) > 0:
+        first_idx = agreement_matrix.index[0]
+        has_composite_key = isinstance(first_idx, str) and '_' in first_idx
+
+    # Different handling for single vs multiple choice variables
+    if variable_info.choice == 'single':
+        # For single-select, identify conflicts where annotators chose different options
+        for task_id, row in agreement_matrix.iterrows():
+            # Drop NaN values and get the values and corresponding coders
+            values = row.dropna().tolist()
+            coders = row.dropna().index.tolist()
+
+            if len(values) < 2:
+                continue  # Need at least 2 annotations to have a conflict
+
+            # For single-choice, extract the first element from any lists
+            processed_values = []
+            for val in values:
+                if isinstance(val, list) and len(val) > 0:
+                    processed_values.append(val[0])
+                else:
+                    processed_values.append(val)
+
+            # Check if all values are equal
+            unique_values = set()
+            for val in processed_values:
+                if isinstance(val, (int, float, str)):
+                    unique_values.add(val)
+
+            if len(unique_values) <= 1:
+                continue  # All values are the same, no conflict
+
+            # Extract actual task_id and image_idx if using composite keys
+            actual_task_id = task_id
+            image_idx = None
+
+            if has_composite_key:
+                parts = str(task_id).split('_')
+                if len(parts) >= 2:
+                    actual_task_id = parts[0]
+                    try:
+                        image_idx = int(parts[1])
+                    except (ValueError, IndexError):
+                        pass
+
+            # Find platform_id for this task
+            platform_id = platform_id_map.get(actual_task_id)
+
+            # Convert numeric indices to option labels for readability
+            labeled_annotations = []
+            for i, value in enumerate(processed_values):
+                if isinstance(value, (int, float)) and not np.isnan(value):
+                    try:
+                        # Convert index to label using the options list
+                        label = variable_info.options[int(value)]
+                    except (IndexError, ValueError):
+                        label = str(value) + " (unknown option)"
+                else:
+                    label = str(value)
+
+                labeled_annotations.append({
+                    'user_id': coders[i],
+                    'value': label
+                })
+
+            # Record conflict
+            conflict = {
+                'task_id': actual_task_id,
+                'platform_id': platform_id,
+                'variable': variable,
+                'agreement_score': 0.0,  # 0 for a conflict
+                'annotations': labeled_annotations
+            }
+
+            # Add image_idx if available
+            if image_idx is not None:
+                conflict['image_idx'] = image_idx
+
+            conflicts.append(conflict)
+
+    else:  # Multiple choice
+        # For multi-select, we need to check conflicts option by option
+        options = variable_info.options
+
+        for option in options:
+            # Create binary matrix for this option (1 if present, 0 if absent)
+            binary_matrix = agreement_matrix.applymap(
+                lambda x: 1 if isinstance(x, list) and option in x else 0
+            )
+
+            # Look for disagreements on this option
+            for task_id, row in binary_matrix.iterrows():
+                # Drop NaN values
+                values = row.dropna()
+                if len(values) < 2:
+                    continue  # Need at least 2 annotations
+
+                # Check if there's disagreement (mix of 0s and 1s)
+                if values.nunique() <= 1:
+                    continue  # All annotators agree on this option
+
+                # Extract actual task_id and image_idx if using composite keys
+                actual_task_id = task_id
+                image_idx = None
+
+                if has_composite_key:
+                    parts = str(task_id).split('_')
+                    if len(parts) >= 2:
+                        actual_task_id = parts[0]
+                        try:
+                            image_idx = int(parts[1])
+                        except (ValueError, IndexError):
+                            pass
+
+                # Create annotations showing which users marked this option as present/absent
+                option_annotations = []
+                for coder, value in values.items():
+                    option_annotations.append({
+                        'user_id': coder,
+                        'option': option,
+                        'value': 'present' if value == 1 else 'absent'
+                    })
+
+                # Record conflict for this option
+                conflict = {
+                    'task_id': actual_task_id,
+                    'platform_id': platform_id_map.get(actual_task_id),
+                    'variable': variable,
+                    'option': option,  # Specify which option has the conflict
+                    'agreement_score': 0.0,
+                    'annotations': option_annotations,
+                    'conflict_type': 'multiple_choice'
+                }
+
+                # Add image_idx if available
+                if image_idx is not None:
+                    conflict['image_idx'] = image_idx
+
+                conflicts.append(conflict)
+
+    return conflicts
+
 def analyze_coder_agreement(raw_annotations, assignments, choices: dict[str, ChoiceFieldModel],
                             field_names: Optional[list[str]] = None) -> dict:
     """
@@ -27,15 +202,11 @@ def analyze_coder_agreement(raw_annotations, assignments, choices: dict[str, Cho
     assignments : list of dict or DataFrame
         List of task-coder assignments with metadata
 
-    variables : dict
-        Dictionary mapping variable_ids to their metadata:
-        {
-            "variable_id": {
-                "type": "single_select" or "multi_select",
-                "options": [list of allowed values],
-                "default": default_value
-            }
-        }
+    choices : dict
+        Dictionary mapping variable_ids to their ChoiceFieldModel objects
+
+    field_names : Optional[list[str]]
+        Optional list of field names to analyze (if None, analyze all fields)
 
     Returns:
     --------
@@ -48,7 +219,9 @@ def analyze_coder_agreement(raw_annotations, assignments, choices: dict[str, Cho
     tasks_with_multiple_anns = task_annotation_counts[task_annotation_counts > 1].index
     filtered_df = raw_annotations[raw_annotations['task_id'].isin(tasks_with_multiple_anns)]
     remaining_task_count = filtered_df['task_id'].nunique()
-    print(initial_task_count, remaining_task_count, initial_task_count - remaining_task_count)
+    print(f"Initial tasks: {initial_task_count}, Remaining tasks: {remaining_task_count}, "
+          f"Removed tasks: {initial_task_count - remaining_task_count}")
+
     # Step 1: Create the assignment tracking DataFrame
     assignments_df = _create_assignment_tracking(assignments)
 
@@ -73,7 +246,6 @@ def analyze_coder_agreement(raw_annotations, assignments, choices: dict[str, Cho
 
     # Process each variable individually
     for variable, variable_info in choices.items():
-        # todo can we clean the df earlier?
         if field_names and variable not in field_names:
             continue
 
@@ -114,14 +286,14 @@ def analyze_coder_agreement(raw_annotations, assignments, choices: dict[str, Cho
                 all_variable_agreements[consolidated_name] = variable_agreement
 
                 # Identify conflicts
-                # variable_conflicts = identify_conflicts(
-                #     agreement_matrix,
-                #     consolidated_name,
-                #     variable_info,
-                #     variable_with_defaults
-                # )
-                #
-                # all_conflicts.extend(variable_conflicts)
+                variable_conflicts = identify_conflicts(
+                    agreement_matrix,
+                    consolidated_name,
+                    variable_info,
+                    variable_with_defaults
+                )
+
+                all_conflicts.extend(variable_conflicts)
 
         # Standard processing for regular variables
         else:
@@ -145,26 +317,34 @@ def analyze_coder_agreement(raw_annotations, assignments, choices: dict[str, Cho
                 columns='user_id',
                 values='value'
             )
-            # agreement_matrix_assertions(agreement_matrix, variable_info)
-            cleared_agreement_matrix = clear_agreement_matrix(agreement_matrix, variable_info)
-            # Calculate agreement
-            variable_agreement = calculate_agreement(
-                cleared_agreement_matrix,
-                variable_info
-            )
+
+            # For single-choice, clear the agreement matrix
+            if variable_info.choice == 'single':
+                cleared_agreement_matrix = clear_agreement_matrix(agreement_matrix, variable_info)
+                # Calculate agreement
+                variable_agreement = calculate_agreement(
+                    cleared_agreement_matrix,
+                    variable_info
+                )
+            else:
+                # For multiple-choice, use the original matrix
+                variable_agreement = calculate_agreement(
+                    agreement_matrix,
+                    variable_info
+                )
 
             # Store results
             all_variable_agreements[variable] = variable_agreement
 
             # Identify conflicts
-            # variable_conflicts = identify_conflicts(
-            #     agreement_matrix,
-            #     variable,
-            #     variable_info,
-            #     variable_with_defaults
-            # )
-            #
-            # all_conflicts.extend(variable_conflicts)
+            variable_conflicts = identify_conflicts(
+                agreement_matrix,
+                variable,
+                variable_info,
+                variable_with_defaults
+            )
+
+            all_conflicts.extend(variable_conflicts)
 
     # Generate the final report
     agreement_report = generate_agreement_report(
@@ -177,106 +357,189 @@ def analyze_coder_agreement(raw_annotations, assignments, choices: dict[str, Cho
 
     return agreement_report
 
-
-def agreement_matrix_assertions(agreement_matrix: DataFrame, variable_info: dict):
-    # (index, data)
-    for row in agreement_matrix.iterrows():
-        # cell: (col, value)
-        for idx, cell in enumerate(row[1]):
-            if isinstance(cell, list) and len(cell) == 0:
-                print(row[0], row[1].index[idx])
-
-
-def add_image_index_column(df):
+def fix_users(df: DataFrame, usermap: dict) -> DataFrame:
     """
-    Extract indices from variable names and add columns for base variable name and index.
-    For example: "nep_materiality_visual_0" -> base: "nep_materiality_visual", idx: 0
+    Maps user IDs in the dataframe according to the provided mapping.
 
     Parameters:
     -----------
     df : DataFrame
-        DataFrame containing 'variable' or 'category' column
+        DataFrame containing a 'user_id' column
+
+    usermap : dict
+        Dictionary mapping user IDs to new identifiers
 
     Returns:
     --------
-    dict
-        Dictionary mapping base variable names to their indices
+    DataFrame
+        DataFrame with user_id column replaced according to the mapping
     """
-    # Determine which column to use
-    # if 'variable' not in df.columns and 'category' in df.columns:
-    #     df['variable'] = df['category']
-    #
-    # if 'variable' not in df.columns:
-    #     print("Warning: No variable column found")
-    #     return {}
+    df['user_id'] = df['user_id'].map(usermap)
+    return df
 
-    # Extract base names and indices
-    base_names = []
-    indices = []
 
-    for var_name in df['variable']:
-        var_str = str(var_name)
-        # Look for _NUMBER at the end of the string
-        match = re.search(r'_(\d+)(?:$|_)', var_str)
+def generate_agreement_report(all_variable_agreements, all_conflicts, choices, annotations_df, base_to_indexed=None):
+    """
+    Generate final agreement report.
 
-        if match:
-            idx = int(match.group(0).strip("_"))
-            # Remove the _NUMBER suffix to get base name
-            if match.group(0)[0] == "_" and match.group(0)[-1] == "_":
-                base = re.sub(r'_(\d+)(?:$|_)', '', var_str)
-            else:
-                base = re.sub(r'_(\d+)(?:$|_)', '', var_str)
-            base_names.append(base)
+    Parameters:
+    -----------
+    all_variable_agreements : dict
+        Dictionary of variable agreements
 
-            indices.append(idx)
+    all_conflicts : list
+        List of conflicts
+
+    choices : dict
+        Variable metadata (mapping of variable_ids to ChoiceFieldModel objects)
+
+    annotations_df : DataFrame
+        Original annotations
+
+    base_to_indexed : dict, optional
+        Mapping of base variable names to their indexed versions
+
+    Returns:
+    --------
+    dict with complete report
+    """
+    # Calculate overall statistics
+    # Count unique tasks, coders, and variables
+    unique_tasks = annotations_df['task_id'].nunique()
+    unique_coders = annotations_df['user_id'].nunique()
+    total_variables = len(choices)
+    total_annotations = len(annotations_df)
+    total_conflicts = len(all_conflicts)
+
+    # Group variables by type
+    single_choice_vars = []
+    multiple_choice_vars = []
+
+    for var_name, var_info in choices.items():
+        if var_info.choice == 'single':
+            single_choice_vars.append(var_name)
+        elif var_info.choice == 'multiple':
+            multiple_choice_vars.append(var_name)
+
+    # Calculate overall agreement metrics
+    single_choice_agreements = {}
+    multiple_choice_agreements = {}
+
+    # Calculate average agreements by choice type
+    single_kappas = []
+    single_gwets = []
+    multiple_option_kappas = []
+    multiple_option_gwets = []
+
+    # Process single-choice variables
+    for var_name, var_metrics in all_variable_agreements.items():
+        var_info = None
+        # Handle consolidated variables (with _$)
+        if var_name.endswith('_$'):
+            base_name = var_name[:-2]
+            if base_name in choices:
+                var_info = choices[base_name]
         else:
-            base_names.append(var_str)
-            indices.append(0)  # 0 indicates no index
+            if var_name in choices:
+                var_info = choices[var_name]
 
-    # Add new columns
-    df['variable_base'] = base_names
-    df['image_idx'] = indices
+        if var_info is None:
+            continue
 
-    # Create mapping of base variables to their indices
-    base_to_indices = {}
-    for base, idx in zip(base_names, indices):
-        if idx > 0:  # Only track variables with indices
-            if base not in base_to_indices:
-                base_to_indices[base] = []
-            base_to_indices[base].append(idx)
+        if var_info.choice == 'single':
+            # Extract kappa and gwet if available
+            if 'kappa' in var_metrics:
+                single_kappas.append(var_metrics['kappa'])
+            if 'gwet' in var_metrics:
+                single_gwets.append(var_metrics['gwet'])
+            single_choice_agreements[var_name] = var_metrics
+        elif var_info.choice == 'multiple':
+            # For multiple-choice, we track option-level metrics
+            if 'option_results' in var_metrics:
+                for option, option_metrics in var_metrics['option_results'].items():
+                    if 'kappa' in option_metrics:
+                        multiple_option_kappas.append(option_metrics['kappa'])
+                    if 'gwet' in option_metrics:
+                        multiple_option_gwets.append(option_metrics['gwet'])
+            multiple_choice_agreements[var_name] = var_metrics
 
-    # Print summary
-    if base_to_indices:
-        pass
-        # print(f"Found {len(base_to_indices)} variables with indices:")
-        # for base, idxs in base_to_indices.items():
-        #     print(f"  {base}: indices {sorted(idxs)}")
+    # Calculate averages
+    avg_single_kappa = sum(single_kappas) / len(single_kappas) if single_kappas else 0
+    avg_single_gwet = sum(single_gwets) / len(single_gwets) if single_gwets else 0
+    avg_multiple_kappa = sum(multiple_option_kappas) / len(multiple_option_kappas) if multiple_option_kappas else 0
+    avg_multiple_gwet = sum(multiple_option_gwets) / len(multiple_option_gwets) if multiple_option_gwets else 0
 
-    return base_to_indices
+    # Calculate overall average across all variables
+    all_kappas = single_kappas + multiple_option_kappas
+    all_gwets = single_gwets + multiple_option_gwets
+    overall_kappa = sum(all_kappas) / len(all_kappas) if all_kappas else 0
+    overall_gwet = sum(all_gwets) / len(all_gwets) if all_gwets else 0
 
+    # Process indexed variables
+    indexed_vars_count = 0
+    base_vars_count = 0
+    if base_to_indexed:
+        indexed_vars_count = sum(len(vars_list) for vars_list in base_to_indexed.values())
+        base_vars_count = len(base_to_indexed)
 
-def clear_agreement_matrix(agreement_matrix: DataFrame, variable_info: ChoiceFieldModel) -> DataFrame:
-    def single_val(c):
-        if isinstance(c, list):
-            return list(map(variable_info.option_index, c))
-        elif isinstance(c, str) and c == NO_SINGLE_CHOICE:
-            return [99]
-        else:
-            try:
-                if np.isnan(c):
-                    return np.NaN
-            except:
-                raise ValueError(f"maybe nan, for single. should be filled with default BEFORE: {c}")
+    # Count conflicts by variable type
+    single_choice_conflicts = [c for c in all_conflicts if
+                               'conflict_type' not in c or c.get('conflict_type') != 'multiple_choice']
+    multiple_choice_conflicts = [c for c in all_conflicts if
+                                 'conflict_type' in c and c.get('conflict_type') == 'multiple_choice']
 
-    cleared_agreement_matrix = agreement_matrix.map(single_val)
-    # print(variable_info.name)
-    # try:
-    #     if "NONE" in pd.Series(cleared_agreement_matrix.values.ravel()).unique():
-    #         pass
-    # except:
-    #     pass
-    return cleared_agreement_matrix
+    # Calculate conflict rates
+    single_conflict_rate = len(single_choice_conflicts) / (
+                unique_tasks * len(single_choice_vars)) if unique_tasks > 0 and single_choice_vars else 0
+    multiple_conflict_rate = len(multiple_choice_conflicts) / (
+                unique_tasks * len(multiple_choice_vars)) if unique_tasks > 0 and multiple_choice_vars else 0
+    overall_conflict_rate = total_conflicts / (
+                unique_tasks * total_variables) if unique_tasks > 0 and total_variables > 0 else 0
 
+    # Prepare the final report
+    report = {
+        "summary_stats": {
+            "total_tasks": unique_tasks,
+            "total_coders": unique_coders,
+            "total_variables": total_variables,
+            "total_annotations": total_annotations,
+            "total_conflicts": total_conflicts,
+            "single_choice_variables": len(single_choice_vars),
+            "multiple_choice_variables": len(multiple_choice_vars),
+            "indexed_variables_count": indexed_vars_count,
+            "base_variables_count": base_vars_count,
+            "conflict_rate": overall_conflict_rate,
+        },
+        "agreement_metrics": {
+            "overall": {
+                "kappa": float(overall_kappa),
+                "gwet": float(overall_gwet),
+            },
+            "single_choice": {
+                "average_kappa": float(avg_single_kappa),
+                "average_gwet": float(avg_single_gwet),
+                "variables": single_choice_agreements,
+                "conflict_rate": float(single_conflict_rate),
+                "conflict_count": len(single_choice_conflicts)
+            },
+            "multiple_choice": {
+                "average_kappa": float(avg_multiple_kappa),
+                "average_gwet": float(avg_multiple_gwet),
+                "variables": multiple_choice_agreements,
+                "conflict_rate": float(multiple_conflict_rate),
+                "conflict_count": len(multiple_choice_conflicts)
+            }
+        },
+        "conflicts": all_conflicts
+    }
+
+    # Make sure all numeric values are native Python types (not numpy types)
+    # This ensures JSON serialization works correctly
+    for key, value in report["summary_stats"].items():
+        if hasattr(value, 'item'):
+            report["summary_stats"][key] = value.item()
+
+    return report
 
 def create_indexed_agreement_matrix(variable_annotations):
     """
@@ -316,6 +579,101 @@ def create_indexed_agreement_matrix(variable_annotations):
             columns='user_id',
             values='value'
         )
+
+def agreement_matrix_assertions(agreement_matrix: DataFrame, variable_info: dict):
+    # (index, data)
+    for row in agreement_matrix.iterrows():
+        # cell: (col, value)
+        for idx, cell in enumerate(row[1]):
+            if isinstance(cell, list) and len(cell) == 0:
+                print(row[0], row[1].index[idx])
+
+
+def add_image_index_column(df):
+    """
+    Extract indices from variable names and add columns for base variable name and index.
+    For example: "nep_materiality_visual_0" -> base: "nep_materiality_visual", idx: 0
+
+    Parameters:
+    -----------
+    df : DataFrame
+        DataFrame containing 'variable' or 'category' column
+
+    Returns:
+    --------
+    dict
+        Dictionary mapping base variable names to their indices
+    """
+    # Extract base names and indices
+    base_names = []
+    indices = []
+
+    for var_name in df['variable']:
+        var_str = str(var_name)
+        # Look for _NUMBER at the end of the string
+        match = re.search(r'_(\d+)(?:$|_)', var_str)
+
+        if match:
+            idx = int(match.group(0).strip("_"))
+            # Remove the _NUMBER suffix to get base name
+            if match.group(0)[0] == "_" and match.group(0)[-1] == "_":
+                base = re.sub(r'_(\d+)(?:$|_)', '', var_str)
+            else:
+                base = re.sub(r'_(\d+)(?:$|_)', '', var_str)
+            base_names.append(base)
+
+            indices.append(idx)
+        else:
+            base_names.append(var_str)
+            indices.append(0)  # 0 indicates no index
+
+    # Add new columns
+    df['variable_base'] = base_names
+    df['image_idx'] = indices
+
+    # Create mapping of base variables to their indices
+    base_to_indices = {}
+    for base, idx in zip(base_names, indices):
+        if idx > 0:  # Only track variables with indices
+            if base not in base_to_indices:
+                base_to_indices[base] = []
+            base_to_indices[base].append(idx)
+
+    return base_to_indices
+
+
+def clear_agreement_matrix(agreement_matrix: DataFrame, variable_info: ChoiceFieldModel) -> DataFrame:
+    """
+    Transforms agreement matrix for single-select variables by extracting values from lists.
+
+    Parameters:
+    -----------
+    agreement_matrix : DataFrame
+        Matrix with tasks as rows and coders as columns
+
+    variable_info : ChoiceFieldModel
+        Variable metadata including options
+
+    Returns:
+    --------
+    DataFrame
+        Cleared agreement matrix with indices instead of values
+    """
+
+    def single_val(c):
+        if isinstance(c, list):
+            return list(map(variable_info.option_index, c))
+        elif isinstance(c, str) and c == NO_SINGLE_CHOICE:
+            return [99]
+        else:
+            try:
+                if np.isnan(c):
+                    return np.NaN
+            except:
+                raise ValueError(f"maybe nan, for single. should be filled with default BEFORE: {c}")
+
+    cleared_agreement_matrix = agreement_matrix.map(single_val)
+    return cleared_agreement_matrix
 
 
 def _create_assignment_tracking(assignments):
@@ -484,21 +842,17 @@ def apply_defaults_for_variable(variable_annotations: DataFrame,
 
     # Ensure the value column exists
     if 'value' not in merged.columns:
-        logger.debug("not yet implemented")
-
+        logger.debug("Value column not found")
     else:
         if variable_info.choice == 'single':
-            # merged['value'] = merged['value'].fillna(value=[variable_info.safe_default])
             merged['value'] = merged['value'].apply(
                 lambda x: x if isinstance(x, list) or not pd.isna(x) else [variable_info.safe_default]
             )
-
         else:  # multi_select
             merged['value'] = merged['value'].apply(
                 lambda x: x if isinstance(x, list) or not pd.isna(x) else []
             )
-    # DEB
-    # set(tuple(a) for a in merged["value"].tolist())
+
     return merged
 
 
@@ -518,21 +872,19 @@ def calculate_agreement(agreement_matrix, variable_info):
     --------
     dict with agreement metrics
     """
-
-    # Standardize variable type strings
+    # Handle different variable types
     if variable_info.choice == 'single':
-        return _calculate_single_select_agreement(agreement_matrix, variable_info)
+        return _calculate_single_select_agreement2(agreement_matrix, variable_info)
     elif variable_info.choice == 'multiple':
-        return {}
-        # return _calculate_multi_select_agreement(agreement_matrix, variable_info.options)
+        return _calculate_multi_select_agreement(agreement_matrix, variable_info)
     else:
         raise ValueError(f"Unknown variable type: {variable_info}")
 
 
-def _calculate_single_select_agreement(agreement_matrix,
-                                       variable_info: ChoiceFieldModel,
-                                       counts: bool = True,
-                                       collect_conflicts_agreements: bool = True) -> dict:
+def _calculate_single_select_agreement2(agreement_matrix,
+                                        variable_info: ChoiceFieldModel,
+                                        counts: bool = True,
+                                        collect_conflicts_agreements: bool = True) -> dict:
     """Calculate agreement for single-select variables with improved metrics."""
     # Convert list values to single values
     agreement_matrix = agreement_matrix.map(lambda v: v[0] if isinstance(v, list) else np.NaN)
@@ -610,10 +962,10 @@ def _calculate_single_select_agreement(agreement_matrix,
             else:
                 option_kappa = 1.0
                 option_gwet = 1
-        except:
+        except Exception as e:
             option_kappa = 1.0 if disagreement_on_option_count == 0 else 0.0
             option_gwet = 1
-            error = "x"
+            error = str(e)
 
         # Convert any NumPy types to native Python types
         option_results[option] = {
@@ -631,7 +983,7 @@ def _calculate_single_select_agreement(agreement_matrix,
     # Final conversion of all values to JSON-serializable types
     return {
         'kappa': float(kappa) if hasattr(kappa, 'item') else kappa,
-        "wget": float(gwet),
+        "gwet": float(gwet) if hasattr(gwet, 'item') else gwet,
         'percent_agreement': float(percent_agreement) if hasattr(percent_agreement, 'item') else percent_agreement,
         'total_rows': int(total_valid_rows) if hasattr(total_valid_rows, 'item') else total_valid_rows,
         'agreement_count': int(agreement_count) if hasattr(agreement_count, 'item') else agreement_count,
@@ -642,7 +994,8 @@ def _calculate_single_select_agreement(agreement_matrix,
     }
 
 
-def _calculate_multi_select_agreement(agreement_matrix, options):
+def _calculate_multi_select_agreement(agreement_matrix, variable_info: ChoiceFieldModel,
+                                      counts: bool = True, collect_conflicts_agreements: bool = True):
     """
     Calculate agreement for multi-select variables by creating
     binary matrices for each option.
@@ -652,334 +1005,124 @@ def _calculate_multi_select_agreement(agreement_matrix, options):
     agreement_matrix : DataFrame
         Matrix with tasks as rows and coders as columns
 
-    options : list
-        List of allowed options for this variable
+    variable_info : ChoiceFieldModel
+        Variable metadata including type and options
+
+    counts : bool
+        Whether to collect counts of options
+
+    collect_conflicts_agreements : bool
+        Whether to collect conflicts
 
     Returns:
     --------
-    dict with agreement metrics
+    dict with agreement metrics per option
     """
-    # Track agreement metrics for each option
-    option_metrics = {}
-    overall_kappas = []
+    options = variable_info.options
 
-    # Process each option separately
+    # Track agreement metrics for each option
+    option_results = {}
+    all_conflicts = []
+
+    # Get overall counts if needed
+    option_counts = {}
+    if counts:
+        # Count how many times each option was selected
+        for option in options:
+            count = 0
+            for _, row in agreement_matrix.iterrows():
+                for value in row.dropna():
+                    if isinstance(value, list) and option in value:
+                        count += 1
+            option_counts[option] = count
+
+    # Process each option separately as a binary choice
     for option in options:
-        # Create binary matrix for this option
+        # Create binary matrix for this option (1 if present, 0 if absent)
         binary_matrix = agreement_matrix.applymap(
             lambda x: 1 if isinstance(x, list) and option in x else 0
         )
 
-        # Calculate agreement for this option (treat as binary single-select)
-        option_agreement = _calculate_binary_agreement(binary_matrix)
-        option_metrics[option] = option_agreement
-        overall_kappas.append(option_agreement.get('kappa', 0))
+        # Calculate metrics for valid rows (rows with at least one non-NaN value)
+        valid_rows = binary_matrix.dropna(how='all')
+        total_valid_rows = len(valid_rows)
 
-    # Calculate overall metrics
-    avg_kappa = sum(overall_kappas) / len(overall_kappas) if overall_kappas else 0
+        # Calculate rows with agreement (all coders chose the same)
+        agreement_mask = valid_rows.apply(lambda row: row.dropna().nunique() == 1, axis=1)
+        agreement_rows = valid_rows[agreement_mask]
+        agreement_count = len(agreement_rows)
 
-    return {
-        'overall_agreement': avg_kappa,
-        'kappa_by_option': option_metrics,
-        'average_kappa': avg_kappa
-    }
+        # Calculate rows with disagreement
+        disagreement_mask = valid_rows.apply(lambda row: row.dropna().nunique() > 1, axis=1)
+        disagreement_rows = valid_rows[disagreement_mask]
+        disagreement_count = len(disagreement_rows)
 
+        # Calculate percent agreement
+        percent_agreement = agreement_count / total_valid_rows if total_valid_rows > 0 else 1.0
 
-def _calculate_binary_agreement(binary_matrix):
-    """
-    Calculate agreement for a binary matrix (presence/absence of an option).
+        # Calculate kappa and gwet for this option
+        kappa = 1.0
+        gwet = 1.0
+        error = None
 
-    Parameters:
-    -----------
-    binary_matrix : DataFrame
-        Matrix with tasks as rows, coders as columns, and binary values
+        try:
+            if len(valid_rows) > 0:
+                cac = CAC(binary_matrix)
+                kappa = cac.fleiss()["est"]["coefficient_value"]
+                gwet = cac.gwet()["est"]["coefficient_value"]
+        except Exception as e:
+            logger.error(f"Agreement calculation error for option {option}: {str(e)}")
+            error = str(e)
 
-    Returns:
-    --------
-    dict with agreement metrics
-    """
-    # Get coder pairs
-    coders = binary_matrix.columns
-    n_coders = len(coders)
+        # Get conflicts for this option if needed
+        option_conflicts = None
+        if collect_conflicts_agreements:
+            option_conflicts = disagreement_rows.index.tolist()
 
-    # Track agreements and kappa values
-    total_agreements = 0
-    total_comparisons = 0
-    kappa_values = []
+            # Add conflict details to all_conflicts
+            for task_id in option_conflicts:
+                row_data = binary_matrix.loc[task_id].dropna()
+                conflict_info = {
+                    'task_id': task_id,
+                    'option': option,
+                    'agreement_score': 0,  # 0 because it's a disagreement
+                    'annotations': [
+                        {'user_id': coder, 'value': 'present' if value == 1 else 'absent'}
+                        for coder, value in row_data.items()
+                    ]
+                }
+                all_conflicts.append(conflict_info)
 
-    for i in range(n_coders):
-        for j in range(i + 1, n_coders):
-            coder1 = coders[i]
-            coder2 = coders[j]
+        # Count rows where this option was selected at least once
+        rows_with_option = binary_matrix[binary_matrix.eq(1).any(axis=1)]
+        option_presence_count = len(rows_with_option)
 
-            # Get data for this pair
-            pair_data = binary_matrix[[coder1, coder2]].dropna()
+        # Count rows where all coders agreed this option was present
+        all_present_mask = binary_matrix.apply(lambda row: all(val == 1 for val in row.dropna()), axis=1)
+        all_present_count = all_present_mask.sum()
 
-            if len(pair_data) == 0:
-                continue
+        # Count rows where all coders agreed this option was absent
+        all_absent_mask = binary_matrix.apply(lambda row: all(val == 0 for val in row.dropna()), axis=1)
+        all_absent_count = all_absent_mask.sum()
 
-            # Count agreements
-            agreements = (pair_data[coder1] == pair_data[coder2]).sum()
-            total_agreements += agreements
-            total_comparisons += len(pair_data)
-
-            # Calculate Cohen's kappa for this binary choice
-            observed_agreement = agreements / len(pair_data)
-
-            # Calculate expected agreement (simpler for binary case)
-            prob_coder1_yes = pair_data[coder1].mean()
-            prob_coder1_no = 1 - prob_coder1_yes
-            prob_coder2_yes = pair_data[coder2].mean()
-            prob_coder2_no = 1 - prob_coder2_yes
-
-            expected_agreement = (prob_coder1_yes * prob_coder2_yes) + (prob_coder1_no * prob_coder2_no)
-
-            # Calculate kappa
-            if expected_agreement < 1.0:
-                kappa = (observed_agreement - expected_agreement) / (1 - expected_agreement)
-                kappa_values.append(kappa)
-
-    # Overall metrics
-    overall_agreement = total_agreements / total_comparisons if total_comparisons > 0 else 0
-    avg_kappa = sum(kappa_values) / len(kappa_values) if kappa_values else 0
-
-    return {
-        'agreement_rate': overall_agreement,
-        'kappa': avg_kappa,
-        'sample_size': total_comparisons
-    }
-
-
-def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info: ChoiceFieldModel,
-                       variable_annotations):
-    """
-    Identify conflicts for this variable.
-
-    Parameters:
-    -----------
-    agreement_matrix : DataFrame
-        Matrix with tasks as rows and coders as columns
-
-    variable : str
-        ID of the variable
-
-    variable_info : dict
-        Variable metadata including type
-
-    variable_annotations : DataFrame
-        Annotations for this variable with all metadata
-
-    Returns:
-    --------
-    list of conflict dictionaries
-    """
-    conflicts = []
-
-    # Get a mapping of task_id to platform_id from the annotations
-    platform_id_map = {}
-    for _, row in variable_annotations.iterrows():
-        if 'task_id' in row and 'platform_id' in row:
-            platform_id_map[row['task_id']] = row['platform_id']
-
-    # Check if we're using composite keys (for indexed variables)
-    has_composite_key = isinstance(agreement_matrix.index[0], str) and '_' in agreement_matrix.index[0] if len(
-        agreement_matrix.index) > 0 else False
-
-    if variable_info.choice == 'single':
-        # For single-select, check exact matches
-        for task_id, row in agreement_matrix.iterrows():
-            values = row.dropna().tolist()
-            coders = row.dropna().index.tolist()
-
-            if len(values) < 2:
-                continue  # Need at least 2 annotations
-
-            # Check if all values are equal
-            if len(set(str(val) for val in values)) == 1:  # Convert to strings for comparison
-                continue  # All values are the same, no conflict
-
-            # Calculate agreement score (0 for conflict, 1 for agreement)
-            agreement = 0.0  # Since we know there's a disagreement at this point
-
-            # Extract actual task_id and image_idx if using composite keys
-            actual_task_id = task_id
-            image_idx = None
-
-            if has_composite_key:
-                parts = task_id.split('_')
-                if len(parts) >= 2:
-                    actual_task_id = parts[0]
-                    try:
-                        image_idx = int(parts[1])
-                    except (ValueError, IndexError):
-                        pass
-
-            # Find platform_id for this task
-            platform_id = platform_id_map.get(actual_task_id)
-
-            # Record conflict
-            conflict = {
-                'task_id': actual_task_id,
-                'platform_id': platform_id,
-                'variable': variable,
-                'agreement_score': agreement,
-                'annotations': [
-                    {'user_id': coders[i], 'value': values[i]}
-                    for i in range(len(coders))
-                ]
-            }
-
-            # Add image_idx if available
-            if image_idx is not None:
-                conflict['image_idx'] = image_idx
-
-            conflicts.append(conflict)
-    else:
-        # For multi-select, check option-by-option
-        options = variable_info.options
-
-        for task_id, row in agreement_matrix.iterrows():
-            values = row.dropna().tolist()
-            coders = row.dropna().index.tolist()
-
-            if len(values) < 2:
-                continue  # Need at least 2 annotations
-
-            # Check if all values are identical (including empty lists)
-            serialized_values = [str(sorted(v) if isinstance(v, list) else v) for v in values]
-            if len(set(serialized_values)) == 1:
-                continue  # All values are the same, no conflict
-
-            # Calculate option-by-option agreement
-            option_agreements = []
-            for option in options:
-                # Check if coders agree on this option
-                option_values = [1 if isinstance(v, list) and option in v else 0 for v in values]
-                option_agreement = 1.0 if len(set(option_values)) == 1 else 0.0
-                option_agreements.append(option_agreement)
-
-            # Average agreement across options
-            avg_agreement = sum(option_agreements) / len(option_agreements) if option_agreements else 0
-
-            # Extract actual task_id and image_idx if using composite keys
-            actual_task_id = task_id
-            image_idx = None
-
-            if has_composite_key:
-                parts = task_id.split('_')
-                if len(parts) >= 2:
-                    actual_task_id = parts[0]
-                    try:
-                        image_idx = int(parts[1])
-                    except (ValueError, IndexError):
-                        pass
-
-            # Record conflict
-            conflict = {
-                'task_id': actual_task_id,
-                'platform_id': platform_id_map.get(actual_task_id, None),
-                'variable': variable,
-                'agreement_score': avg_agreement,
-                'annotations': [
-                    {'user_id': coders[i], 'value': values[i]}
-                    for i in range(len(coders))
-                ]
-            }
-
-            # Add image_idx if available
-            if image_idx is not None:
-                conflict['image_idx'] = image_idx
-
-            conflicts.append(conflict)
-
-    return conflicts
-
-
-def generate_agreement_report(all_variable_agreements, all_conflicts, variables, annotations_df, base_to_indexed=None):
-    """
-    Generate final agreement report.
-
-    Parameters:
-    -----------
-    all_variable_agreements : dict
-        Dictionary of variable agreements
-
-    all_conflicts : list
-        List of conflicts
-
-    variables : dict
-        Variable metadata
-
-    annotations_df : DataFrame
-        Original annotations
-
-    base_to_indexed : dict, optional
-        Mapping of base variable names to their indexed versions
-
-    Returns:
-    --------
-    dict with complete report
-    """
-    # Calculate overall metrics
-    all_scores = [metrics.get('overall_agreement', 0)
-                  for metrics in all_variable_agreements.values()]
-
-    overall_agreement = sum(all_scores) / len(all_scores) if all_scores else 0
-
-    # Count unique tasks and coders
-    unique_tasks = annotations_df['task_id'].nunique()
-    unique_coders = annotations_df['user_id'].nunique()
-
-    # Count consolidated variables (those ending with _$)
-    consolidated_vars = sum(1 for var in all_variable_agreements if var.endswith('_$'))
-
-    # Get counts of indexed variables
-    indexed_vars_count = 0
-    base_vars_count = 0
-
-    if base_to_indexed:
-        indexed_vars_count = sum(len(vars_list) for vars_list in base_to_indexed.values())
-        base_vars_count = len(base_to_indexed)
-
-    # Build report
-    report = {
-        "agreement_metrics": {
-            "overall": overall_agreement,
-            "by_variable": all_variable_agreements
-        },
-        "conflicts": all_conflicts,
-        "summary_stats": {
-            "total_tasks": unique_tasks,
-            "total_variables": len(variables),
-            "total_coders": unique_coders,
-            "total_annotations": len(annotations_df),
-            "consolidated_variables": consolidated_vars,
-            "indexed_variables_count": indexed_vars_count,
-            "base_variables_count": base_vars_count,
-            "conflict_rate": len(all_conflicts) / (unique_tasks * len(variables)) if unique_tasks > 0 and len(
-                variables) > 0 else 0
+        # Store metrics for this option
+        option_results[option] = {
+            'error': error,
+            'kappa': float(kappa),
+            'gwet': float(gwet),
+            'percent_agreement': float(percent_agreement),
+            'total_rows': int(total_valid_rows),
+            'agreement_count': int(agreement_count),
+            'disagreement_count': int(disagreement_count),
+            'option_presence_count': int(option_presence_count),
+            'all_present_count': int(all_present_count),
+            'all_absent_count': int(all_absent_count),
+            'conflicts': [str(c) for c in option_conflicts] if option_conflicts is not None else None
         }
+
+    # Final result - no overall kappa, just per-option statistics
+    return {
+        'counts': option_counts,
+        'option_results': option_results,
+        'conflicts': all_conflicts
     }
-
-    return report
-
-
-def fix_users(df: DataFrame, usermap: dict) -> DataFrame:
-    """
-    Maps user IDs in the dataframe according to the provided mapping.
-
-    Parameters:
-    -----------
-    df : DataFrame
-        DataFrame containing a 'user_id' column
-
-    usermap : dict
-        Dictionary mapping user IDs to new identifiers
-
-    Returns:
-    --------
-    DataFrame
-        DataFrame with user_id column replaced according to the mapping
-    """
-    df['user_id'] = df['user_id'].map(usermap)
-    return df
