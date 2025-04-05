@@ -440,7 +440,7 @@ def agreements(
 ) -> tuple[Path, dict]:
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
     mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
-    agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, po.choices)
+    agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, po.choices, ["extras"])
     dest: Path = (SETTINGS.agreements_dir / f"{mp.id}.json")
     print(f"agreement_report -> {dest.as_posix()}")
     dest.write_text(json.dumps(agreement_report, indent=2))

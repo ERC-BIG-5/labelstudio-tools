@@ -36,8 +36,8 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
     --------
     list of conflict dictionaries
     """
-    conflicts = []
 
+    conflicts = []
     # Get a mapping of task_id to platform_id from the annotations
     platform_id_map = {}
     for _, row in variable_annotations.iterrows():
@@ -49,7 +49,6 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
     if len(agreement_matrix.index) > 0:
         first_idx = agreement_matrix.index[0]
         has_composite_key = isinstance(first_idx, str) and '_' in first_idx
-
     # Different handling for single vs multiple choice variables
     if variable_info.choice == 'single':
         # For single-select, identify conflicts where annotators chose different options
@@ -132,20 +131,20 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
 
         for option in options:
             # Create binary matrix for this option (1 if present, 0 if absent)
-            binary_matrix = agreement_matrix.applymap(
+            binary_matrix = agreement_matrix.map(
                 lambda x: 1 if isinstance(x, list) and option in x else 0
             )
 
-            # Look for disagreements on this option
+            # Look for disagreements on this option (must have both 0s and 1s)
             for task_id, row in binary_matrix.iterrows():
                 # Drop NaN values
                 values = row.dropna()
                 if len(values) < 2:
                     continue  # Need at least 2 annotations
 
-                # Check if there's disagreement (mix of 0s and 1s)
-                if values.nunique() <= 1:
-                    continue  # All annotators agree on this option
+                # Check if there's a true disagreement (must have both 0s and 1s)
+                if set(values) != {0, 1}:
+                    continue  # Not a true disagreement if all have same value
 
                 # Extract actual task_id and image_idx if using composite keys
                 actual_task_id = task_id
@@ -160,7 +159,7 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
                         except (ValueError, IndexError):
                             pass
 
-                # Create annotations showing which users marked this option as present/absent
+                # Create annotations for coders who actually coded
                 option_annotations = []
                 for coder, value in values.items():
                     option_annotations.append({
@@ -174,7 +173,7 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
                     'task_id': actual_task_id,
                     'platform_id': platform_id_map.get(actual_task_id),
                     'variable': variable,
-                    'option': option,  # Specify which option has the conflict
+                    'option': option,
                     'agreement_score': 0.0,
                     'annotations': option_annotations,
                     'conflict_type': 'multiple_choice'
@@ -765,9 +764,10 @@ def apply_defaults_for_variable(variable_annotations: DataFrame,
     DataFrame with defaults applied
     """
     # Reset index on assignments to get task_id and user_id as columns
+    # Reset index on assignments to get task_id and user_id as columns
     assignments = assignments_df.reset_index()
 
-    # Create all possible task-coder combinations for this variable
+    # Create task-coder combinations only for assigned coders
     all_combinations = []
     for _, row in assignments.iterrows():
         combo = {
@@ -999,24 +999,6 @@ def _calculate_multi_select_agreement(agreement_matrix, variable_info: ChoiceFie
     """
     Calculate agreement for multi-select variables by creating
     binary matrices for each option.
-
-    Parameters:
-    -----------
-    agreement_matrix : DataFrame
-        Matrix with tasks as rows and coders as columns
-
-    variable_info : ChoiceFieldModel
-        Variable metadata including type and options
-
-    counts : bool
-        Whether to collect counts of options
-
-    collect_conflicts_agreements : bool
-        Whether to collect conflicts
-
-    Returns:
-    --------
-    dict with agreement metrics per option
     """
     options = variable_info.options
 
@@ -1038,27 +1020,74 @@ def _calculate_multi_select_agreement(agreement_matrix, variable_info: ChoiceFie
 
     # Process each option separately as a binary choice
     for option in options:
-        # Create binary matrix for this option (1 if present, 0 if absent)
-        binary_matrix = agreement_matrix.applymap(
-            lambda x: 1 if isinstance(x, list) and option in x else 0
+        # SIMPLEST FIX: Use the map function with a safe lambda that handles NaN values correctly
+        binary_matrix = agreement_matrix.map(
+            lambda x: 1 if isinstance(x, list) and option in x else (
+                0 if isinstance(x, list) else np.nan
+            )
         )
 
-        # Calculate metrics for valid rows (rows with at least one non-NaN value)
-        valid_rows = binary_matrix.dropna(how='all')
-        total_valid_rows = len(valid_rows)
+        # Debug for task 9363
+        if "9363" in binary_matrix.index:
+            print(f"Option {option} - Task 9363 data: {binary_matrix.loc['9363'].to_dict()}")
+            # Only show the non-NaN values
+            non_nan = binary_matrix.loc['9363'].dropna()
+            print(f"Non-NaN values: {non_nan.to_dict()}")
+            print(f"Unique values in non-NaN: {set(non_nan)}")
 
-        # Calculate rows with agreement (all coders chose the same)
-        agreement_mask = valid_rows.apply(lambda row: row.dropna().nunique() == 1, axis=1)
-        agreement_rows = valid_rows[agreement_mask]
-        agreement_count = len(agreement_rows)
+        # Only look at rows with at least 2 annotators
+        multiple_annotator_mask = binary_matrix.count(axis=1) >= 2
+        rows_with_multiple_annotators = binary_matrix[multiple_annotator_mask]
 
-        # Calculate rows with disagreement
-        disagreement_mask = valid_rows.apply(lambda row: row.dropna().nunique() > 1, axis=1)
-        disagreement_rows = valid_rows[disagreement_mask]
+        # Skip the rest of processing if no rows have multiple annotators
+        if len(rows_with_multiple_annotators) == 0:
+            option_results[option] = {
+                'error': None,
+                'kappa': 1.0,
+                'gwet': 1.0,
+                'percent_agreement': 1.0,
+                'total_rows_selected': 0,
+                'total_tasks_analyzed': 0,
+                'agreement_count': 0,
+                'disagreement_count': 0,
+                'all_present_count': 0,
+                'all_absent_count': 0,
+                'conflicts': None
+            }
+            continue
+
+        # Count rows where all coders agreed this option was present
+        all_present_mask = rows_with_multiple_annotators.apply(
+            lambda row: row.dropna().nunique() == 1 and row.dropna().iloc[0] == 1,
+            axis=1
+        )
+        all_present_count = all_present_mask.sum()
+
+        # Count rows where all coders agreed this option was absent
+        all_absent_mask = rows_with_multiple_annotators.apply(
+            lambda row: row.dropna().nunique() == 1 and row.dropna().iloc[0] == 0,
+            axis=1
+        )
+        all_absent_count = all_absent_mask.sum()
+
+        # Total agreement count (all present OR all absent)
+        agreement_count = all_present_count + all_absent_count
+
+        # Calculate disagreements (rows where some coders say present and others say absent)
+        disagreement_mask = rows_with_multiple_annotators.apply(
+            lambda row: row.dropna().nunique() > 1,  # Must have both 0 and 1 in the row
+            axis=1
+        )
+        disagreement_rows = rows_with_multiple_annotators[disagreement_mask]
         disagreement_count = len(disagreement_rows)
 
-        # Calculate percent agreement
-        percent_agreement = agreement_count / total_valid_rows if total_valid_rows > 0 else 1.0
+        # Rows where this option was selected at least once
+        rows_with_option = rows_with_multiple_annotators[rows_with_multiple_annotators.eq(1).any(axis=1)]
+        option_presence_count = len(rows_with_option)
+
+        # Calculate percent agreement based on rows with multiple annotators
+        total_analyzed = len(rows_with_multiple_annotators)
+        percent_agreement = agreement_count / total_analyzed if total_analyzed > 0 else 1.0
 
         # Calculate kappa and gwet for this option
         kappa = 1.0
@@ -1066,44 +1095,37 @@ def _calculate_multi_select_agreement(agreement_matrix, variable_info: ChoiceFie
         error = None
 
         try:
-            if len(valid_rows) > 0:
-                cac = CAC(binary_matrix)
+            if len(rows_with_multiple_annotators) > 0:
+                cac = CAC(rows_with_multiple_annotators)
                 kappa = cac.fleiss()["est"]["coefficient_value"]
                 gwet = cac.gwet()["est"]["coefficient_value"]
         except Exception as e:
-            logger.error(f"Agreement calculation error for option {option}: {str(e)}")
             error = str(e)
+            logger.error(f"Agreement calculation error for option {option}: {error}")
 
         # Get conflicts for this option if needed
-        option_conflicts = None
+        option_conflicts = []
         if collect_conflicts_agreements:
-            option_conflicts = disagreement_rows.index.tolist()
-
-            # Add conflict details to all_conflicts
-            for task_id in option_conflicts:
+            # Only collect ACTUAL disagreements (where some coders say present and others say absent)
+            for task_id in disagreement_rows.index:
                 row_data = binary_matrix.loc[task_id].dropna()
-                conflict_info = {
-                    'task_id': task_id,
-                    'option': option,
-                    'agreement_score': 0,  # 0 because it's a disagreement
-                    'annotations': [
-                        {'user_id': coder, 'value': 'present' if value == 1 else 'absent'}
-                        for coder, value in row_data.items()
-                    ]
-                }
-                all_conflicts.append(conflict_info)
 
-        # Count rows where this option was selected at least once
-        rows_with_option = binary_matrix[binary_matrix.eq(1).any(axis=1)]
-        option_presence_count = len(rows_with_option)
+                # Check if there's a mix of 0s and 1s (true disagreement)
+                values_set = set(row_data)
+                if len(values_set) > 1:  # Must have both 0 and 1 to be a true disagreement
+                    option_conflicts.append(task_id)
 
-        # Count rows where all coders agreed this option was present
-        all_present_mask = binary_matrix.apply(lambda row: all(val == 1 for val in row.dropna()), axis=1)
-        all_present_count = all_present_mask.sum()
-
-        # Count rows where all coders agreed this option was absent
-        all_absent_mask = binary_matrix.apply(lambda row: all(val == 0 for val in row.dropna()), axis=1)
-        all_absent_count = all_absent_mask.sum()
+                    # Only add users who actually coded
+                    conflict_info = {
+                        'task_id': task_id,
+                        'option': option,
+                        'agreement_score': 0,
+                        'annotations': [
+                            {'user_id': coder, 'value': 'present' if value == 1 else 'absent'}
+                            for coder, value in row_data.items()
+                        ]
+                    }
+                    all_conflicts.append(conflict_info)
 
         # Store metrics for this option
         option_results[option] = {
@@ -1111,16 +1133,16 @@ def _calculate_multi_select_agreement(agreement_matrix, variable_info: ChoiceFie
             'kappa': float(kappa),
             'gwet': float(gwet),
             'percent_agreement': float(percent_agreement),
-            'total_rows': int(total_valid_rows),
+            'total_rows_selected': int(option_presence_count),  # Rows where option was selected
+            'total_tasks_analyzed': int(total_analyzed),  # Only rows with multiple annotators
             'agreement_count': int(agreement_count),
             'disagreement_count': int(disagreement_count),
-            'option_presence_count': int(option_presence_count),
             'all_present_count': int(all_present_count),
             'all_absent_count': int(all_absent_count),
-            'conflicts': [str(c) for c in option_conflicts] if option_conflicts is not None else None
+            'conflicts': [str(c) for c in option_conflicts] if option_conflicts else None
         }
 
-    # Final result - no overall kappa, just per-option statistics
+    # Final result
     return {
         'counts': option_counts,
         'option_results': option_results,
