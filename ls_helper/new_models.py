@@ -5,7 +5,7 @@ from typing import Optional, Any
 
 import pandas as pd
 from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, IChoice, IChoices, PrincipleRow, \
-    ITextArea, IText
+    ITextArea, IText, IField
 from pandas import DataFrame
 from pydantic import BaseModel, Field, model_validator, ConfigDict
 from ls_helper.models.field_models import FieldModel as FieldModel, ChoiceFieldModel as FieldModelChoice, FieldType
@@ -93,7 +93,7 @@ class ProjectData(ProjectCreate):
     def parse_label_config_xml(xml_string) -> InterfaceData:
         root: ET.Element = ET.fromstring(xml_string)
 
-        ordered_fields_map: dict[str,str] = {}
+        ordered_fields_map: dict[str,IField] = {}
         input_text_fields: dict[str, str] = {}  # New list for text fields with "$" values
 
         for el in root.iter():
@@ -103,6 +103,7 @@ class ProjectData(ProjectCreate):
                     raise ValueError("shouldnt happen in a valid interface")
                 # print(choices_element.attrib)
                 choice_list = [IChoice.model_validate(choice.attrib) for choice in el.findall('./Choice')]
+
                 ordered_fields_map[name] = IChoices.model_validate(el.attrib | {"options": choice_list})
             elif el.tag == "TextArea":
                 name = el.get('name')
@@ -138,44 +139,17 @@ class ProjectData(ProjectCreate):
             if isinstance(field, IChoices):
                 field: IChoices
                 data["choice"] = field.choice
-                data["options"] = field.raw_options_list()
+                data["orig_options"] = field.raw_options_list()
                 data["default"] = field_extension.default
                 variables[name] = FieldModelChoice.model_validate(data)
             else:
                 variables[name] = FieldModel.model_validate(data)
 
-        # extensions = self.field_extensions.extensions
-        # for var, fix_info in extensions.items():
-        #     if new_name := extensions[var].name_fix:
-        #         name = new_name
-        #     else:
-        #         name = var
-        #
-        #     if name not in self.interface.ordered_fields:
-        #         from tools.fast_levenhstein import find_closest_matches
-        #         logger.warning(f"{var=} is not in extensions. maybe: {find_closest_matches(name,
-        #                                                                                    self.interface.ordered_fields)}")
-        #         continue
-        #
-        #     if name in self.interface.inputs:
-        #         continue
-        #     type = self.interface.field_type(name)
-        #
-        #     data = {
-        #         "orig_name": var,
-        #         "name": name,
-        #         "type": type
-        #     }
-        #
-        #     if type == FieldType.choice:
-        #         data["choice"] = self.interface.orig_choices[name].choice
-        #         data["options"] = self.interface.orig_choices[name].raw_options_list()
-        #         data["default"] = fix_info.default
-        #         variables[name] = FieldModelChoice.model_validate(data)
-        #     else:
-        #         variables[name] = FieldModel.model_validate(data)
-
         return variables
+
+    @property
+    def choices(self) -> dict[str, FieldModelChoice]:
+        return {k:v for k,v in self.fields.items() if isinstance(v, FieldModelChoice)}
 
     @property
     def interface(self) -> InterfaceData:

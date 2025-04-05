@@ -54,6 +54,7 @@ class IChoices(AField):
     options: list[IChoice]
     choice: ChoicesType = "single"
     indices: Optional[list[str]] = Field(default_factory=list)
+    value: Optional[str] = None # thats when the options come from the data
 
     @model_validator(mode="after")
     def create_indices(cls, data: "IChoices"):

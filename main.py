@@ -2,6 +2,7 @@ import json
 import shutil
 import webbrowser
 from pathlib import Path
+from time import time
 from typing import Annotated, Optional
 
 import typer
@@ -418,7 +419,7 @@ def annotations(
     Path, str]:
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
     po.validate_extensions()
-    mp = po.create_annotations_results( accepted_ann_age=accepted_ann_age)
+    mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
     res = mp.flatten_annotation_results(min_coders, mp.interface.ordered_fields)
     res = mp.format_df_for_csv(res)
@@ -438,12 +439,11 @@ def agreements(
         min_num_coders: Annotated[int, typer.Option()] = 2
 ) -> tuple[Path, dict]:
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-    mp = po.create_annotations_results( accepted_ann_age=accepted_ann_age)
-
-    agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df,po.fields)
+    mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
+    agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, po.choices)
     dest: Path = (SETTINGS.agreements_dir / f"{mp.id}.json")
     print(f"agreement_report -> {dest.as_posix()}")
-    dest.write_text(json.dumps(agreement_report))
+    dest.write_text(json.dumps(agreement_report, indent=2))
     return dest, agreement_report
 
 
@@ -479,7 +479,7 @@ def reformat_for_datapipelines(
     """
     # does extra calculation but ok.
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
-    mp = po.create_annotations_results(  0)
+    mp = po.create_annotations_results(0)
     res = {}
 
     for task_result in mp.raw_annotation_result:
@@ -572,13 +572,13 @@ if __name__ == "__main__":
     tw_en = {"platform": twitter, "language": en}
     _default = tw_en
 
-    #generate_result_fixes_template(**_default)
-    #build_ls_labeling_interface(Path("twitter-2.json"))
-    #build_extension_index(project_ids=[39, 43])
+    # generate_result_fixes_template(**_default)
+    # build_ls_labeling_interface(Path("twitter-2.json"))
+    # build_extension_index(project_ids=[39, 43])
     # exit()
     # status(**_default)
-    #annotations(**_default)
-    #download_project_data(**_default)
-    agreements(**_default)
+    # annotations(**_default)
+    # download_project_data(**_default)
+    agreements(**_default, accepted_ann_age=12)
     # create_conflict_view("nature_text",**_default)
     # update_coding_game(**_default)
