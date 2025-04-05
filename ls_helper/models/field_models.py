@@ -12,6 +12,7 @@ class FieldModel(BaseModel):
     orig_name: str
     name: str
     type: FieldType
+    required: bool = False
 
 class ChoiceFieldModel(FieldModel):
     options: list[str]

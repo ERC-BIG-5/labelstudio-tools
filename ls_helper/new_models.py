@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import Optional, Any
 
 import pandas as pd
-from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, Choice, Choices, PrincipleRow
+from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, IChoice, IChoices, PrincipleRow, \
+    ITextArea, IText
 from pandas import DataFrame
 from pydantic import BaseModel, Field, model_validator, ConfigDict
 from ls_helper.models.field_models import FieldModel as FieldModel, ChoiceFieldModel as FieldModelChoice, FieldType
@@ -92,67 +93,87 @@ class ProjectData(ProjectCreate):
     def parse_label_config_xml(xml_string) -> InterfaceData:
         root: ET.Element = ET.fromstring(xml_string)
 
-        ordered_fields: list[str] = []
-        choices = {}
-        free_text = []
+        ordered_fields_map: dict[str,str] = {}
         input_text_fields: dict[str, str] = {}  # New list for text fields with "$" values
 
         for el in root.iter():
             if el.tag == "Choices":
                 name = el.get('name')
-                ordered_fields.append(name)
+                if not name:
+                    raise ValueError("shouldnt happen in a valid interface")
                 # print(choices_element.attrib)
-                choice_list = [Choice.model_validate(choice.attrib) for choice in el.findall('./Choice')]
-                choices[name] = Choices.model_validate(el.attrib | {"options": choice_list})
+                choice_list = [IChoice.model_validate(choice.attrib) for choice in el.findall('./Choice')]
+                ordered_fields_map[name] = IChoices.model_validate(el.attrib | {"options": choice_list})
             elif el.tag == "TextArea":
                 name = el.get('name')
-                free_text.append(name)
-                ordered_fields.append(name)
+                ordered_fields_map[name] = ITextArea(name=name)
             elif el.tag == "Text":
                 value = el.get('value')
                 if value and value.startswith('$'):
                     name = el.get('name')
                     # keep the $ so we know its a ref to data.
                     input_text_fields[name] = value[1:]
-                    ordered_fields.append(name)
+                    ordered_fields_map[name] = IText()
 
         return InterfaceData(
-            ordered_fields=ordered_fields,
-            orig_choices=choices,
-            free_text=free_text,
+            ordered_fields_map=ordered_fields_map,
+            # orig_choices=choices,
+            # free_text=free_text,
             inputs=input_text_fields)
 
+    @property
     def fields(self) -> dict[str, FieldModel]:
         variables = {}
 
-        extensions = self.field_extensions.extensions
-        for var, fix_info in extensions.items():
-            if new_name := extensions[var].name_fix:
-                name = new_name
-            else:
-                name = var
+        for orig_name, field in self.interface.ordered_fields_map.items():
 
-            if name not in self.interface.ordered_fields:
-                logger.warning(f"{var=} is not in extensions")
-                continue
-
-            if name in self.interface.inputs:
-                continue
-            type = self.interface.field_type(name)
-
+            field_extension = self.field_extensions.extensions[orig_name]
+            name = self.field_extensions.name_fixes[orig_name]
             data = {
-                "orig_name": var,
                 "name": name,
-                "type": type
+                "orig_name": orig_name,
+                "type": self.interface.field_type(orig_name),
             }
 
-            if type == FieldType.choice:
-                data["choice"] = self.interface.orig_choices[name].choice
-                data["options"] = self.interface.orig_choices[name].raw_options_list()
-                data["default"] = fix_info.default
+            if isinstance(field, IChoices):
+                field: IChoices
+                data["choice"] = field.choice
+                data["options"] = field.raw_options_list()
+                data["default"] = field_extension.default
                 variables[name] = FieldModelChoice.model_validate(data)
             else:
                 variables[name] = FieldModel.model_validate(data)
+
+        # extensions = self.field_extensions.extensions
+        # for var, fix_info in extensions.items():
+        #     if new_name := extensions[var].name_fix:
+        #         name = new_name
+        #     else:
+        #         name = var
+        #
+        #     if name not in self.interface.ordered_fields:
+        #         from tools.fast_levenhstein import find_closest_matches
+        #         logger.warning(f"{var=} is not in extensions. maybe: {find_closest_matches(name,
+        #                                                                                    self.interface.ordered_fields)}")
+        #         continue
+        #
+        #     if name in self.interface.inputs:
+        #         continue
+        #     type = self.interface.field_type(name)
+        #
+        #     data = {
+        #         "orig_name": var,
+        #         "name": name,
+        #         "type": type
+        #     }
+        #
+        #     if type == FieldType.choice:
+        #         data["choice"] = self.interface.orig_choices[name].choice
+        #         data["options"] = self.interface.orig_choices[name].raw_options_list()
+        #         data["default"] = fix_info.default
+        #         variables[name] = FieldModelChoice.model_validate(data)
+        #     else:
+        #         variables[name] = FieldModel.model_validate(data)
 
         return variables
 
@@ -373,7 +394,7 @@ class ProjectResult(BaseModel):
                         continue
                     # print(question)
                     if question.type == "choices":
-                        type_ = self.interface.choices[new_name].choice
+                        type_ = self.project_data.fields[new_name].choice
                     elif question.type == "textarea":
                         type_ = "text"
                     else:

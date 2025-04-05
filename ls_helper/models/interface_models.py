@@ -25,7 +25,15 @@ PlLang = tuple[str, str]
 logger = get_logger(__file__)
 
 
-class Choice(BaseModel):
+class IField(BaseModel):
+    pass
+
+
+class AField(IField):
+    name: str
+
+
+class IChoice(BaseModel):
     value: str
     alias: Optional[str] = None
 
@@ -36,19 +44,19 @@ class Choice(BaseModel):
         return self.value
 
 
-class ChoicesType(str,Enum):
+class ChoicesType(str, Enum):
     single = "single"
     multiple = "multiple"
 
-class Choices(BaseModel):
-    name: str
+
+class IChoices(AField):
     toName: str
-    options: list[Choice]
+    options: list[IChoice]
     choice: ChoicesType = "single"
     indices: Optional[list[str]] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def create_indices(cls, data: "Choices"):
+    def create_indices(cls, data: "IChoices"):
         data.indices = [c.annot_val for c in data.options]
         return data
 
@@ -58,7 +66,7 @@ class Choices(BaseModel):
         else:
             return [self.indices.index(v) for v in value]
 
-    def insert_option(self, index, choice: Choice):
+    def insert_option(self, index, choice: IChoice):
         self.options.insert(index, choice)
         self.indices = [c.annot_val for c in self.options]
 
@@ -66,16 +74,32 @@ class Choices(BaseModel):
         return [c.annot_val for c in self.options]
 
 
-class InterfaceData(BaseModel):
-    ordered_fields: list[str]
-    #
-    orig_choices: dict[str, Choices]
-    choices: Optional[dict[str, Choices]] = Field(default_factory=dict)
+class ITextArea(AField):
+    toName: Optional[str] = None
+    required: Optional[bool] = False
 
-    free_text: list[str]
+
+class IText(IField):
+    value: Optional[str] = None
+
+
+class InterfaceData(BaseModel):
+    ordered_fields_map: dict[str, IField]= Field(default_factory=dict)
+
+    #
+    orig_choices: dict[str, IChoices] = Field(default_factory=dict)
+    # choices: Optional[dict[str, IChoices]] = Field(default_factory=dict)
+    # this should have a model, required, indexed, ...
+    # free_text: list[str]
     #
     inputs: dict[str, str] = Field(description="Map from el.name > el.value")
     _extension_applied: bool = False
+
+    @property
+    def free_text(self) -> list[str]:
+        oa = self.ordered_fields_map.items()
+        return list(map(lambda f: f[0],
+                        filter(lambda f: isinstance(f[1], IText), oa)))
 
     def find_name_fixes(self, orig_keys: Iterable[str],
                         name_fixes: dict[str, str],
@@ -123,7 +147,7 @@ class InterfaceData(BaseModel):
                                 raise ValueError(
                                     f"Choice {k} has default invalid value {ext.default}, options: {v.raw_options_list()}")
                     # TODO pass actually add the default...
-                    v.insert_option(0, Choice(value=ext.default, alias=ext.default))
+                    v.insert_option(0, IChoice(value=ext.default, alias=ext.default))
             else:
                 field_extensions = list(data_extensions.extension_reverse_map.keys())
                 logger.error(
@@ -145,18 +169,39 @@ class InterfaceData(BaseModel):
         :param q:
         :return:
         """
-        if "$" in q:
-            q = q.replace("$", "0")
-        if q in self.orig_choices:
+        field = self.ordered_fields_map.get(q)
+        if not field:
+            # not required when catching during validation...
+            raise ValueError(f"Field {q} has not been defined")
+        if isinstance(field,IChoices):
             return FieldType.choice
-        elif q in self.free_text:
+        elif isinstance(field, IText):
+            return FieldType.text
+        elif isinstance(field, ITextArea):
             return FieldType.text
         else:
-            print(f"ERROR: unknown question type for {q}. defaulting to text")
+        # if "$" in q:
+        #     q = q.replace("$", "0")
+        # if q in self.orig_choices:
+        #     return FieldType.choice
+        # elif q in self.free_text:
+        #     return FieldType.text
+        # else:
+            logger.error(f"unknown question type for {q}: {type(field)}. defaulting to text")
             return FieldType.text
 
     def __contains__(self, item):
         return item in self.ordered_fields
+
+    @property
+    def choices(self) -> dict[str, IChoices]:
+        oa = self.ordered_fields_map.items()
+        return dict(
+            filter(lambda f: isinstance(f[1], IChoices), oa))
+
+    @property
+    def ordered_fields(self) -> list[str]:
+        return list(self.ordered_fields_map.keys())
 
 
 class FieldExtension(BaseModel):

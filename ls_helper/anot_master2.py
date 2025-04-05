@@ -1,6 +1,5 @@
 import pandas as pd
 import re
-import numpy as np
 from irrCAC.raw import CAC
 from pandas import DataFrame
 
@@ -233,9 +232,10 @@ def add_image_index_column(df):
 
     # Print summary
     if base_to_indices:
-        print(f"Found {len(base_to_indices)} variables with indices:")
-        for base, idxs in base_to_indices.items():
-            print(f"  {base}: indices {sorted(idxs)}")
+        pass
+        #print(f"Found {len(base_to_indices)} variables with indices:")
+        # for base, idxs in base_to_indices.items():
+        #     print(f"  {base}: indices {sorted(idxs)}")
 
     return base_to_indices
 
