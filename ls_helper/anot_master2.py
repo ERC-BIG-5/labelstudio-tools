@@ -187,6 +187,7 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
 
     return conflicts
 
+
 def analyze_coder_agreement(raw_annotations, assignments, choices: dict[str, ChoiceFieldModel],
                             field_names: Optional[list[str]] = None) -> dict:
     """
@@ -356,6 +357,7 @@ def analyze_coder_agreement(raw_annotations, assignments, choices: dict[str, Cho
 
     return agreement_report
 
+
 def fix_users(df: DataFrame, usermap: dict) -> DataFrame:
     """
     Maps user IDs in the dataframe according to the provided mapping.
@@ -489,11 +491,11 @@ def generate_agreement_report(all_variable_agreements, all_conflicts, choices, a
 
     # Calculate conflict rates
     single_conflict_rate = len(single_choice_conflicts) / (
-                unique_tasks * len(single_choice_vars)) if unique_tasks > 0 and single_choice_vars else 0
+            unique_tasks * len(single_choice_vars)) if unique_tasks > 0 and single_choice_vars else 0
     multiple_conflict_rate = len(multiple_choice_conflicts) / (
-                unique_tasks * len(multiple_choice_vars)) if unique_tasks > 0 and multiple_choice_vars else 0
+            unique_tasks * len(multiple_choice_vars)) if unique_tasks > 0 and multiple_choice_vars else 0
     overall_conflict_rate = total_conflicts / (
-                unique_tasks * total_variables) if unique_tasks > 0 and total_variables > 0 else 0
+            unique_tasks * total_variables) if unique_tasks > 0 and total_variables > 0 else 0
 
     # Prepare the final report
     report = {
@@ -540,6 +542,7 @@ def generate_agreement_report(all_variable_agreements, all_conflicts, choices, a
 
     return report
 
+
 def create_indexed_agreement_matrix(variable_annotations):
     """
     Create an agreement matrix for variables with indices,
@@ -578,6 +581,7 @@ def create_indexed_agreement_matrix(variable_annotations):
             columns='user_id',
             values='value'
         )
+
 
 def agreement_matrix_assertions(agreement_matrix: DataFrame, variable_info: dict):
     # (index, data)
@@ -905,6 +909,8 @@ def _calculate_single_select_agreement2(agreement_matrix,
 
     # Calculate percent agreement (simpler metric than kappa)
     percent_agreement = agreement_count / total_valid_rows if total_valid_rows > 0 else 1.0
+    # Round to 4 digits
+    percent_agreement = round(percent_agreement, 4)
 
     # Calculate Fleiss' kappa
     try:
@@ -912,6 +918,9 @@ def _calculate_single_select_agreement2(agreement_matrix,
         fk = cac.fleiss()
         kappa = fk["est"]["coefficient_value"]
         gwet = cac.gwet()["est"]["coefficient_value"]
+        # Round to 4 digits
+        kappa = round(kappa, 4)
+        gwet = round(gwet, 4)
     except Exception as e:
         logger.error(f"Kappa calculation error for {variable_info.name}: {str(e)}")
         kappa = 1 if agreement_count == total_valid_rows else 0
@@ -952,6 +961,12 @@ def _calculate_single_select_agreement2(agreement_matrix,
 
         # Rows with disagreement involving this option
         disagreement_on_option_count = option_row_count - agreement_on_option_count
+
+        # Calculate option-level percent agreement
+        option_percent_agreement = agreement_on_option_count / option_row_count if option_row_count > 0 else 1.0
+        # Round to 4 digits
+        option_percent_agreement = round(option_percent_agreement, 4)
+
         error = None
         # Option-specific kappa
         try:
@@ -959,12 +974,15 @@ def _calculate_single_select_agreement2(agreement_matrix,
                 cac = CAC(option_rows)
                 option_kappa = cac.fleiss()["est"]["coefficient_value"]
                 option_gwet = cac.gwet()["est"]["coefficient_value"]
+                # Round to 4 digits
+                option_kappa = round(option_kappa, 4)
+                option_gwet = round(option_gwet, 4)
             else:
                 option_kappa = 1.0
-                option_gwet = 1
+                option_gwet = 1.0
         except Exception as e:
             option_kappa = 1.0 if disagreement_on_option_count == 0 else 0.0
-            option_gwet = 1
+            option_gwet = 1.0
             error = str(e)
 
         # Convert any NumPy types to native Python types
@@ -972,6 +990,7 @@ def _calculate_single_select_agreement2(agreement_matrix,
             "error": error,
             "kappa": float(option_kappa),
             "gwet": float(option_gwet),
+            "percent_agreement": float(option_percent_agreement),  # Add percent agreement at option level
             "number": int(option_row_count) if hasattr(option_row_count, 'item') else option_row_count,
             "agreement_count": int(agreement_on_option_count) if hasattr(agreement_on_option_count,
                                                                          'item') else agreement_on_option_count,
@@ -1027,14 +1046,6 @@ def _calculate_multi_select_agreement(agreement_matrix, variable_info: ChoiceFie
             )
         )
 
-        # Debug for task 9363
-        if "9363" in binary_matrix.index:
-            print(f"Option {option} - Task 9363 data: {binary_matrix.loc['9363'].to_dict()}")
-            # Only show the non-NaN values
-            non_nan = binary_matrix.loc['9363'].dropna()
-            print(f"Non-NaN values: {non_nan.to_dict()}")
-            print(f"Unique values in non-NaN: {set(non_nan)}")
-
         # Only look at rows with at least 2 annotators
         multiple_annotator_mask = binary_matrix.count(axis=1) >= 2
         rows_with_multiple_annotators = binary_matrix[multiple_annotator_mask]
@@ -1088,6 +1099,8 @@ def _calculate_multi_select_agreement(agreement_matrix, variable_info: ChoiceFie
         # Calculate percent agreement based on rows with multiple annotators
         total_analyzed = len(rows_with_multiple_annotators)
         percent_agreement = agreement_count / total_analyzed if total_analyzed > 0 else 1.0
+        # Round to 4 digits
+        percent_agreement = round(percent_agreement, 4)
 
         # Calculate kappa and gwet for this option
         kappa = 1.0
@@ -1099,6 +1112,9 @@ def _calculate_multi_select_agreement(agreement_matrix, variable_info: ChoiceFie
                 cac = CAC(rows_with_multiple_annotators)
                 kappa = cac.fleiss()["est"]["coefficient_value"]
                 gwet = cac.gwet()["est"]["coefficient_value"]
+                # Round to 4 digits
+                kappa = round(kappa, 4)
+                gwet = round(gwet, 4)
         except Exception as e:
             error = str(e)
             logger.error(f"Agreement calculation error for option {option}: {error}")
@@ -1148,3 +1164,189 @@ def _calculate_multi_select_agreement(agreement_matrix, variable_info: ChoiceFie
         'option_results': option_results,
         'conflicts': all_conflicts
     }
+
+
+def export_agreement_metrics_to_csv(agreement_report, output_file):
+    """
+    Export agreement metrics to a CSV file.
+
+    Parameters:
+    -----------
+    agreement_report : dict
+        The agreement report returned by analyze_coder_agreement
+
+    output_file : str
+        Path to the output CSV file
+    """
+    import csv
+    from datetime import datetime
+
+    # Prepare data for CSV
+    rows = []
+
+    # Process single-choice variables
+    single_choice_vars = agreement_report["agreement_metrics"]["single_choice"]["variables"]
+    for var_name, var_data in single_choice_vars.items():
+        # Basic variable info
+        row = {
+            "variable_type": "single_choice",
+            "variable": var_name,
+            "option": "VARIABLE_LEVEL",
+            "kappa": var_data.get("kappa", ""),
+            "gwet": var_data.get("gwet", ""),
+            "percent_agreement": var_data.get("percent_agreement", ""),
+            "total_tasks": var_data.get("total_rows", ""),
+            "agreement_count": var_data.get("agreement_count", ""),
+            "disagreement_count": var_data.get("disagreement_count", ""),
+            "option_selected_count": "",
+            "all_present_count": "",
+            "all_absent_count": "",
+        }
+        rows.append(row)
+
+        # Add option-level data for single choice
+        if "option_results" in var_data and var_data["option_results"]:
+            for opt_name, opt_data in var_data["option_results"].items():
+                opt_row = {
+                    "variable_type": "single_choice",
+                    "variable": var_name,
+                    "option": opt_name,
+                    "kappa": opt_data.get("kappa", ""),
+                    "gwet": opt_data.get("gwet", ""),
+                    "percent_agreement": opt_data.get("percent_agreement", ""),  # Include percent agreement for options
+                    "total_tasks": opt_data.get("number", ""),
+                    "agreement_count": opt_data.get("agreement_count", ""),
+                    "disagreement_count": opt_data.get("disagreement_count", ""),
+                    "option_selected_count": opt_data.get("total_selections", ""),
+                    "all_present_count": "",
+                    "all_absent_count": "",
+                }
+                rows.append(opt_row)
+
+    # Process multiple-choice variables
+    multiple_choice_vars = agreement_report["agreement_metrics"]["multiple_choice"]["variables"]
+    for var_name, var_data in multiple_choice_vars.items():
+        # Add option-level data
+        if "option_results" in var_data and var_data["option_results"]:
+            for opt_name, opt_data in var_data["option_results"].items():
+                opt_row = {
+                    "variable_type": "multiple_choice",
+                    "variable": var_name,
+                    "option": opt_name,
+                    "kappa": opt_data.get("kappa", ""),
+                    "gwet": opt_data.get("gwet", ""),
+                    "percent_agreement": opt_data.get("percent_agreement", ""),
+                    "total_tasks": opt_data.get("total_tasks_analyzed", opt_data.get("total_rows", "")),
+                    "agreement_count": opt_data.get("agreement_count", ""),
+                    "disagreement_count": opt_data.get("disagreement_count", ""),
+                    "option_selected_count": opt_data.get("total_rows_selected",
+                                                          opt_data.get("option_presence_count", "")),
+                    "all_present_count": opt_data.get("all_present_count", ""),
+                    "all_absent_count": opt_data.get("all_absent_count", ""),
+                }
+                rows.append(opt_row)
+
+    # Add summary rows
+    rows.append({
+        "variable_type": "SUMMARY",
+        "variable": "ALL_SINGLE_CHOICE",
+        "option": "",
+        "kappa": round(agreement_report["agreement_metrics"]["single_choice"]["average_kappa"], 4),
+        "gwet": round(agreement_report["agreement_metrics"]["single_choice"]["average_gwet"], 4),
+        "percent_agreement": "",
+        "total_tasks": "",
+        "agreement_count": "",
+        "disagreement_count": agreement_report["agreement_metrics"]["single_choice"]["conflict_count"],
+        "option_selected_count": "",
+        "all_present_count": "",
+        "all_absent_count": "",
+    })
+
+    rows.append({
+        "variable_type": "SUMMARY",
+        "variable": "ALL_MULTIPLE_CHOICE",
+        "option": "",
+        "kappa": round(agreement_report["agreement_metrics"]["multiple_choice"]["average_kappa"], 4),
+        "gwet": round(agreement_report["agreement_metrics"]["multiple_choice"]["average_gwet"], 4),
+        "percent_agreement": "",
+        "total_tasks": "",
+        "agreement_count": "",
+        "disagreement_count": agreement_report["agreement_metrics"]["multiple_choice"]["conflict_count"],
+        "option_selected_count": "",
+        "all_present_count": "",
+        "all_absent_count": "",
+    })
+
+    # Add overall summary
+    rows.append({
+        "variable_type": "SUMMARY",
+        "variable": "OVERALL",
+        "option": "",
+        "kappa": round(agreement_report["agreement_metrics"]["overall"]["kappa"], 4),
+        "gwet": round(agreement_report["agreement_metrics"]["overall"]["gwet"], 4),
+        "percent_agreement": "",
+        "total_tasks": agreement_report["summary_stats"]["total_tasks"],
+        "agreement_count": "",
+        "disagreement_count": agreement_report["summary_stats"]["total_conflicts"],
+        "option_selected_count": "",
+        "all_present_count": "",
+        "all_absent_count": "",
+    })
+
+    # Write to CSV
+    with open(output_file, 'w', newline='') as f:
+        # Define the fieldnames in a specific order for better readability
+        fieldnames = [
+            "variable_type",
+            "variable",
+            "option",
+            "kappa",
+            "gwet",
+            "percent_agreement",
+            "total_tasks",
+            "agreement_count",
+            "disagreement_count",
+            "option_selected_count",
+            "all_present_count",
+            "all_absent_count"
+        ]
+
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    print(f"Agreement metrics exported to {output_file}")
+
+
+def export_agreement_report(agreement_report, output_file=None):
+    """
+    Export the agreement report to a CSV file.
+
+    Parameters:
+    -----------
+    agreement_report : dict
+        The agreement report returned by analyze_coder_agreement
+
+    output_file : str, optional
+        Path to the output CSV file. If not provided, a default name will be used.
+
+    Returns:
+    --------
+    str
+        Path to the created CSV file
+    """
+    import os
+    from datetime import datetime
+
+    # Generate a default filename if none provided
+    if output_file is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = f"agreement_metrics_{timestamp}.csv"
+
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(os.path.abspath(output_file)) or '.', exist_ok=True)
+
+    # Export the metrics
+    export_agreement_metrics_to_csv(agreement_report, output_file)
+
+    return output_file
