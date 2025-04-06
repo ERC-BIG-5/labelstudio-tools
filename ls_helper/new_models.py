@@ -7,7 +7,7 @@ from typing import Optional, Any
 
 import pandas as pd
 
-from ls_helper.agreements import AgreementReport, export_agreement_metrics_to_csv
+from ls_helper.agreements import AgreementReport, export_agreement_metrics_to_csv, analyze_coder_agreement
 from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, IChoice, IChoices, PrincipleRow, \
     ITextArea, IText, IField
 from pandas import DataFrame
@@ -20,7 +20,7 @@ from ls_helper.settings import SETTINGS, DFCols, DFFormat
 from tools.project_logging import get_logger
 
 PlLang = tuple[str, str]
-ProjectAccess = int | str | PlLang
+ProjectAccess = int | str | PlLang | tuple[Optional[int], Optional[str], Optional[str], Optional[str]]
 
 logger = get_logger(__file__)
 
@@ -77,6 +77,7 @@ class ItemType(str, Enum):
     project_data = auto()
     agreement_report = auto()
 
+
 class ProjectData(ProjectCreate):
     id: int
     _project_data: Optional[LSProjectModel] = None
@@ -105,7 +106,7 @@ class ProjectData(ProjectCreate):
     def parse_label_config_xml(xml_string) -> InterfaceData:
         root: ET.Element = ET.fromstring(xml_string)
 
-        ordered_fields_map: dict[str,IField] = {}
+        ordered_fields_map: dict[str, IField] = {}
         input_text_fields: dict[str, str] = {}  # New list for text fields with "$" values
 
         for el in root.iter():
@@ -161,7 +162,7 @@ class ProjectData(ProjectCreate):
 
     @property
     def choices(self) -> dict[str, FieldModelChoice]:
-        return {k:v for k,v in self.fields.items() if isinstance(v, FieldModelChoice)}
+        return {k: v for k, v in self.fields.items() if isinstance(v, FieldModelChoice)}
 
     @property
     def interface(self) -> InterfaceData:
@@ -222,6 +223,7 @@ class ProjectData(ProjectCreate):
         # project_data = p_info.project_data()
 
         data_extensions = self.field_extensions
+        # should happen inside that function or when post_init
         self.interface.apply_extension(data_extensions)
         mp = ProjectResult(project_data=self)
 
@@ -229,16 +231,19 @@ class ProjectData(ProjectCreate):
         # todo, only buuild df, wehn we have a new file
         from_existing, mp.raw_annotation_result = ProjectMgmt.get_recent_annotations(mp.id, accepted_ann_age)
         if from_existing:
-            mp.raw_annotation_df = pd.read_csv(SETTINGS.annotations_dir/ f"raw_{self.id}.pqt")
+            mp.raw_annotation_df = pd.read_csv(SETTINGS.annotations_dir / f"raw_{self.id}.pqt")
             # this, cuz values are lists.
             mp.raw_annotation_df['value'] = mp.raw_annotation_df['value'].apply(ast.literal_eval)
             mp.raw_annotation_df['platform_id'] = mp.raw_annotation_df['platform_id'].astype(str)
-            mp.assignment_df = pd.read_csv(SETTINGS.annotations_dir/ f"ass_{self.id}.pqt")
+            mp.assignment_df = pd.read_csv(SETTINGS.annotations_dir / f"ass_{self.id}.pqt")
         else:
             mp.raw_annotation_df, mp.assignment_df = mp.get_annotation_df()
-            mp.raw_annotation_df.to_parquet(SETTINGS.annotations_dir/ f"raw_{self.id}.pqt")
-            mp.assignment_df.to_parquet(SETTINGS.annotations_dir/ f"ass_{self.id}.pqt")
+            mp.raw_annotation_df.to_parquet(SETTINGS.annotations_dir / f"raw_{self.id}.pqt")
+            mp.assignment_df.to_parquet(SETTINGS.annotations_dir / f"ass_{self.id}.pqt")
         return mp
+
+    def get_agreement_results(self, accepted_ann_age: Optional[int] = 6) -> "ProjectAgreementResult":
+        pass
 
     # todo, move somewhere else?
     @staticmethod
@@ -252,14 +257,16 @@ class ProjectData(ProjectCreate):
             return UserInfo.model_validate(json.load(pp.open()))
 
     def store_agreement_report(self, agreement_report: AgreementReport):
-        (p := self.path_for(ItemType.agreement_report)).write_text(agreement_report.model_dump_json(exclude_none=True,indent=2))
+        (p := self.path_for(ItemType.agreement_report)).write_text(
+            agreement_report.model_dump_json(exclude_none=True, indent=2))
         print(f"agreement_report -> {p.as_posix()}")
-        export_agreement_metrics_to_csv(agreement_report, (p_csv := self.path_for(ItemType.agreement_report,".csv")))
+        export_agreement_metrics_to_csv(agreement_report, (p_csv := self.path_for(ItemType.agreement_report, ".csv")))
         print(f"agreement_report -> {p_csv.as_posix()}")
         return p
 
     def get_agreement_data(self) -> AgreementReport:
         return AgreementReport.model_validate_json(self.path_for(ItemType.agreement_report).read_text())
+
 
 class ProjectOverView(BaseModel):
     projects: dict[ProjectAccess, ProjectData]
@@ -307,8 +314,17 @@ class ProjectOverView(BaseModel):
             return self.projects[str(p_access)]
         elif isinstance(p_access, str):
             return self.alias_map[p_access]
-        elif isinstance(p_access, tuple) and len(p_access) == 2:
+        elif (is_t := isinstance(p_access, tuple)) and (l := len(p_access)) == 2:
             return self.default_map[p_access]
+        elif is_t and l == 4:
+            id,alias,platform,language = p_access
+            if alias:
+                return self.alias_map[p_access]
+            elif id:
+                return self.projects[str(p_access)]
+            elif platform and language:
+                return self.default_map[(platform,language)]
+            raise ValueError(f"{id=} {platform=} {language=}, {alias=} not a valid project-access")
         raise ValueError(f"unknown project access: {p_access}")
 
     def add_project(self, p: ProjectCreate, save: bool = True):
@@ -670,5 +686,12 @@ class ProjectResult(BaseModel):
 
         result.attrs["format"] = DFFormat.flat
         return result
+
+    def get_coder_agreements(self, min_num_coders: int = 2, variables: Optional[list[str]] = None) -> tuple[
+        Path, AgreementReport]:
+        agreement_report = analyze_coder_agreement(self.raw_annotation_df, self.assignment_df,
+                                                   self.project_data.choices, min_num_coders, variables)
+        dest = self.project_data.store_agreement_report(agreement_report)
+        return dest, agreement_report
 
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)

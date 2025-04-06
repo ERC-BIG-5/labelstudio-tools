@@ -434,14 +434,15 @@ def agreements(
         alias: Annotated[str, typer.Option("-a")] = None,
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None,
-        accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 2,
-        min_num_coders: Annotated[int, typer.Option()] = 2
-) -> tuple[Path, AgreementReport]:
-    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
-    mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
+        accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 6,
+        min_num_coders: Annotated[int, typer.Option()] = 2,
+        variables: Annotated[list[str], typer.Argument()] = None
 
-    agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, po.choices )
-    dest = po.store_agreement_report(agreement_report)
+) -> tuple[Path, AgreementReport]:
+    dest, agreement_report = (platforms_overview.get_project((id, alias, platform, language))
+                              .get_annotations_results(
+        accepted_ann_age=accepted_ann_age)
+                              .get_coder_agreements(min_num_coders, variables))
     return dest, agreement_report
 
 
@@ -509,11 +510,11 @@ def create_conflict_view(
         variable_option: Annotated[str, typer.Option()] = None
 ):
     po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
-    po.validate_extensions()
-    mp = po.get_annotations_results()
+    # po.validate_extensions()
+    # mp = po.get_annotations_results()
 
     # just check existence
-    _ = mp.interface.field_type(variable)
+    po.interface.field_type(variable)
 
     agreement_data = json.loads((SETTINGS.agreements_dir / f"{po.id}.json").read_text())
 

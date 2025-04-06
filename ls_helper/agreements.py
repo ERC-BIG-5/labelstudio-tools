@@ -534,15 +534,16 @@ def export_agreement_metrics_to_csv(agreement_report: AgreementReport, output_fi
 
 
 def analyze_coder_agreement(raw_annotations, assignments, choices,
+                            min_coders: Optional[int] = 2,
                             field_names: Optional[List[str]] = None) -> AgreementReport:
     """
     End-to-end function to analyze coder agreement across annotations.
     Modified to treat indexed variables as part of a unified dataset.
     """
-    # Step 0: Filter out tasks with less than 2 coders
+    # Step 0: Filter out tasks with less than 'min_coders' coders
     initial_task_count = raw_annotations['task_id'].nunique()
     task_annotation_counts = raw_annotations.groupby('task_id')['ann_id'].nunique()
-    tasks_with_multiple_anns = task_annotation_counts[task_annotation_counts > 1].index
+    tasks_with_multiple_anns = task_annotation_counts[task_annotation_counts >= min_coders].index
     filtered_df = raw_annotations[raw_annotations['task_id'].isin(tasks_with_multiple_anns)]
     remaining_task_count = filtered_df['task_id'].nunique()
     print(f"Initial tasks: {initial_task_count}, Remaining tasks: {remaining_task_count}, "
@@ -776,6 +777,8 @@ def analyze_coder_agreement(raw_annotations, assignments, choices,
 
     # Convert to Pydantic model
     return AgreementReport.model_validate(agreement_report_dict)
+
+
 def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info: ChoiceFieldModel,
                        variable_annotations):
     """
@@ -861,7 +864,7 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
             conflicts.append(conflict)
 
     else:  # Multiple choice (similar changes as above)
-    # For multi-select, check conflicts option by option
+        # For multi-select, check conflicts option by option
         options = variable_info.options
 
         for option in options:
@@ -915,6 +918,7 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
 
     return conflicts
 
+
 def fix_users(df: DataFrame, usermap: dict) -> DataFrame:
     """
     Maps user IDs in the dataframe according to the provided mapping.
@@ -934,6 +938,7 @@ def fix_users(df: DataFrame, usermap: dict) -> DataFrame:
     """
     df['user_id'] = df['user_id'].map(usermap)
     return df
+
 
 def generate_agreement_report(all_variable_agreements, all_conflicts, choices, annotations_df,
                               base_to_indexed=None, indexed_vars_to_skip=None):
@@ -1143,7 +1148,6 @@ def create_indexed_agreement_matrix(variable_annotations):
     return agreement_matrix
 
 
-
 def agreement_matrix_assertions(agreement_matrix: DataFrame, variable_info: dict):
     # (index, data)
     for row in agreement_matrix.iterrows():
@@ -1196,7 +1200,6 @@ def add_image_index_column(df):
             base_to_indices[base].append(idx)
 
     return base_to_indices
-
 
 
 def clear_agreement_matrix(agreement_matrix: DataFrame, variable_info: ChoiceFieldModel) -> DataFrame:
@@ -1294,6 +1297,7 @@ def create_annotations_dataframe(raw_annotations):
         annotations_df = annotations_df.rename(columns={'coder_id': 'user_id'})
 
     return annotations_df
+
 
 def apply_defaults_for_variable(variable_annotations: DataFrame,
                                 assignments_df: DataFrame,
@@ -1397,4 +1401,3 @@ def calculate_agreement(agreement_matrix, variable_info):
         return _calculate_multi_select_agreement(agreement_matrix, variable_info)
     else:
         raise ValueError(f"Unknown variable type: {variable_info}")
-
