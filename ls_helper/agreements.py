@@ -96,6 +96,9 @@ class AgreementMetrics(BaseModel):
     single_choice: VariableTypeAgreement
     multiple_choice: VariableTypeAgreement
 
+    @property
+    def all_variables(self) -> dict[str,Union[SingleChoiceAgreement, MultiChoiceAgreement]]:
+        return self.single_choice.variables | self.multiple_choice.variables
 
 class SummaryStats(BaseModel):
     """Model for summary statistics"""

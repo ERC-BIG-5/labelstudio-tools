@@ -516,9 +516,11 @@ def create_conflict_view(
     # just check existence
     po.interface.field_type(variable)
 
-    agreement_data = json.loads((SETTINGS.agreements_dir / f"{po.id}.json").read_text())
-
-    conflicts = agreement_data["conflicts"]
+    #agreement_data = json.loads((SETTINGS.agreements_dir / f"{po.id}.json").read_text())
+    agg_metrics = po.get_agreement_data().agreement_metrics
+    am = agg_metrics.all_variables.get(variable)
+    return
+    #conflicts = agreement_data["conflicts"]
     relevant_conflicts_p_ids = [c["platform_id"] for c in conflicts if c["variable"] == variable]
     # print(relevant_conflicts_p_ids)
 
@@ -578,6 +580,7 @@ if __name__ == "__main__":
     # status(**_default)
     # annotations(**_default)
     # download_project_data(**_default)
-    agreements(**_default, accepted_ann_age=12)
+    # agreements(**_default, accepted_ann_age=12)
+    create_conflict_view(**_default, variable="nature_text")
     # create_conflict_view("nature_text",**_default)
     # update_coding_game(**_default)
