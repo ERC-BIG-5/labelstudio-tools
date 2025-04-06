@@ -269,7 +269,7 @@ def status(
 
     po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     po.validate_extensions()
-    mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
+    mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
     res = mp.basic_flatten_results(1)
     # just for checking...
@@ -394,7 +394,7 @@ def update_coding_game(
 
     po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     # project_annotations = _get_recent_annotations(po.id, accepted_ann_age)
-    mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
+    mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # project_annotations = _get_recent_annotations(po.id, 0)
 
     ann = mp.raw_annotation_df.copy()
@@ -418,7 +418,7 @@ def annotations(
     Path, str]:
     po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     po.validate_extensions()
-    mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
+    mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
     res = mp.flatten_annotation_results(min_coders, mp.interface.ordered_fields)
     res = mp.format_df_for_csv(res)
@@ -438,7 +438,7 @@ def agreements(
         min_num_coders: Annotated[int, typer.Option()] = 2
 ) -> tuple[Path, AgreementReport]:
     po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
-    mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
+    mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
 
     agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, po.choices )
     dest = po.store_agreement_report(agreement_report)
@@ -477,7 +477,7 @@ def reformat_for_datapipelines(
     """
     # does extra calculation but ok.
     po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
-    mp = po.create_annotations_results(0)
+    mp = po.get_annotations_results(0)
     res = {}
 
     for task_result in mp.raw_annotation_result:
@@ -510,7 +510,7 @@ def create_conflict_view(
 ):
     po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     po.validate_extensions()
-    mp = po.create_annotations_results()
+    mp = po.get_annotations_results()
 
     # just check existence
     _ = mp.interface.field_type(variable)

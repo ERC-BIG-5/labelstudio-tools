@@ -89,17 +89,23 @@ class ProjectMgmt:
         return project, coding_game_view
 
     @staticmethod
-    def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[list[TaskResultModel]]:
+    def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[tuple[bool, list[TaskResultModel]]]:
+        """
+
+        :param project_id:
+        :param accepted_age:
+        :return: true, list of anns; True if existing file
+        """
         latest_file = get_latest_annotation_file(project_id)
         if latest_file is not None:
             file_dt = datetime.strptime(latest_file.stem, "%Y%m%d_%H%M")
             # print(file_dt, datetime.now(), datetime.now() - file_dt)
             if datetime.now() - file_dt < timedelta(hours=accepted_age):
-                ls_logger.info("Get recent, gets latest annotation")
-                return get_latest_annotation(project_id)
+                ls_logger.info(f"Get recent, gets latest annotation: {file_dt:%m%d_%H%M}")
+                return True, get_latest_annotation(project_id)
 
         print("downloading annotations")
-        return ls_client().get_project_annotations(project_id)
+        return False, ls_client().get_project_annotations(project_id)
 
     # @staticmethod
     # def get_annotations(platform: str, language: str):

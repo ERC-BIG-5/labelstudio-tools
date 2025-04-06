@@ -217,8 +217,8 @@ class ProjectData(ProjectCreate):
                 # logger.warning(f"variable from fixes is redundant {var}")
         return redundant_extensions
 
-    def create_annotations_results(self,
-                                   accepted_ann_age: Optional[int] = 6) -> "ProjectResult":
+    def get_annotations_results(self,
+                                accepted_ann_age: Optional[int] = 6) -> "ProjectResult":
         # project_data = p_info.project_data()
 
         data_extensions = self.field_extensions
@@ -227,13 +227,17 @@ class ProjectData(ProjectCreate):
 
         from ls_helper.project_mgmt import ProjectMgmt
         # todo, only buuild df, wehn we have a new file
-        mp.raw_annotation_result = ProjectMgmt.get_recent_annotations(mp.id, accepted_ann_age)
-        #mp.raw_annotation_df, mp.assignment_df = mp.get_annotation_df()
-        mp.raw_annotation_df = pd.read_csv(SETTINGS.annotations_dir/ f"raw_{self.id}.pqt")
-        mp.raw_annotation_df['value'] = mp.raw_annotation_df['value'].apply(ast.literal_eval)
-        mp.assignment_df = pd.read_csv(SETTINGS.annotations_dir/ f"ass_{self.id}.pqt")
-        # mp.raw_annotation_df.to_parquet()
-        # mp.assignment_df.to_parquet(SETTINGS.annotations_dir/ f"ass_{self.id}.pqt")
+        from_existing, mp.raw_annotation_result = ProjectMgmt.get_recent_annotations(mp.id, accepted_ann_age)
+        if from_existing:
+            mp.raw_annotation_df = pd.read_csv(SETTINGS.annotations_dir/ f"raw_{self.id}.pqt")
+            # this, cuz values are lists.
+            mp.raw_annotation_df['value'] = mp.raw_annotation_df['value'].apply(ast.literal_eval)
+            mp.raw_annotation_df['platform_id'] = mp.raw_annotation_df['platform_id'].astype(str)
+            mp.assignment_df = pd.read_csv(SETTINGS.annotations_dir/ f"ass_{self.id}.pqt")
+        else:
+            mp.raw_annotation_df, mp.assignment_df = mp.get_annotation_df()
+            mp.raw_annotation_df.to_parquet(SETTINGS.annotations_dir/ f"raw_{self.id}.pqt")
+            mp.assignment_df.to_parquet(SETTINGS.annotations_dir/ f"ass_{self.id}.pqt")
         return mp
 
     # todo, move somewhere else?

@@ -790,7 +790,7 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
             # Store mapping from task_key to task_id and platform_id
             task_key_to_info[row['task_key']] = {
                 'task_id': row['task_id'],
-                'platform_id': row.get('platform_id'),
+                'platform_id': str(row.get('platform_id')),
                 'image_idx': row.get('image_idx', 0)
             }
 
