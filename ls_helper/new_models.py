@@ -1,3 +1,4 @@
+import ast
 import json
 import xml.etree.ElementTree as ET
 from enum import Enum, auto
@@ -225,11 +226,14 @@ class ProjectData(ProjectCreate):
         mp = ProjectResult(project_data=self)
 
         from ls_helper.project_mgmt import ProjectMgmt
+        # todo, only buuild df, wehn we have a new file
         mp.raw_annotation_result = ProjectMgmt.get_recent_annotations(mp.id, accepted_ann_age)
-        mp.raw_annotation_df, mp.assignment_df = mp.get_annotation_df()
-        mp.raw_annotation_df.to_parquet(SETTINGS.annotations_dir/ f"raw_{self.id}.pqt")
-
-        mp.assignment_df.to_parquet(SETTINGS.annotations_dir/ f"ass_{self.id}.pqt")
+        #mp.raw_annotation_df, mp.assignment_df = mp.get_annotation_df()
+        mp.raw_annotation_df = pd.read_csv(SETTINGS.annotations_dir/ f"raw_{self.id}.pqt")
+        mp.raw_annotation_df['value'] = mp.raw_annotation_df['value'].apply(ast.literal_eval)
+        mp.assignment_df = pd.read_csv(SETTINGS.annotations_dir/ f"ass_{self.id}.pqt")
+        # mp.raw_annotation_df.to_parquet()
+        # mp.assignment_df.to_parquet(SETTINGS.annotations_dir/ f"ass_{self.id}.pqt")
         return mp
 
     # todo, move somewhere else?

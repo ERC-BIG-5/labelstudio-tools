@@ -533,14 +533,13 @@ def export_agreement_metrics_to_csv(agreement_report: AgreementReport, output_fi
         writer.writerows([row.model_dump() for row in rows])
 
 
-
 def analyze_coder_agreement(raw_annotations, assignments, choices,
                             field_names: Optional[List[str]] = None) -> AgreementReport:
     """
     End-to-end function to analyze coder agreement across annotations.
     Modified to treat indexed variables as part of a unified dataset.
     """
-    # Step 0: Kickout tasks with less than 2 coders
+    # Step 0: Filter out tasks with less than 2 coders
     initial_task_count = raw_annotations['task_id'].nunique()
     task_annotation_counts = raw_annotations.groupby('task_id')['ann_id'].nunique()
     tasks_with_multiple_anns = task_annotation_counts[task_annotation_counts > 1].index
@@ -558,6 +557,7 @@ def analyze_coder_agreement(raw_annotations, assignments, choices,
     # Add image index information and create task_key
     base_to_indexed = add_image_index_column(annotations_df)
     print(f"{base_to_indexed=}")
+
     # Ensure task_key exists for all annotations
     if 'task_key' not in annotations_df.columns:
         annotations_df['task_key'] = (
@@ -569,13 +569,56 @@ def analyze_coder_agreement(raw_annotations, assignments, choices,
     all_variable_agreements = {}
     all_conflicts = []
 
+    # PREPROCESSING STEP: Categorize variables to eliminate redundant checks
+    variable_categories = {
+        'base_variables': set(),  # Base variables with no indexed versions
+        'indexed_bases': set(),  # Base variables that have indexed versions
+        'process_with_base': {},  # Maps indexed vars to their base for processing together
+        'skip_processing': set()  # Variables to skip (indices > 0)
+    }
+
+    # Categorize all variables upfront to avoid redundant checks
+    for variable in choices.keys():
+        # Check if this is a base variable with indexed versions
+        if variable in base_to_indexed:
+            variable_categories['indexed_bases'].add(variable)
+            # Mark higher indices to be skipped
+            for idx in base_to_indexed[variable]:
+                if idx > 0:
+                    indexed_var = f"{variable}_{idx}"
+                    variable_categories['skip_processing'].add(indexed_var)
+                    variable_categories['process_with_base'][indexed_var] = variable
+            # Map the _0 version to the base
+            zero_indexed_var = f"{variable}_0"
+            if zero_indexed_var in choices:
+                variable_categories['process_with_base'][zero_indexed_var] = variable
+        else:
+            # Check if this might be an indexed variable
+            match = re.match(r'^(.+)_(\d+)$', variable)
+            if match:
+                base_name, idx = match.groups()
+                idx = int(idx)
+                if base_name in variable_categories['indexed_bases']:
+                    if idx > 0:
+                        variable_categories['skip_processing'].add(variable)
+                    variable_categories['process_with_base'][variable] = base_name
+                else:
+                    # It's a variable with _number suffix but not part of indexed series
+                    variable_categories['base_variables'].add(variable)
+            else:
+                variable_categories['base_variables'].add(variable)
+
+    print(f"Base variables: {len(variable_categories['base_variables'])}")
+    print(f"Indexed base variables: {len(variable_categories['indexed_bases'])}")
+    print(f"Skip processing: {len(variable_categories['skip_processing'])}")
+    print(f"Process with base: {len(variable_categories['process_with_base'])}")
+
+    indexed_variable_map = {}  # Maps base variable names to True if they have indexed versions
+    processed_base_vars = set()  # Tracks which base variables have already been processed
+    indexed_vars_to_skip = set()  # Variables to skip (indices > 0)
+    base_vars_map = {}  # Maps indexed _0 variables to their base name
+
     # Create a mapping to track variables with indices
-    indexed_variable_map = {}
-    indexed_vars_to_skip = set()
-    base_vars_map = {}  # Map from indexed name to base name
-
-    print(f"base_to_indexed mapping: {base_to_indexed}")
-
     for base_name, indexed_vars in base_to_indexed.items():
         if len(indexed_vars) > 0:
             # Mark this as a base variable with indexed versions
@@ -594,12 +637,73 @@ def analyze_coder_agreement(raw_annotations, assignments, choices,
     print(f"Indexed variables to skip: {list(indexed_vars_to_skip)}")
     print(f"Base vars map: {base_vars_map}")
 
+    # Process variables based on their categorization
     for variable, variable_info in tqdm(choices.items()):
         if field_names and variable not in field_names:
             continue
 
         print(f"Processing variable: {variable}")
         print(f"Is this an indexed base? {variable in indexed_variable_map}")
+
+        # Check if this is a base variable WITH indexed versions
+        if variable in indexed_variable_map:
+            print(f"Processing {variable} as a base variable with indexed versions")
+
+            # Skip if we've already processed this base variable
+            if variable in processed_base_vars:
+                print(f"Already processed base variable {variable}, skipping")
+                continue
+
+            processed_base_vars.add(variable)
+
+            # Find all variables with this base name - use the pattern once
+            base_pattern = f"^{re.escape(variable)}_\\d+"
+            indexed_vars = [v for v in annotations_df['variable'].unique()
+                            if re.match(base_pattern, str(v))]
+
+            print(f"Found indexed versions: {indexed_vars}")
+
+            # Get all annotations for indexed versions
+            indexed_annotations = annotations_df[annotations_df['variable'].isin(indexed_vars)]
+
+            if len(indexed_annotations) > 0:
+                print(f"Found {len(indexed_annotations)} annotations for indexed versions of {variable}")
+
+                # Apply defaults using our improved function for ALL indexed versions together
+                variable_with_defaults = apply_defaults_for_variable(
+                    indexed_annotations,
+                    assignments_df,
+                    variable,  # Use base variable name
+                    variable_info
+                )
+
+                # Create agreement matrix using task_key
+                agreement_matrix = variable_with_defaults.pivot(
+                    index='task_key',
+                    columns='user_id',
+                    values='value'
+                )
+
+                # Calculate agreement
+                variable_agreement = calculate_agreement(
+                    agreement_matrix,
+                    variable_info
+                )
+
+                # Identify conflicts
+                variable_conflicts = identify_conflicts(
+                    agreement_matrix,
+                    variable,
+                    variable_info,
+                    variable_with_defaults
+                )
+
+                # Store results
+                all_variable_agreements[variable] = variable_agreement
+                all_conflicts.extend(variable_conflicts)
+
+                # Continue to next variable without individual processing
+                continue
 
         if variable in indexed_vars_to_skip:
             print(f"Skipping indexed variable: {variable}")
@@ -618,69 +722,6 @@ def analyze_coder_agreement(raw_annotations, assignments, choices,
             # Skip variables with no data
             print(f"No data on {variable}")
             continue
-
-        print(f"Checking variable {variable}. indexed_variable_map keys: {list(indexed_variable_map.keys())}")
-        print(f"Is variable in indexed_variable_map? {variable in indexed_variable_map}")
-
-        # Check if this is a base variable with indexed versions
-        is_indexed_base = variable in indexed_variable_map
-
-        if is_indexed_base:
-            # For indexed variables, get all annotations across indices
-            # Find all variables with this base name
-            base_pattern = f"^{re.escape(variable)}_\\d+"
-            indexed_vars = [v for v in annotations_df['variable'].unique()
-                            if re.match(base_pattern, str(v))]
-
-            print(f"Base variable {variable} has indexed versions: {indexed_vars}")
-            print(f"Current size of indexed_vars_to_skip: {len(indexed_vars_to_skip)}")
-            indexed_vars_to_skip.update(indexed_vars)
-            print(f"New size of indexed_vars_to_skip: {len(indexed_vars_to_skip)}")
-
-            # Get all annotations for indexed versions
-            indexed_annotations = annotations_df[annotations_df['variable'].isin(indexed_vars)]
-
-            if len(indexed_annotations) > 0:
-                # Apply defaults using our improved function
-                variable_with_defaults = apply_defaults_for_variable(
-                    indexed_annotations,
-                    assignments_df,
-                    variable,  # Use base variable name
-                    variable_info
-                )
-
-                # Create agreement matrix using task_key
-                agreement_matrix = variable_with_defaults.pivot(
-                    index='task_key',
-                    columns='user_id',
-                    values='value'
-                )
-
-                print(f"Agreement matrix shape: {agreement_matrix.shape}")
-                print(f"Total cells: {agreement_matrix.size}")
-                print(f"Non-NaN cells: {agreement_matrix.count().sum()}")
-
-                # Calculate agreement
-                variable_agreement = calculate_agreement(
-                    agreement_matrix,
-                    variable_info
-                )
-
-                # Store results
-                all_variable_agreements[variable] = variable_agreement
-
-                # Identify conflicts
-                variable_conflicts = identify_conflicts(
-                    agreement_matrix,
-                    variable,
-                    variable_info,
-                    variable_with_defaults
-                )
-
-                all_conflicts.extend(variable_conflicts)
-
-                # Skip individual processing of indexed variables
-                continue
 
         # Standard processing for regular variables
         variable_with_defaults = apply_defaults_for_variable(
@@ -723,34 +764,6 @@ def analyze_coder_agreement(raw_annotations, assignments, choices,
 
         all_conflicts.extend(variable_conflicts)
 
-    print("Consolidating indexed variables to base names...")
-    consolidated_agreements = {}
-
-    for var_name, var_metrics in all_variable_agreements.items():
-        # Check if this is part of an indexed group
-        is_indexed = False
-        base_name = var_name
-
-        # Extract base name if this is an indexed var
-        match = re.match(r'^(.+)_\d+$', var_name)
-        if match:
-            base_name = match.group(1)
-            is_indexed = base_name in indexed_variable_map
-
-        if is_indexed:
-            # For indexed variables, add to the base name in the consolidated dictionary
-            if base_name not in consolidated_agreements:
-                # Copy the metrics but change the name
-                consolidated_agreements[base_name] = var_metrics
-            # We're skipping metrics consolidation for simplicity
-        else:
-            # For non-indexed variables, just copy directly
-            consolidated_agreements[var_name] = var_metrics
-
-    # Replace the original dictionary with consolidated one
-    all_variable_agreements = consolidated_agreements
-    print(f"After consolidation: {len(all_variable_agreements)} variables")
-
     # Generate the final report
     agreement_report_dict = generate_agreement_report(
         all_variable_agreements,
@@ -758,13 +771,11 @@ def analyze_coder_agreement(raw_annotations, assignments, choices,
         choices,
         annotations_df,
         base_to_indexed,
-        indexed_vars_to_skip  # NEW: Pass this to report generation
+        variable_categories['skip_processing']  # Pass our clean skip set
     )
 
     # Convert to Pydantic model
     return AgreementReport.model_validate(agreement_report_dict)
-
-
 def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info: ChoiceFieldModel,
                        variable_annotations):
     """
