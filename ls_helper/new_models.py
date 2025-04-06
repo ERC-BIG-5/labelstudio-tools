@@ -70,7 +70,7 @@ class ProjectCreate(BaseModel):
         return self.platform, self.language
 
     def save(self):
-        platforms_overview2.add_project(self)
+        platforms_overview.add_project(self)
 
 
 class ItemType(str, Enum):
@@ -257,13 +257,13 @@ class ProjectData(ProjectCreate):
     def get_agreement_data(self) -> AgreementReport:
         return AgreementReport.model_validate_json(self.path_for(ItemType.agreement_report).read_text())
 
-class ProjectOverView2(BaseModel):
+class ProjectOverView(BaseModel):
     projects: dict[ProjectAccess, ProjectData]
     alias_map: dict[str, ProjectData] = Field(default_factory=dict, exclude=True)
     default_map: dict[PlLang, ProjectData] = Field(default_factory=dict, exclude=True)
 
     @model_validator(mode="after")
-    def create_map(cls, overview: "ProjectOverView2") -> "ProjectOverView2":
+    def create_map(cls, overview: "ProjectOverView") -> "ProjectOverView":
         """
         create alias_map and default_map
         """
@@ -295,7 +295,7 @@ class ProjectOverView2(BaseModel):
             print("projects file missing")
         # print(pp.read_text())
         # print(ProjectOverView2.model_validate_json(pp.read_text()))
-        return ProjectOverView2.model_validate({"projects": json.loads(pp.read_text())})
+        return ProjectOverView.model_validate({"projects": json.loads(pp.read_text())})
 
     def get_project(self, p_access: ProjectAccess) -> ProjectData:
         # int | str | platf_lang_default | platform_lang_name
@@ -334,7 +334,7 @@ class ProjectOverView2(BaseModel):
         pp.write_text(json.dumps({id: p.model_dump() for id, p in projects.items()}))
 
 
-platforms_overview2: ProjectOverView2 = ProjectOverView2.load()
+platforms_overview: ProjectOverView = ProjectOverView.load()
 
 
 class ProjectResult(BaseModel):

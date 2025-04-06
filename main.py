@@ -16,7 +16,7 @@ from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filt
 from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, FieldExtension
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectViewCreate, ProjectViewDataModel
-from ls_helper.new_models import platforms_overview2, get_p_access, ProjectCreate
+from ls_helper.new_models import platforms_overview, get_p_access, ProjectCreate
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
@@ -48,7 +48,7 @@ def generate_result_fixes_template(
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None
 ):
-    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
 
     conf = po.interface()
 
@@ -81,7 +81,7 @@ def setup_project_settings(
         alias: Annotated[str, typer.Option("-a")] = None,
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None):
-    po = platforms_overview2.get_project(get_p_access(id, platform, language, alias))
+    po = platforms_overview.get_project(get_p_access(id, platform, language, alias))
     values = ProjectMgmt.default_project_values()
     del values["color"]
     res = ls_client().patch_project(po.id, values)
@@ -114,7 +114,7 @@ def update_labeling_configs(
     # todo, if we do that. save it
     # download_project_data(platform, language)
     client = ls_client()
-    po = platforms_overview2.get_project(get_p_access(id, platform, language, alias))
+    po = platforms_overview.get_project(get_p_access(id, platform, language, alias))
 
     label_config = (SETTINGS.labeling_configs_dir / f"{po.platform}.xml").read_text(encoding="utf-8")
 
@@ -232,7 +232,7 @@ def download_project_data(
         platform: Annotated[Optional[str], typer.Argument()] = None,
         language: Annotated[Optional[str], typer.Argument()] = None,
 ):
-    p = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    p = platforms_overview.get_project(get_p_access(id, alias, platform, language))
 
     project_data = ls_client().get_project(p.id)
     if not project_data:
@@ -251,7 +251,7 @@ def download_project_views(
 ) -> list[
     ProjectViewModel]:
     p_a = get_p_access(id, alias, platform, language)
-    po = platforms_overview2.get_project(p_a)
+    po = platforms_overview.get_project(p_a)
     views = ProjectMgmt.refresh_views(po)
     logger.debug(f"view file -> {po.view_file}")
     return views
@@ -267,7 +267,7 @@ def status(
     from ls_helper import main_funcs
     main_funcs.status(get_p_access(id, alias, platform, language), accepted_ann_age)
 
-    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     po.validate_extensions()
     mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
@@ -289,7 +289,7 @@ def total_over_time(
             int, typer.Option(help="Download annotations if older than x hours")] = 6,
 ):
     print(get_p_access(id, alias, platform, language))
-    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     annotations = ProjectMgmt.get_recent_annotations(po.id, accepted_ann_age)
     df = annotation_total_over_time(annotations)
     temp_file = plot_cumulative_annotations(df,
@@ -307,7 +307,7 @@ def annotation_lead_times(id: Annotated[int, typer.Option()] = None,
                           language: Annotated[str, typer.Argument()] = None,
                           accepted_ann_age: Annotated[
                               int, typer.Option(help="Download annotations if older than x hours")] = 6):
-    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     project_annotations = ProjectMgmt.get_recent_annotations(po.id, accepted_ann_age)
 
     df = get_annotation_lead_times(project_annotations)
@@ -327,7 +327,7 @@ def set_view_items(
         language: Annotated[str, typer.Argument()] = None,
         create_view: Annotated[Optional[bool], typer.Option()] = True
 ):
-    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     views = po.get_views()
     if not views and not create_view:
         print("No views found")
@@ -370,7 +370,7 @@ def update_coding_game(
 
     """
     p_a = get_p_access(id, alias, platform, language)
-    po = platforms_overview2.get_project(p_a)
+    po = platforms_overview.get_project(p_a)
     logger.info(po.alias)
     view_id = po.coding_game_view_id
     if not view_id:
@@ -392,7 +392,7 @@ def update_coding_game(
         return None
     view_ = view_[0]
 
-    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     # project_annotations = _get_recent_annotations(po.id, accepted_ann_age)
     mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
     # project_annotations = _get_recent_annotations(po.id, 0)
@@ -416,7 +416,7 @@ def annotations(
             int, typer.Option(help="Download annotations if older than x hours")] = 6,
         min_coders: Annotated[int, typer.Option()] = 2) -> tuple[
     Path, str]:
-    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     po.validate_extensions()
     mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
@@ -437,7 +437,7 @@ def agreements(
         accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 2,
         min_num_coders: Annotated[int, typer.Option()] = 2
 ) -> tuple[Path, AgreementReport]:
-    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
 
     agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, po.choices )
@@ -451,7 +451,7 @@ def create_project(
         platform: Annotated[str, typer.Option()],
         language: Annotated[str, typer.Option()],
         alias: Annotated[str, typer.Option()] = None):
-    platforms_overview2.add_project(ProjectCreate(
+    platforms_overview.add_project(ProjectCreate(
         title=title,
         platform=platform,
         language=language,
@@ -476,7 +476,7 @@ def reformat_for_datapipelines(
     :return:
     """
     # does extra calculation but ok.
-    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     mp = po.create_annotations_results(0)
     res = {}
 
@@ -494,7 +494,7 @@ def get_all_variable_names(
         platform: Annotated[str, typer.Option()] = None,
         language: Annotated[str, typer.Option()] = None
 ):
-    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     struct = po.interface(include_text=False, apply_extension=True)
     return list(struct.orig_choices.keys()) + struct.free_text
 
@@ -508,7 +508,7 @@ def create_conflict_view(
         language: Annotated[str, typer.Option()] = None,
         variable_option: Annotated[str, typer.Option()] = None
 ):
-    po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
+    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
     po.validate_extensions()
     mp = po.create_annotations_results()
 
@@ -545,9 +545,9 @@ def build_extension_index(
     from ls_helper.annot_extension import build_extension_index as _build_extension_index
 
     if project_ids:
-        projects = [platforms_overview2.get_project(get_p_access(id)) for id in project_ids]
+        projects = [platforms_overview.get_project(get_p_access(id)) for id in project_ids]
     elif take_all_defaults:
-        projects = list(platforms_overview2.default_map.values())
+        projects = list(platforms_overview.default_map.values())
     else:
         raise ValueError(f"Unclear parameter for build_extension_index")
     index = _build_extension_index(projects)

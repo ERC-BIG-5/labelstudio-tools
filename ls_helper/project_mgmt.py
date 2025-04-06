@@ -9,7 +9,7 @@ import orjson
 from ls_helper.funcs import get_latest_annotation_file, get_latest_annotation
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel, ProjectViewCreate, TaskResultModel
-from ls_helper.new_models import ProjectCreate, platforms_overview2, ProjectData
+from ls_helper.new_models import ProjectCreate, platforms_overview, ProjectData
 from ls_helper.settings import SETTINGS, ls_logger
 from tools.env_root import root
 from tools.files import read_data
@@ -45,7 +45,7 @@ class ProjectMgmt:
         projects_data = SETTINGS.client.projects_list()
         project_map = {p.id: p for p in projects_data}
 
-        projects_info = platforms_overview2
+        projects_info = platforms_overview
         for platform, p_data in projects_info:
             # print(platform, p_data)
             for lang, l_d in p_data.items():
