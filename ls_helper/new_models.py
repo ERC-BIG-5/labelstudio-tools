@@ -1,9 +1,12 @@
 import json
 import xml.etree.ElementTree as ET
+from enum import Enum, auto
 from pathlib import Path
 from typing import Optional, Any
 
 import pandas as pd
+
+from ls_helper.agreements import AgreementReport, export_agreement_metrics_to_csv
 from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, IChoice, IChoices, PrincipleRow, \
     ITextArea, IText, IField
 from pandas import DataFrame
@@ -69,6 +72,10 @@ class ProjectCreate(BaseModel):
         platforms_overview2.add_project(self)
 
 
+class ItemType(str, Enum):
+    project_data = auto()
+    agreement_report = auto()
+
 class ProjectData(ProjectCreate):
     id: int
     _project_data: Optional[LSProjectModel] = None
@@ -76,6 +83,10 @@ class ProjectData(ProjectCreate):
     _field_extensions: Optional[ProjectFieldsExtensions] = None
 
     # views, predictions, results
+
+    def path_for(self, item: ItemType, ext: Optional[str] = ".json") -> Path:
+        if item == ItemType.agreement_report:
+            return SETTINGS.agreements_dir / f"{self.id}{ext}"
 
     @property
     def project_data(self) -> LSProjectModel:
@@ -229,6 +240,15 @@ class ProjectData(ProjectCreate):
         else:
             return UserInfo.model_validate(json.load(pp.open()))
 
+    def store_agreement_report(self, agreement_report: AgreementReport):
+        (p := self.path_for(ItemType.agreement_report)).write_text(agreement_report.model_dump_json(indent=2))
+        print(f"agreement_report -> {p.as_posix()}")
+        export_agreement_metrics_to_csv(agreement_report, (p_csv := self.path_for(ItemType.agreement_report,".csv")))
+        print(f"agreement_report -> {p_csv.as_posix()}")
+        return p
+
+    def get_agreement_data(self) -> AgreementReport:
+        return AgreementReport.model_validate_json(self.path_for(ItemType.agreement_report).read_text())
 
 class ProjectOverView2(BaseModel):
     projects: dict[ProjectAccess, ProjectData]
