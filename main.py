@@ -439,6 +439,7 @@ def agreements(
 ) -> tuple[Path, AgreementReport]:
     po = platforms_overview2.get_project(get_p_access(id, alias, platform, language))
     mp = po.create_annotations_results(accepted_ann_age=accepted_ann_age)
+
     agreement_report = analyze_coder_agreement(mp.raw_annotation_df, mp.assignment_df, po.choices )
     dest = po.store_agreement_report(agreement_report)
     return dest, agreement_report

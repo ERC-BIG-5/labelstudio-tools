@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 
 from pandas import DataFrame
+from tqdm import tqdm
 
 from ls_helper.models.field_models import ChoiceFieldModel, NO_SINGLE_CHOICE
 from tools.project_logging import get_logger
@@ -533,32 +534,11 @@ def export_agreement_metrics_to_csv(agreement_report: AgreementReport, output_fi
 
 
 
-
-
 def analyze_coder_agreement(raw_annotations, assignments, choices,
                             field_names: Optional[List[str]] = None) -> AgreementReport:
     """
     End-to-end function to analyze coder agreement across annotations.
-
-    Parameters:
-    -----------
-    raw_annotations : list of dict or DataFrame
-        List of annotation objects with keys:
-        task_id, ann_id, coder_id, ts, platform_id, category (variable name), type, value
-
-    assignments : list of dict or DataFrame
-        List of task-coder assignments with metadata
-
-    choices : dict
-        Dictionary mapping variable_ids to their ChoiceFieldModel objects
-
-    field_names : Optional[list[str]]
-        Optional list of field names to analyze (if None, analyze all fields)
-
-    Returns:
-    --------
-    AgreementReport
-        Agreement report with metrics and conflicts
+    Modified to treat indexed variables as part of a unified dataset.
     """
     # Step 0: Kickout tasks with less than 2 coders
     initial_task_count = raw_annotations['task_id'].nunique()
@@ -575,131 +555,210 @@ def analyze_coder_agreement(raw_annotations, assignments, choices,
     # Step 2: Create annotations DataFrame without defaults
     annotations_df = create_annotations_dataframe(filtered_df)
 
-    # Add image index information to identify indexed variables
-    add_image_index_column(annotations_df)
+    # Add image index information and create task_key
+    base_to_indexed = add_image_index_column(annotations_df)
+    print(f"{base_to_indexed=}")
+    # Ensure task_key exists for all annotations
+    if 'task_key' not in annotations_df.columns:
+        annotations_df['task_key'] = (
+                annotations_df['task_id'].astype(str) + '_' +
+                annotations_df['image_idx'].astype(str)
+        )
 
     # Initialize results containers
     all_variable_agreements = {}
     all_conflicts = []
 
-    # Create a mapping of base variable names to the original variables with indices
-    base_to_indexed = {}
-    if 'variable_base' in annotations_df.columns and 'image_idx' in annotations_df.columns:
-        indexed_vars = annotations_df[annotations_df['image_idx'] > 0]
-        for base_name in indexed_vars['variable_base'].unique():
-            matching_vars = indexed_vars[indexed_vars['variable_base'] == base_name]['variable'].unique()
-            if len(matching_vars) > 0:
-                base_to_indexed[base_name] = list(matching_vars)
+    # Create a mapping to track variables with indices
+    indexed_variable_map = {}
+    indexed_vars_to_skip = set()
+    base_vars_map = {}  # Map from indexed name to base name
 
-    # Process each variable individually
-    for variable, variable_info in choices.items():
+    print(f"base_to_indexed mapping: {base_to_indexed}")
+
+    for base_name, indexed_vars in base_to_indexed.items():
+        if len(indexed_vars) > 0:
+            # Mark this as a base variable with indexed versions
+            indexed_variable_map[base_name] = True
+            print(f"Adding {base_name} to indexed_variable_map")
+
+            # Create a list of indexed variables to skip (only indices > 0)
+            higher_indexed_vars = [f"{base_name}_{idx}" for idx in indexed_vars if idx > 0]
+            indexed_vars_to_skip.update(higher_indexed_vars)
+
+            # Map the _0 version to the base name
+            zero_indexed_var = f"{base_name}_0"
+            base_vars_map[zero_indexed_var] = base_name
+
+    print(f"Indexed base variables: {list(indexed_variable_map.keys())}")
+    print(f"Indexed variables to skip: {list(indexed_vars_to_skip)}")
+    print(f"Base vars map: {base_vars_map}")
+
+    for variable, variable_info in tqdm(choices.items()):
         if field_names and variable not in field_names:
             continue
 
-        # Check if this is a base variable name that has indexed versions
-        if variable in base_to_indexed:
-            # We'll create a consolidated variable for all indexed versions
-            consolidated_name = f"{variable}_$"
+        print(f"Processing variable: {variable}")
+        print(f"Is this an indexed base? {variable in indexed_variable_map}")
 
-            # Get all annotations for the indexed versions of this variable
-            all_indices_annotations = []
-            for indexed_var in base_to_indexed[variable]:
-                var_annotations = annotations_df[annotations_df['variable'] == indexed_var]
-                if len(var_annotations) > 0:
-                    all_indices_annotations.append(var_annotations)
+        if variable in indexed_vars_to_skip:
+            print(f"Skipping indexed variable: {variable}")
+            continue
 
-            if all_indices_annotations:
-                # Combine all indexed annotations
-                variable_annotations = pd.concat(all_indices_annotations)
+        # For _0 indexed variables, we'll process them but store under the base name
+        result_var_name = variable
+        if variable in base_vars_map:
+            print(f"Processing {variable} as base variable {base_vars_map[variable]}")
+            result_var_name = base_vars_map[variable]
 
-                # Apply defaults
+        # Get all annotations for this variable
+        variable_annotations = annotations_df[annotations_df['variable'] == variable]
+
+        if len(variable_annotations) == 0:
+            # Skip variables with no data
+            print(f"No data on {variable}")
+            continue
+
+        print(f"Checking variable {variable}. indexed_variable_map keys: {list(indexed_variable_map.keys())}")
+        print(f"Is variable in indexed_variable_map? {variable in indexed_variable_map}")
+
+        # Check if this is a base variable with indexed versions
+        is_indexed_base = variable in indexed_variable_map
+
+        if is_indexed_base:
+            # For indexed variables, get all annotations across indices
+            # Find all variables with this base name
+            base_pattern = f"^{re.escape(variable)}_\\d+"
+            indexed_vars = [v for v in annotations_df['variable'].unique()
+                            if re.match(base_pattern, str(v))]
+
+            print(f"Base variable {variable} has indexed versions: {indexed_vars}")
+            print(f"Current size of indexed_vars_to_skip: {len(indexed_vars_to_skip)}")
+            indexed_vars_to_skip.update(indexed_vars)
+            print(f"New size of indexed_vars_to_skip: {len(indexed_vars_to_skip)}")
+
+            # Get all annotations for indexed versions
+            indexed_annotations = annotations_df[annotations_df['variable'].isin(indexed_vars)]
+
+            if len(indexed_annotations) > 0:
+                # Apply defaults using our improved function
                 variable_with_defaults = apply_defaults_for_variable(
-                    variable_annotations,
+                    indexed_annotations,
                     assignments_df,
-                    consolidated_name,  # Use consolidated name
+                    variable,  # Use base variable name
                     variable_info
                 )
 
-                # Create agreement matrix with task+index as the row identifier
-                agreement_matrix = create_indexed_agreement_matrix(variable_with_defaults)
+                # Create agreement matrix using task_key
+                agreement_matrix = variable_with_defaults.pivot(
+                    index='task_key',
+                    columns='user_id',
+                    values='value'
+                )
 
-                # Calculate agreement using Pydantic models
+                print(f"Agreement matrix shape: {agreement_matrix.shape}")
+                print(f"Total cells: {agreement_matrix.size}")
+                print(f"Non-NaN cells: {agreement_matrix.count().sum()}")
+
+                # Calculate agreement
                 variable_agreement = calculate_agreement(
                     agreement_matrix,
                     variable_info
                 )
 
-                # Store results under the consolidated name
-                all_variable_agreements[consolidated_name] = variable_agreement
+                # Store results
+                all_variable_agreements[variable] = variable_agreement
 
                 # Identify conflicts
                 variable_conflicts = identify_conflicts(
                     agreement_matrix,
-                    consolidated_name,
+                    variable,
                     variable_info,
                     variable_with_defaults
                 )
 
                 all_conflicts.extend(variable_conflicts)
 
-        # Standard processing for regular variables
-        else:
-            variable_annotations = annotations_df[annotations_df['variable'] == variable]
-
-            if len(variable_annotations) == 0:
-                print(f"No data on {variable}")
+                # Skip individual processing of indexed variables
                 continue
 
-            # Apply defaults
-            variable_with_defaults = apply_defaults_for_variable(
-                variable_annotations,
-                assignments_df,
-                variable,
+        # Standard processing for regular variables
+        variable_with_defaults = apply_defaults_for_variable(
+            variable_annotations,
+            assignments_df,
+            variable,
+            variable_info
+        )
+
+        # Create agreement matrix using task_key
+        agreement_matrix = variable_with_defaults.pivot(
+            index='task_key',
+            columns='user_id',
+            values='value'
+        )
+
+        # For single-choice, clear the agreement matrix
+        if variable_info.choice == 'single':
+            cleared_agreement_matrix = clear_agreement_matrix(agreement_matrix, variable_info)
+            variable_agreement = calculate_agreement(
+                cleared_agreement_matrix,
+                variable_info
+            )
+        else:  # multi_select
+            variable_agreement = calculate_agreement(
+                agreement_matrix,
                 variable_info
             )
 
-            # Create standard agreement matrix
-            agreement_matrix = variable_with_defaults.pivot(
-                index='task_id',
-                columns='user_id',
-                values='value'
-            )
+        # Store results
+        all_variable_agreements[result_var_name] = variable_agreement
 
-            # For single-choice, clear the agreement matrix
-            if variable_info.choice == 'single':
-                cleared_agreement_matrix = clear_agreement_matrix(agreement_matrix, variable_info)
-                # Calculate agreement using Pydantic-returning function
-                variable_agreement = calculate_agreement(
-                    cleared_agreement_matrix,
-                    variable_info
-                )
-            else:
-                # For multiple-choice, use the original matrix
-                variable_agreement = calculate_agreement(
-                    agreement_matrix,
-                    variable_info
-                )
+        # Identify conflicts
+        variable_conflicts = identify_conflicts(
+            agreement_matrix,
+            variable,
+            variable_info,
+            variable_with_defaults
+        )
 
-            # Store results
-            all_variable_agreements[variable] = variable_agreement
+        all_conflicts.extend(variable_conflicts)
 
-            # Identify conflicts
-            variable_conflicts = identify_conflicts(
-                agreement_matrix,
-                variable,
-                variable_info,
-                variable_with_defaults
-            )
+    print("Consolidating indexed variables to base names...")
+    consolidated_agreements = {}
 
-            all_conflicts.extend(variable_conflicts)
+    for var_name, var_metrics in all_variable_agreements.items():
+        # Check if this is part of an indexed group
+        is_indexed = False
+        base_name = var_name
 
-    # Generate the final report using Pydantic models
+        # Extract base name if this is an indexed var
+        match = re.match(r'^(.+)_\d+$', var_name)
+        if match:
+            base_name = match.group(1)
+            is_indexed = base_name in indexed_variable_map
+
+        if is_indexed:
+            # For indexed variables, add to the base name in the consolidated dictionary
+            if base_name not in consolidated_agreements:
+                # Copy the metrics but change the name
+                consolidated_agreements[base_name] = var_metrics
+            # We're skipping metrics consolidation for simplicity
+        else:
+            # For non-indexed variables, just copy directly
+            consolidated_agreements[var_name] = var_metrics
+
+    # Replace the original dictionary with consolidated one
+    all_variable_agreements = consolidated_agreements
+    print(f"After consolidation: {len(all_variable_agreements)} variables")
+
+    # Generate the final report
     agreement_report_dict = generate_agreement_report(
         all_variable_agreements,
         all_conflicts,
         choices,
         annotations_df,
-        base_to_indexed
+        base_to_indexed,
+        indexed_vars_to_skip  # NEW: Pass this to report generation
     )
 
     # Convert to Pydantic model
@@ -709,51 +768,39 @@ def analyze_coder_agreement(raw_annotations, assignments, choices,
 def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info: ChoiceFieldModel,
                        variable_annotations):
     """
-    Identify conflicts for this variable.
-
-    Parameters:
-    -----------
-    agreement_matrix : DataFrame
-        Matrix with tasks as rows and coders as columns
-
-    variable : str
-        ID of the variable
-
-    variable_info : ChoiceFieldModel
-        Variable metadata including type
-
-    variable_annotations : DataFrame
-        Annotations for this variable with all metadata
-
-    Returns:
-    --------
-    list of conflict dictionaries
+    Identify conflicts for this variable using task_key.
     """
-
     conflicts = []
-    # Get a mapping of task_id to platform_id from the annotations
-    platform_id_map = {}
-    for _, row in variable_annotations.iterrows():
-        if 'task_id' in row and 'platform_id' in row:
-            platform_id_map[row['task_id']] = row['platform_id']
 
-    # Check if we're using composite keys (for indexed variables)
-    has_composite_key = False
-    if len(agreement_matrix.index) > 0:
-        first_idx = agreement_matrix.index[0]
-        has_composite_key = isinstance(first_idx, str) and '_' in first_idx
+    # Get mapping of task_key to task_id and platform_id
+    task_key_to_info = {}
+    for _, row in variable_annotations.iterrows():
+        if 'task_key' in row and 'task_id' in row:
+            # Store mapping from task_key to task_id and platform_id
+            task_key_to_info[row['task_key']] = {
+                'task_id': row['task_id'],
+                'platform_id': row.get('platform_id'),
+                'image_idx': row.get('image_idx', 0)
+            }
+
     # Different handling for single vs multiple choice variables
     if variable_info.choice == 'single':
         # For single-select, identify conflicts where annotators chose different options
-        for task_id, row in agreement_matrix.iterrows():
-            # Drop NaN values and get the values and corresponding coders
+        for task_key, row in agreement_matrix.iterrows():
+            # Get task info
+            task_info = task_key_to_info.get(task_key, {})
+            task_id = task_info.get('task_id', task_key)
+            platform_id = task_info.get('platform_id')
+            image_idx = task_info.get('image_idx', 0)
+
+            # Drop NaN values and get values and coders
             values = row.dropna().tolist()
             coders = row.dropna().index.tolist()
 
             if len(values) < 2:
                 continue  # Need at least 2 annotations to have a conflict
 
-            # For single-choice, extract the first element from any lists
+            # For single-choice, extract first element from lists
             processed_values = []
             for val in values:
                 if isinstance(val, list) and len(val) > 0:
@@ -770,28 +817,12 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
             if len(unique_values) <= 1:
                 continue  # All values are the same, no conflict
 
-            # Extract actual task_id and image_idx if using composite keys
-            actual_task_id = task_id
-            image_idx = None
-
-            if has_composite_key:
-                parts = str(task_id).split('_')
-                if len(parts) >= 2:
-                    actual_task_id = parts[0]
-                    try:
-                        image_idx = int(parts[1])
-                    except (ValueError, IndexError):
-                        pass
-
-            # Find platform_id for this task
-            platform_id = platform_id_map.get(actual_task_id)
-
             # Convert numeric indices to option labels for readability
             labeled_annotations = []
             for i, value in enumerate(processed_values):
                 if isinstance(value, (int, float)) and not np.isnan(value):
                     try:
-                        # Convert index to label using the options list
+                        # Convert index to label
                         label = variable_info.options[int(value)]
                     except (IndexError, ValueError):
                         label = str(value) + " (unknown option)"
@@ -799,27 +830,27 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
                     label = str(value)
 
                 labeled_annotations.append({
-                    'user_id':coders[i],
+                    'user_id': coders[i],
                     'value': label
                 })
 
             # Record conflict
             conflict = {
-                'task_id': actual_task_id,
+                'task_id': task_id,
                 'platform_id': platform_id,
                 'variable': variable,
-                'agreement_score': 0.0,  # 0 for a conflict
+                'agreement_score': 0.0,
                 'annotations': labeled_annotations
             }
 
             # Add image_idx if available
-            if image_idx is not None:
+            if image_idx is not None and image_idx != 0:
                 conflict['image_idx'] = image_idx
 
             conflicts.append(conflict)
 
-    else:  # Multiple choice
-        # For multi-select, we need to check conflicts option by option
+    else:  # Multiple choice (similar changes as above)
+    # For multi-select, check conflicts option by option
         options = variable_info.options
 
         for option in options:
@@ -829,7 +860,13 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
             )
 
             # Look for disagreements on this option (must have both 0s and 1s)
-            for task_id, row in binary_matrix.iterrows():
+            for task_key, row in binary_matrix.iterrows():
+                # Get task info
+                task_info = task_key_to_info.get(task_key, {})
+                task_id = task_info.get('task_id', task_key)
+                platform_id = task_info.get('platform_id')
+                image_idx = task_info.get('image_idx', 0)
+
                 # Drop NaN values
                 values = row.dropna()
                 if len(values) < 2:
@@ -838,19 +875,6 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
                 # Check if there's a true disagreement (must have both 0s and 1s)
                 if set(values) != {0, 1}:
                     continue  # Not a true disagreement if all have same value
-
-                # Extract actual task_id and image_idx if using composite keys
-                actual_task_id = task_id
-                image_idx = None
-
-                if has_composite_key:
-                    parts = str(task_id).split('_')
-                    if len(parts) >= 2:
-                        actual_task_id = parts[0]
-                        try:
-                            image_idx = int(parts[1])
-                        except (ValueError, IndexError):
-                            pass
 
                 # Create annotations for coders who actually coded
                 option_annotations = []
@@ -863,8 +887,8 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
 
                 # Record conflict for this option
                 conflict = {
-                    'task_id': actual_task_id,
-                    'platform_id': platform_id_map.get(actual_task_id),
+                    'task_id': task_id,
+                    'platform_id': platform_id,
                     'variable': variable,
                     'option': option,
                     'agreement_score': 0.0,
@@ -872,14 +896,13 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
                     'conflict_type': 'multiple_choice'
                 }
 
-                # Add image_idx if available
-                if image_idx is not None:
+                # Add image_idx if it's not the default value
+                if image_idx is not None and image_idx != 0:
                     conflict['image_idx'] = image_idx
 
                 conflicts.append(conflict)
 
     return conflicts
-
 
 def fix_users(df: DataFrame, usermap: dict) -> DataFrame:
     """
@@ -901,8 +924,8 @@ def fix_users(df: DataFrame, usermap: dict) -> DataFrame:
     df['user_id'] = df['user_id'].map(usermap)
     return df
 
-
-def generate_agreement_report(all_variable_agreements, all_conflicts, choices, annotations_df, base_to_indexed=None):
+def generate_agreement_report(all_variable_agreements, all_conflicts, choices, annotations_df,
+                              base_to_indexed=None, indexed_vars_to_skip=None):
     """
     Generate final agreement report.
 
@@ -927,6 +950,8 @@ def generate_agreement_report(all_variable_agreements, all_conflicts, choices, a
     --------
     dict with complete report
     """
+    print("Variables received in generate_agreement_report:", sorted(all_variable_agreements.keys()))
+
     # Calculate overall statistics
     # Count unique tasks, coders, and variables
     unique_tasks = annotations_df['task_id'].nunique()
@@ -938,6 +963,14 @@ def generate_agreement_report(all_variable_agreements, all_conflicts, choices, a
     # Group variables by type
     single_choice_vars = []
     multiple_choice_vars = []
+
+    if indexed_vars_to_skip:
+        print(f"Received {len(indexed_vars_to_skip)} indexed variables to skip")
+        print(f"First 5 examples: {list(indexed_vars_to_skip)[:5]}")
+
+    print("All variables:", sorted(all_variable_agreements.keys()))
+    if indexed_vars_to_skip:
+        print("Indexed variables to skip:", sorted(indexed_vars_to_skip))
 
     for var_name, var_info in choices.items():
         if var_info.choice == 'single':
@@ -957,17 +990,26 @@ def generate_agreement_report(all_variable_agreements, all_conflicts, choices, a
 
     # Process single-choice variables
     for var_name, var_metrics in all_variable_agreements.items():
+        # Debug what variables are being processed
+        print(f"Checking variable {var_name} for processing")
+
+        if indexed_vars_to_skip and var_name in indexed_vars_to_skip:
+            print(f"Skipping indexed variable: {var_name}")
+            continue
+
         var_info = None
-        # Handle consolidated variables (with _$)
-        if var_name.endswith('_$'):
-            base_name = var_name[:-2]
-            if base_name in choices:
-                var_info = choices[base_name]
+        # Try direct lookup first
+        if var_name in choices:
+            var_info = choices[var_name]
         else:
-            if var_name in choices:
-                var_info = choices[var_name]
+            # For base variables that were renamed from indexed_0, try looking up various forms
+            # Check if this might be a base name for an indexed variable
+            indexed_0_name = f"{var_name}_0"
+            if indexed_0_name in choices:
+                var_info = choices[indexed_0_name]
 
         if var_info is None:
+            print(f"No variable info found for {var_name}, skipping")
             continue
 
         if var_info.choice == 'single':
@@ -1068,42 +1110,27 @@ def generate_agreement_report(all_variable_agreements, all_conflicts, choices, a
 
 def create_indexed_agreement_matrix(variable_annotations):
     """
-    Create an agreement matrix for variables with indices,
-    using a composite key of task_id and image_idx.
-
-    Parameters:
-    -----------
-    variable_annotations : DataFrame
-        Annotations with image_idx column
-
-    Returns:
-    --------
-    DataFrame
-        Agreement matrix with composite row index
+    Create an agreement matrix using the composite task_key as the index.
     """
-    # Create a composite key
-    if 'image_idx' in variable_annotations.columns:
-        variable_annotations['composite_key'] = (
-                variable_annotations['task_id'].astype(str) +
-                '_' +
-                variable_annotations['image_idx'].astype(str)
-        )
+    # Use the task_key if it exists, otherwise create it
+    if 'task_key' not in variable_annotations.columns:
+        if 'image_idx' in variable_annotations.columns:
+            variable_annotations['task_key'] = (
+                    variable_annotations['task_id'].astype(str) + '_' +
+                    variable_annotations['image_idx'].astype(str)
+            )
+        else:
+            variable_annotations['task_key'] = variable_annotations['task_id'].astype(str) + '_0'
 
-        # Pivot table with composite key as index
-        agreement_matrix = variable_annotations.pivot(
-            index='composite_key',
-            columns='user_id',
-            values='value'
-        )
+    # Pivot using the task_key as index
+    agreement_matrix = variable_annotations.pivot(
+        index='task_key',
+        columns='user_id',
+        values='value'
+    )
 
-        return agreement_matrix
-    else:
-        # Fall back to standard pivot if no image_idx
-        return variable_annotations.pivot(
-            index='task_id',
-            columns='user_id',
-            values='value'
-        )
+    return agreement_matrix
+
 
 
 def agreement_matrix_assertions(agreement_matrix: DataFrame, variable_info: dict):
@@ -1118,19 +1145,9 @@ def agreement_matrix_assertions(agreement_matrix: DataFrame, variable_info: dict
 def add_image_index_column(df):
     """
     Extract indices from variable names and add columns for base variable name and index.
-    For example: "nep_materiality_visual_0" -> base: "nep_materiality_visual", idx: 0
-
-    Parameters:
-    -----------
-    df : DataFrame
-        DataFrame containing 'variable' or 'category' column
-
-    Returns:
-    --------
-    dict
-        Dictionary mapping base variable names to their indices
+    Also creates a composite task_key for agreement calculations.
     """
-    # Extract base names and indices
+    # Extract base names and indices (existing code)
     base_names = []
     indices = []
 
@@ -1147,7 +1164,6 @@ def add_image_index_column(df):
             else:
                 base = re.sub(r'_(\d+)(?:$|_)', '', var_str)
             base_names.append(base)
-
             indices.append(idx)
         else:
             base_names.append(var_str)
@@ -1157,7 +1173,10 @@ def add_image_index_column(df):
     df['variable_base'] = base_names
     df['image_idx'] = indices
 
-    # Create mapping of base variables to their indices
+    # Create a composite task key that combines task_id and image_idx
+    df['task_key'] = df['task_id'].astype(str) + '_' + df['image_idx'].astype(str)
+
+    # Create mapping of base variables to their indices (existing code)
     base_to_indices = {}
     for base, idx in zip(base_names, indices):
         if idx > 0:  # Only track variables with indices
@@ -1166,6 +1185,7 @@ def add_image_index_column(df):
             base_to_indices[base].append(idx)
 
     return base_to_indices
+
 
 
 def clear_agreement_matrix(agreement_matrix: DataFrame, variable_info: ChoiceFieldModel) -> DataFrame:
@@ -1264,112 +1284,72 @@ def create_annotations_dataframe(raw_annotations):
 
     return annotations_df
 
-
 def apply_defaults_for_variable(variable_annotations: DataFrame,
                                 assignments_df: DataFrame,
                                 variable: str,
                                 variable_info: ChoiceFieldModel):
     """
     Apply default values for a specific variable where annotations are missing.
-
-    Parameters:
-    -----------
-    variable_annotations : DataFrame
-        Annotations for this specific variable
-
-    assignments_df : DataFrame
-        Assignment tracking DataFrame
-
-    variable : str
-        ID of the variable
-
-    variable_info : dict
-        Metadata for this variable including type and default value
-
-    Returns:
-    --------
-    DataFrame with defaults applied
+    Uses task_key (task_id_image_idx) for handling indexed variables.
     """
-    # Reset index on assignments to get task_id and user_id as columns
     # Reset index on assignments to get task_id and user_id as columns
     assignments = assignments_df.reset_index()
 
-    # Create task-coder combinations only for assigned coders
+    # Determine unique image indices for this variable
+    indices = [0]  # Default for non-indexed variables
+    if 'image_idx' in variable_annotations.columns:
+        indices = sorted(variable_annotations['image_idx'].unique())
+
+    # Create combinations for each task-coder-index
     all_combinations = []
     for _, row in assignments.iterrows():
-        combo = {
-            'task_id': row['task_id'],
-            'user_id': row['user_id'],
-            'variable': variable,
-            # Include metadata if available
-            'ann_id': row.get('ann_id', None),
-            'timestamp': row.get('ts', None),
-            'platform_id': row.get('platform_id', None)
-        }
-        all_combinations.append(combo)
+        for idx in indices:
+            combo = {
+                'task_id': row['task_id'],
+                'user_id': row['user_id'],
+                'variable': variable,
+                'image_idx': idx,
+                'task_key': f"{row['task_id']}_{idx}",
+                # Include metadata if available
+                'ann_id': row.get('ann_id', None),
+                'timestamp': row.get('ts', None),
+                'platform_id': row.get('platform_id', None)
+            }
+            all_combinations.append(combo)
 
-    all_combinations_df = pd.DataFrame(all_combinations)
+    combinations_df = pd.DataFrame(all_combinations)
 
-    # Check if we need to handle image indices
-    if 'image_idx' in variable_annotations.columns:
-        # We need to handle each image index
-        result_dfs = []
-
-        for idx in variable_annotations['image_idx'].unique():
-            # Filter annotations for this index
-            idx_annotations = variable_annotations[variable_annotations['image_idx'] == idx]
-
-            # Add image_idx to combinations
-            idx_combinations = all_combinations_df.copy()
-            idx_combinations['image_idx'] = idx
-
-            # Merge
-            merged = pd.merge(
-                idx_combinations,
-                idx_annotations,
-                on=['task_id', 'user_id'],
-                how='left',
-                suffixes=('', '_existing')
-            )
-
-            # Keep the image_idx
-            if 'image_idx_existing' in merged.columns and 'image_idx' in merged.columns:
-                # Handle image_idx values carefully
-                if 'image_idx_existing' in merged.columns:
-                    # Create a mask for rows where image_idx_existing is null
-                    mask = merged['image_idx_existing'].isna()
-                    # Only fill those rows with values from image_idx
-                    merged.loc[mask, 'image_idx'] = merged.loc[mask, 'image_idx']
-                    # For all other rows, use image_idx_existing
-                    merged.loc[~mask, 'image_idx'] = merged.loc[~mask, 'image_idx_existing']
-                merged = merged.drop(columns=['image_idx_existing'])
-
-            # Keep the variable_base if it exists
-            if 'variable_base' in idx_annotations.columns:
-                merged['variable_base'] = merged[
-                    'variable_base_existing'] if 'variable_base_existing' in merged.columns else None
-                if 'variable_base_existing' in merged.columns:
-                    merged = merged.drop(columns=['variable_base_existing'])
-
-            result_dfs.append(merged)
-
-        if result_dfs:
-            merged = pd.concat(result_dfs)
-        else:
-            merged = all_combinations_df
-    else:
-        # Standard merge without image indices
-        merged = pd.merge(
-            all_combinations_df,
-            variable_annotations,
-            on=['task_id', 'user_id'],
-            how='left',
-            suffixes=('', '_existing')
+    # Ensure variable_annotations has task_key
+    if 'task_key' not in variable_annotations.columns:
+        variable_annotations = variable_annotations.copy()
+        variable_annotations['task_key'] = (
+                variable_annotations['task_id'].astype(str) + '_' +
+                variable_annotations.get('image_idx', 0).astype(str)
         )
 
-    # Ensure the value column exists
-    if 'value' not in merged.columns:
-        logger.debug("Value column not found")
+    # Merge on task_key and user_id to properly handle indexed variables
+    merged = pd.merge(
+        combinations_df,
+        variable_annotations,
+        on=['task_key', 'user_id'],
+        how='left',
+        suffixes=('', '_existing')
+    )
+
+    # Clean up duplicate columns
+    for col in merged.columns:
+        if col.endswith('_existing'):
+            base_col = col[:-9]
+            # Keep existing values where available
+            merged[base_col] = merged[col].combine_first(merged[base_col])
+            merged = merged.drop(columns=[col])
+
+    # Apply defaults for value column
+    if 'value' not in merged.columns or merged['value'].isna().all():
+        if variable_info.choice == 'single':
+            merged['value'] = [variable_info.safe_default]
+        else:  # multi_select
+            merged['value'] = []
     else:
         if variable_info.choice == 'single':
             merged['value'] = merged['value'].apply(

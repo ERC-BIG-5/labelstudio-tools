@@ -227,6 +227,9 @@ class ProjectData(ProjectCreate):
         from ls_helper.project_mgmt import ProjectMgmt
         mp.raw_annotation_result = ProjectMgmt.get_recent_annotations(mp.id, accepted_ann_age)
         mp.raw_annotation_df, mp.assignment_df = mp.get_annotation_df()
+        mp.raw_annotation_df.to_parquet(SETTINGS.annotations_dir/ f"raw_{self.id}.pqt")
+
+        mp.assignment_df.to_parquet(SETTINGS.annotations_dir/ f"ass_{self.id}.pqt")
         return mp
 
     # todo, move somewhere else?
@@ -241,7 +244,7 @@ class ProjectData(ProjectCreate):
             return UserInfo.model_validate(json.load(pp.open()))
 
     def store_agreement_report(self, agreement_report: AgreementReport):
-        (p := self.path_for(ItemType.agreement_report)).write_text(agreement_report.model_dump_json(indent=2))
+        (p := self.path_for(ItemType.agreement_report)).write_text(agreement_report.model_dump_json(exclude_none=True,indent=2))
         print(f"agreement_report -> {p.as_posix()}")
         export_agreement_metrics_to_csv(agreement_report, (p_csv := self.path_for(ItemType.agreement_report,".csv")))
         print(f"agreement_report -> {p_csv.as_posix()}")
