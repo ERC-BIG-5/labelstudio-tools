@@ -108,9 +108,10 @@ class ProjectData(ProjectCreate):
         template_path = self.path_for(SETTINGS.labeling_templates,".xml")
         print(template_path)
         if not template_path.exists():
-            # todo use function in tools.files
             logger.info(f"Creating template for {self.id},{self.alias}")
-            print("NO FILE")
+            # todo that should happen during project creation
+            print("NO template File. setting default")
+            template_path.write_text("<View></View>")
             # print(self.project_data.label_config)
             return None
         build_config = LabelingInterfaceBuildConfig(template=template_path,
