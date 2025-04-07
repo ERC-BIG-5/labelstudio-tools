@@ -1,0 +1,5 @@
+<View idAttr="relevantImages" className="visual_underline" visibleWhen="choice-selected"
+      whenTagName="nature_visual" whenChoiceValue="Yes">
+    <Text name="rel_media" value="Select Images containing nature" selectionEnabled="false"/>
+    <Choices name="media_relevant" toName="title" choice="multiple" showInline="true" value="$image_options"/>
+</View>

@@ -62,28 +62,37 @@ class Settings(BaseSettings):
         return self.BASE_DATA_DIR / "annotations_results"
 
     @property
-    def agreements_dir(self):
+    def agreements_dir(self) -> Path:
         return self.BASE_DATA_DIR / "agreements"
 
     @property
-    def labeling_configs_dir(self):
+    def labeling_configs_dir(self) -> Path:
         return self.BASE_DATA_DIR / "labeling_configs"
 
     @property
-    def plots_dir(self):
+    def labeling_templates(self) -> Path:
+        return self.labeling_configs_dir / "templates"
+
+    @property
+    def built_labeling_configs(self) -> Path:
+        return self.labeling_configs_dir / "builds"
+
+    @property
+    def plots_dir(self) -> Path:
         return self.BASE_DATA_DIR / "plots"
 
     @property
-    def fixes_dir(self):
+    def fixes_dir(self) -> Path:
         return self.BASE_DATA_DIR / "fixes"
 
     @property
-    def unifix_file_path(self):
+    def unifix_file_path(self) -> Path:
         return self.fixes_dir / "unifixes.json"
 
     @property
-    def temp_file_path(self):
+    def temp_file_path(self) -> Path:
         return self.BASE_DATA_DIR / "temp"
+
 
 SETTINGS = Settings()
 DEV_SETTINGS = Settings(_env_file=".dev.env")
@@ -92,6 +101,7 @@ ls_logger = getLogger("ls-helper")
 ls_logger.setLevel(logging.DEBUG)
 ls_logger.addHandler(logging.StreamHandler(sys.stdout))
 ls_logger.propagate = False
+
 
 class DFFormat(Enum):
     raw_annotation = auto()

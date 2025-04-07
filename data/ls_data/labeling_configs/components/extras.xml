@@ -1,0 +1,9 @@
+<View>
+    <Choices name="extras" toName="title" showInline="true" choice="multiple">
+        <Choice value="Food"/>
+        <Choice value="Sport"/>
+        <Choice value="Video game"/>
+        <Choice value="Health"/>
+        <Choice value="Pet"/>
+    </Choices>
+</View>

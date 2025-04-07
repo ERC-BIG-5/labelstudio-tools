@@ -152,7 +152,7 @@ class InterfaceData(BaseModel):
             else:
                 field_extensions = list(data_extensions.extension_reverse_map.keys())
                 logger.error(
-                    f"Choice '{k}' has no extension:. Maybe...: >>> {(fast_levenhstein.find_closest_matches(k, field_extensions))}"
+                    f"Choice '{k}' has no extension:. Maybe...: >>> {(fast_levenhstein.levenhstein_get_closest_matches(k, field_extensions))}"
                     f"Download the latest project-data(or check it on the page). check it against your project-data."
                     f"Fix your extensions.")
 

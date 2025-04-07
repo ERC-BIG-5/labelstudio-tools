@@ -1,0 +1,21 @@
+<View>
+    <base_style/>
+    <input_platform_id/>
+    <title/>
+
+    <twitter_data_view/>
+
+    <harmful_any/>
+
+    <harmful_visual_data_option variable="$image_options"/>
+
+    <Collapse>
+        <nature_panel_index title="Image" var="visual" index="1"/>
+        <nature_panel_index title="Image" var="visual" index="2"/>
+        <nature_panel_index title="Image" var="visual" index="3"/>
+        <nature_panel_index title="Image" var="visual" index="4"/>
+    </Collapse>
+
+    {{{coding_game}}}
+
+</View>

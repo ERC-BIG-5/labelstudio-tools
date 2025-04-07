@@ -97,8 +97,9 @@ class AgreementMetrics(BaseModel):
     multiple_choice: VariableTypeAgreement
 
     @property
-    def all_variables(self) -> dict[str,Union[SingleChoiceAgreement, MultiChoiceAgreement]]:
+    def all_variables(self) -> dict[str, Union[SingleChoiceAgreement, MultiChoiceAgreement]]:
         return self.single_choice.variables | self.multiple_choice.variables
+
 
 class SummaryStats(BaseModel):
     """Model for summary statistics"""
@@ -165,6 +166,8 @@ def _calculate_single_select_agreement2(agreement_matrix,
     # Round to 4 digits
     percent_agreement = round(percent_agreement, 4)
 
+    all_conflicts = []
+
     # Calculate Fleiss' kappa
     try:
         cac = CAC(agreement_matrix)
@@ -191,9 +194,9 @@ def _calculate_single_select_agreement2(agreement_matrix,
         option_counts[option] = int(count) if hasattr(count, 'item') else count
 
     # Get conflicts if needed
-    conflicts = None
-    if collect_conflicts_agreements:
-        conflicts = disagreement_rows.index.tolist()
+    # conflicts = None
+    # if collect_conflicts_agreements:
+    conflicts = disagreement_rows.index.tolist()
 
     # Per-option detailed analysis
     option_results = {}
@@ -262,7 +265,7 @@ def _calculate_single_select_agreement2(agreement_matrix,
         disagreement_count=int(disagreement_count) if hasattr(disagreement_count, 'item') else disagreement_count,
         counts=option_counts,
         option_results=option_results,
-        conflicts=[str(c) for c in conflicts] if conflicts is not None else None
+        conflicts=all_conflicts
     )
 
 
@@ -427,7 +430,7 @@ def _calculate_multi_select_agreement(agreement_matrix, variable_info,
     )
 
 
-def export_agreement_metrics_to_csv(agreement_report: AgreementReport, output_file: Path):
+def export_agreement_metrics_to_csv(agreement_report: AgreementReport, output_file: Path) -> list[dict]:
     """
     Export agreement metrics to a CSV file using Pydantic models.
 
@@ -534,6 +537,7 @@ def export_agreement_metrics_to_csv(agreement_report: AgreementReport, output_fi
         writer.writeheader()
         # Convert Pydantic models to dictionaries for CSV writing
         writer.writerows([row.model_dump() for row in rows])
+    return rows
 
 
 def analyze_coder_agreement(raw_annotations, assignments, choices,
@@ -796,7 +800,7 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
             # Store mapping from task_key to task_id and platform_id
             task_key_to_info[row['task_key']] = {
                 'task_id': row['task_id'],
-                'platform_id': str(row.get('platform_id')),
+                'platform_id': str(row.get('platform_id', '')),
                 'image_idx': row.get('image_idx', 0)
             }
 
@@ -806,7 +810,7 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
         for task_key, row in agreement_matrix.iterrows():
             # Get task info
             task_info = task_key_to_info.get(task_key, {})
-            task_id = task_info.get('task_id', task_key)
+            task_id = task_info.get('task_id', int(task_key.split('_')[0]) if '_' in task_key else task_key)
             platform_id = task_info.get('platform_id')
             image_idx = task_info.get('image_idx', 0)
 
@@ -846,41 +850,44 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
                 else:
                     label = str(value)
 
-                labeled_annotations.append({
-                    'user_id': coders[i],
-                    'value': label
-                })
+                labeled_annotations.append(AnnotationInfo(
+                    user_id=coders[i],
+                    value=label
+                ))
 
             # Record conflict
-            conflict = {
-                'task_id': task_id,
-                'platform_id': platform_id,
-                'variable': variable,
-                'agreement_score': 0.0,
-                'annotations': labeled_annotations
-            }
+            conflict = ConflictInfo(
+                task_id=int(task_id) if isinstance(task_id, str) and task_id.isdigit() else task_id,
+                platform_id=platform_id if platform_id else None,
+                variable=variable,
+                agreement_score=0.0,
+                annotations=labeled_annotations,
+                conflict_type='single_choice'
+            )
 
             # Add image_idx if available
             if image_idx is not None and image_idx != 0:
-                conflict['image_idx'] = image_idx
+                conflict.image_idx = image_idx
 
             conflicts.append(conflict)
 
-    else:  # Multiple choice (similar changes as above)
+    else:  # Multiple choice
         # For multi-select, check conflicts option by option
         options = variable_info.options
 
         for option in options:
             # Create binary matrix for this option (1 if present, 0 if absent)
             binary_matrix = agreement_matrix.map(
-                lambda x: 1 if isinstance(x, list) and option in x else 0
+                lambda x: 1 if isinstance(x, list) and option in x else (
+                    0 if isinstance(x, list) else np.nan
+                )
             )
 
             # Look for disagreements on this option (must have both 0s and 1s)
             for task_key, row in binary_matrix.iterrows():
                 # Get task info
                 task_info = task_key_to_info.get(task_key, {})
-                task_id = task_info.get('task_id', task_key)
+                task_id = task_info.get('task_id', int(task_key.split('_')[0]) if '_' in task_key else task_key)
                 platform_id = task_info.get('platform_id')
                 image_idx = task_info.get('image_idx', 0)
 
@@ -896,26 +903,26 @@ def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info
                 # Create annotations for coders who actually coded
                 option_annotations = []
                 for coder, value in values.items():
-                    option_annotations.append({
-                        'user_id': coder,
-                        'option': option,
-                        'value': 'present' if value == 1 else 'absent'
-                    })
+                    option_annotations.append(AnnotationInfo(
+                        user_id=coder,
+                        value='present' if value == 1 else 'absent',
+                        option=option
+                    ))
 
                 # Record conflict for this option
-                conflict = {
-                    'task_id': task_id,
-                    'platform_id': platform_id,
-                    'variable': variable,
-                    'option': option,
-                    'agreement_score': 0.0,
-                    'annotations': option_annotations,
-                    'conflict_type': 'multiple_choice'
-                }
+                conflict = ConflictInfo(
+                    task_id=int(task_id) if isinstance(task_id, str) and task_id.isdigit() else task_id,
+                    platform_id=platform_id if platform_id else None,
+                    variable=variable,
+                    option=option,
+                    agreement_score=0.0,
+                    annotations=option_annotations,
+                    conflict_type='multiple_choice'
+                )
 
                 # Add image_idx if it's not the default value
                 if image_idx is not None and image_idx != 0:
-                    conflict['image_idx'] = image_idx
+                    conflict.image_idx = image_idx
 
                 conflicts.append(conflict)
 

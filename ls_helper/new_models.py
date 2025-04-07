@@ -1,21 +1,20 @@
 import ast
 import json
-import xml.etree.ElementTree as ET
 from enum import Enum, auto
 from pathlib import Path
 from typing import Optional, Any
 
 import pandas as pd
-
-from ls_helper.agreements import AgreementReport, export_agreement_metrics_to_csv, analyze_coder_agreement
-from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, IChoice, IChoices, PrincipleRow, \
-    ITextArea, IText, IField
 from pandas import DataFrame
 from pydantic import BaseModel, Field, model_validator, ConfigDict
-from ls_helper.models.field_models import FieldModel as FieldModel, ChoiceFieldModel as FieldModelChoice, FieldType
-from ls_helper.models.interface_models import FullAnnotationRow
-from ls_helper.my_labelstudio_client.models import ProjectModel as LSProjectModel, ProjectViewModel, TaskResultModel
 
+from ls_helper.agreements import AgreementReport, export_agreement_metrics_to_csv, analyze_coder_agreement
+from ls_helper.config_helper import parse_label_config_xml
+from ls_helper.exp.build_configs import LabelingInterfaceBuildConfig, build_from_template
+from ls_helper.models.field_models import FieldModel as FieldModel, ChoiceFieldModel as FieldModelChoice
+from ls_helper.models.interface_models import FullAnnotationRow
+from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, IChoices, PrincipleRow
+from ls_helper.my_labelstudio_client.models import ProjectModel as LSProjectModel, ProjectViewModel, TaskResultModel
 from ls_helper.settings import SETTINGS, DFCols, DFFormat
 from tools.project_logging import get_logger
 
@@ -51,9 +50,10 @@ class ProjectCreate(BaseModel):
     description: Optional[str] = None
     alias: Optional[str] = None
     default: Optional[bool] = Field(False, deprecated="default should be on the Overview model")
-    label_config_template: Optional[str] = None
-    label_config_additions: Optional[list[str]] = Field(default_factory=list)
+    # label_config_template: Optional[str] = None
+    # label_config_additions: Optional[list[str]] = Field(default_factory=list)
     coding_game_view_id: Optional[int] = None
+    templates: Optional[dict[str, str]] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def post_build(cls, data: "ProjectData") -> "ProjectData":
@@ -76,6 +76,7 @@ class ProjectCreate(BaseModel):
 class ItemType(str, Enum):
     project_data = auto()
     agreement_report = auto()
+    xml_template = auto()
 
 
 class ProjectData(ProjectCreate):
@@ -86,9 +87,8 @@ class ProjectData(ProjectCreate):
 
     # views, predictions, results
 
-    def path_for(self, item: ItemType, ext: Optional[str] = ".json") -> Path:
-        if item == ItemType.agreement_report:
-            return SETTINGS.agreements_dir / f"{self.id}{ext}"
+    def path_for(self, base_p: Path, ext: Optional[str] = ".json") -> Path:
+        return base_p / f"{self.id}{ext}"
 
     @property
     def project_data(self) -> LSProjectModel:
@@ -102,38 +102,21 @@ class ProjectData(ProjectCreate):
         self._project_data = LSProjectModel.model_validate_json(fin.read_text())
         return self._project_data
 
-    @staticmethod
-    def parse_label_config_xml(xml_string) -> InterfaceData:
-        root: ET.Element = ET.fromstring(xml_string)
 
-        ordered_fields_map: dict[str, IField] = {}
-        input_text_fields: dict[str, str] = {}  # New list for text fields with "$" values
+    def build_ls_labeling_config(self):
+        # todo here bring in eventual path parameter
+        template_path = self.path_for(SETTINGS.labeling_templates,".xml")
+        print(template_path)
+        if not template_path.exists():
+            # todo use function in tools.files
+            logger.info(f"Creating template for {self.id},{self.alias}")
+            print("NO FILE")
+            # print(self.project_data.label_config)
+            return None
+        build_config = LabelingInterfaceBuildConfig(template=template_path,
+                                                    destination_path=self.path_for(SETTINGS.built_labeling_configs))
+        build_from_template(build_config)
 
-        for el in root.iter():
-            if el.tag == "Choices":
-                name = el.get('name')
-                if not name:
-                    raise ValueError("shouldnt happen in a valid interface")
-                # print(choices_element.attrib)
-                choice_list = [IChoice.model_validate(choice.attrib) for choice in el.findall('./Choice')]
-
-                ordered_fields_map[name] = IChoices.model_validate(el.attrib | {"options": choice_list})
-            elif el.tag == "TextArea":
-                name = el.get('name')
-                ordered_fields_map[name] = ITextArea(name=name)
-            elif el.tag == "Text":
-                value = el.get('value')
-                if value and value.startswith('$'):
-                    name = el.get('name')
-                    # keep the $ so we know its a ref to data.
-                    input_text_fields[name] = value[1:]
-                    ordered_fields_map[name] = IText()
-
-        return InterfaceData(
-            ordered_fields_map=ordered_fields_map,
-            # orig_choices=choices,
-            # free_text=free_text,
-            inputs=input_text_fields)
 
     @property
     def fields(self) -> dict[str, FieldModel]:
@@ -160,9 +143,11 @@ class ProjectData(ProjectCreate):
 
         return variables
 
+
     @property
     def choices(self) -> dict[str, FieldModelChoice]:
         return {k: v for k, v in self.fields.items() if isinstance(v, FieldModelChoice)}
+
 
     @property
     def interface(self) -> InterfaceData:
@@ -174,8 +159,9 @@ class ProjectData(ProjectCreate):
         if self._interface_data:
             return self._interface_data
 
-        self._interface_data = ProjectData.parse_label_config_xml(self.project_data.label_config)
+        self._interface_data = parse_label_config_xml(self.project_data.label_config)
         return self._interface_data
+
 
     @property
     def field_extensions(self) -> ProjectFieldsExtensions:
@@ -194,6 +180,7 @@ class ProjectData(ProjectCreate):
         self._field_extensions = data_extensions
         return data_extensions
 
+
     def get_views(self) -> Optional[list[ProjectViewModel]]:
         view_file = SETTINGS.view_dir / f"{self.id}.json"
         if not view_file.exists():
@@ -201,9 +188,11 @@ class ProjectData(ProjectCreate):
         data = json.load(view_file.open())
         return [ProjectViewModel.model_validate(v) for v in data]
 
+
     @property
     def view_file(self) -> Optional[Path]:
         return SETTINGS.view_dir / f"{self.id}.json"
+
 
     def validate_extensions(self) -> list[str]:
         """
@@ -217,6 +206,7 @@ class ProjectData(ProjectCreate):
                 redundant_extensions.append(var)
                 # logger.warning(f"variable from fixes is redundant {var}")
         return redundant_extensions
+
 
     def get_annotations_results(self,
                                 accepted_ann_age: Optional[int] = 6) -> "ProjectResult":
@@ -242,8 +232,10 @@ class ProjectData(ProjectCreate):
             mp.assignment_df.to_parquet(SETTINGS.annotations_dir / f"ass_{self.id}.pqt")
         return mp
 
+
     def get_agreement_results(self, accepted_ann_age: Optional[int] = 6) -> "ProjectAgreementResult":
         pass
+
 
     # todo, move somewhere else?
     @staticmethod
@@ -256,13 +248,23 @@ class ProjectData(ProjectCreate):
         else:
             return UserInfo.model_validate(json.load(pp.open()))
 
-    def store_agreement_report(self, agreement_report: AgreementReport):
+
+    def store_agreement_report(self, agreement_report: AgreementReport, gen_csv_tables: bool = True):
         (p := self.path_for(ItemType.agreement_report)).write_text(
             agreement_report.model_dump_json(exclude_none=True, indent=2))
         print(f"agreement_report -> {p.as_posix()}")
-        export_agreement_metrics_to_csv(agreement_report, (p_csv := self.path_for(ItemType.agreement_report, ".csv")))
-        print(f"agreement_report -> {p_csv.as_posix()}")
+        if gen_csv_tables:
+            p_csv = self.path_for(ItemType.agreement_report, ".csv")
+            rows = [dict(r) for r in export_agreement_metrics_to_csv(agreement_report, p_csv)]
+            print(f"agreement_report -> {p_csv.as_posix()}")
+            df = DataFrame(rows)
+            df = df[df["option"] == "VARIABLE_LEVEL"]
+            p_csv = self.path_for(ItemType.agreement_report, "_vars.csv")
+            df.to_csv(p_csv)
+            print(f"agreement_report -> {p_csv.as_posix()}")
+
         return p
+
 
     def get_agreement_data(self) -> AgreementReport:
         return AgreementReport.model_validate_json(self.path_for(ItemType.agreement_report).read_text())
@@ -317,13 +319,13 @@ class ProjectOverView(BaseModel):
         elif (is_t := isinstance(p_access, tuple)) and (l := len(p_access)) == 2:
             return self.default_map[p_access]
         elif is_t and l == 4:
-            id,alias,platform,language = p_access
+            id, alias, platform, language = p_access
             if alias:
-                return self.alias_map[p_access]
+                return self.alias_map[alias]
             elif id:
-                return self.projects[str(p_access)]
+                return self.projects[str(id)]
             elif platform and language:
-                return self.default_map[(platform,language)]
+                return self.default_map[(platform, language)]
             raise ValueError(f"{id=} {platform=} {language=}, {alias=} not a valid project-access")
         raise ValueError(f"unknown project access: {p_access}")
 
@@ -687,11 +689,12 @@ class ProjectResult(BaseModel):
         result.attrs["format"] = DFFormat.flat
         return result
 
-    def get_coder_agreements(self, min_num_coders: int = 2, variables: Optional[list[str]] = None) -> tuple[
+    def get_coder_agreements(self, min_num_coders: int = 2, variables: Optional[list[str]] = None,
+                             gen_csv_tables: bool = True) -> tuple[
         Path, AgreementReport]:
         agreement_report = analyze_coder_agreement(self.raw_annotation_df, self.assignment_df,
                                                    self.project_data.choices, min_num_coders, variables)
-        dest = self.project_data.store_agreement_report(agreement_report)
+        dest = self.project_data.store_agreement_report(agreement_report, gen_csv_tables)
         return dest, agreement_report
 
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)

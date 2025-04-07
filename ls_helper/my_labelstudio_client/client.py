@@ -279,6 +279,9 @@ class LabelStudioBase:
         resp = self._client_wrapper.httpx_client.post(f"/api/tasks/", json=data.model_dump())
         return resp
 
+    def delete_view(self, view_id: int):
+        resp = self._client_wrapper.httpx_client.delete(f"/api/dm/views/{view_id}")
+        print(resp)
 
 _GLOBAL_CLIENT: Optional[LabelStudioBase] = None
 

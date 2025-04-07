@@ -5,12 +5,13 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
+from deepdiff import DeepDiff
 from tqdm import tqdm
 
+from ls_helper.agreements import fix_users, AgreementReport, SingleChoiceAgreement
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
-from ls_helper.agreements import analyze_coder_agreement, fix_users, AgreementReport
-from ls_helper.config_helper import check_config_update
+from ls_helper.config_helper import check_config_update, parse_label_config_xml
 from ls_helper.exp.build_configs import build_configs, LabelingInterfaceBuildConfig, build_from_template
 from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter
 from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, FieldExtension
@@ -33,7 +34,7 @@ platform_ = typer.Option(None, "--platform", "-p"),
 language_ = typer.Option(None, "--language", "-l"),
 alias_ = typer.Option(None, "--alias", "-a"),
 """
-
+_project = lambda id,al,pl,la : platforms_overview.get_project((id,al,pl,la))
 
 def open_image_simple(image_path):
     # Convert to absolute path and URI format
@@ -48,7 +49,7 @@ def generate_result_fixes_template(
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None
 ):
-    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
+    po = _project(get_p_access(id, alias, platform, language))
 
     conf = po.interface()
 
@@ -81,7 +82,7 @@ def setup_project_settings(
         alias: Annotated[str, typer.Option("-a")] = None,
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None):
-    po = platforms_overview.get_project(get_p_access(id, platform, language, alias))
+    po = _project(get_p_access(id, platform, language, alias))
     values = ProjectMgmt.default_project_values()
     del values["color"]
     res = ls_client().patch_project(po.id, values)
@@ -114,7 +115,7 @@ def update_labeling_configs(
     # todo, if we do that. save it
     # download_project_data(platform, language)
     client = ls_client()
-    po = platforms_overview.get_project(get_p_access(id, platform, language, alias))
+    po = _project(get_p_access(id, platform, language, alias))
 
     label_config = (SETTINGS.labeling_configs_dir / f"{po.platform}.xml").read_text(encoding="utf-8")
 
@@ -232,7 +233,7 @@ def download_project_data(
         platform: Annotated[Optional[str], typer.Argument()] = None,
         language: Annotated[Optional[str], typer.Argument()] = None,
 ):
-    p = platforms_overview.get_project(get_p_access(id, alias, platform, language))
+    p = _project(get_p_access(id, alias, platform, language))
 
     project_data = ls_client().get_project(p.id)
     if not project_data:
@@ -251,7 +252,7 @@ def download_project_views(
 ) -> list[
     ProjectViewModel]:
     p_a = get_p_access(id, alias, platform, language)
-    po = platforms_overview.get_project(p_a)
+    po = _project(p_a)
     views = ProjectMgmt.refresh_views(po)
     logger.debug(f"view file -> {po.view_file}")
     return views
@@ -267,7 +268,7 @@ def status(
     from ls_helper import main_funcs
     main_funcs.status(get_p_access(id, alias, platform, language), accepted_ann_age)
 
-    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
+    po = _project(get_p_access(id, alias, platform, language))
     po.validate_extensions()
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
@@ -289,7 +290,7 @@ def total_over_time(
             int, typer.Option(help="Download annotations if older than x hours")] = 6,
 ):
     print(get_p_access(id, alias, platform, language))
-    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
+    po = _project(get_p_access(id, alias, platform, language))
     annotations = ProjectMgmt.get_recent_annotations(po.id, accepted_ann_age)
     df = annotation_total_over_time(annotations)
     temp_file = plot_cumulative_annotations(df,
@@ -307,7 +308,7 @@ def annotation_lead_times(id: Annotated[int, typer.Option()] = None,
                           language: Annotated[str, typer.Argument()] = None,
                           accepted_ann_age: Annotated[
                               int, typer.Option(help="Download annotations if older than x hours")] = 6):
-    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
+    po = _project(get_p_access(id, alias, platform, language))
     project_annotations = ProjectMgmt.get_recent_annotations(po.id, accepted_ann_age)
 
     df = get_annotation_lead_times(project_annotations)
@@ -327,7 +328,7 @@ def set_view_items(
         language: Annotated[str, typer.Argument()] = None,
         create_view: Annotated[Optional[bool], typer.Option()] = True
 ):
-    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
+    po = _project(get_p_access(id, alias, platform, language))
     views = po.get_views()
     if not views and not create_view:
         print("No views found")
@@ -370,7 +371,7 @@ def update_coding_game(
 
     """
     p_a = get_p_access(id, alias, platform, language)
-    po = platforms_overview.get_project(p_a)
+    po = _project(p_a)
     logger.info(po.alias)
     view_id = po.coding_game_view_id
     if not view_id:
@@ -392,7 +393,7 @@ def update_coding_game(
         return None
     view_ = view_[0]
 
-    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
+    po = _project(get_p_access(id, alias, platform, language))
     # project_annotations = _get_recent_annotations(po.id, accepted_ann_age)
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # project_annotations = _get_recent_annotations(po.id, 0)
@@ -416,7 +417,7 @@ def annotations(
             int, typer.Option(help="Download annotations if older than x hours")] = 6,
         min_coders: Annotated[int, typer.Option()] = 2) -> tuple[
     Path, str]:
-    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
+    po = _project(get_p_access(id, alias, platform, language))
     po.validate_extensions()
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
@@ -439,10 +440,10 @@ def agreements(
         variables: Annotated[list[str], typer.Argument()] = None
 
 ) -> tuple[Path, AgreementReport]:
-    dest, agreement_report = (platforms_overview.get_project((id, alias, platform, language))
+    dest, agreement_report = (_project((id, alias, platform, language))
                               .get_annotations_results(
         accepted_ann_age=accepted_ann_age)
-                              .get_coder_agreements(min_num_coders, variables))
+                              .get_coder_agreements(min_num_coders, variables, True))
     return dest, agreement_report
 
 
@@ -477,7 +478,7 @@ def reformat_for_datapipelines(
     :return:
     """
     # does extra calculation but ok.
-    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
+    po = _project(get_p_access(id, alias, platform, language))
     mp = po.get_annotations_results(0)
     res = {}
 
@@ -495,7 +496,7 @@ def get_all_variable_names(
         platform: Annotated[str, typer.Option()] = None,
         language: Annotated[str, typer.Option()] = None
 ):
-    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
+    po = _project(get_p_access(id, alias, platform, language))
     struct = po.interface(include_text=False, apply_extension=True)
     return list(struct.orig_choices.keys()) + struct.free_text
 
@@ -509,28 +510,43 @@ def create_conflict_view(
         language: Annotated[str, typer.Option()] = None,
         variable_option: Annotated[str, typer.Option()] = None
 ):
-    po = platforms_overview.get_project(get_p_access(id, alias, platform, language))
+    po = _project(get_p_access(id, alias, platform, language))
     # po.validate_extensions()
     # mp = po.get_annotations_results()
 
     # just check existence
-    po.interface.field_type(variable)
-
-    #agreement_data = json.loads((SETTINGS.agreements_dir / f"{po.id}.json").read_text())
+    # if not po.interface.ordered_fields_map.get(variable):
+    #    raise ValueError(f"Variable {variable} has not been defined")
+    # agreement_data = json.loads((SETTINGS.agreements_dir / f"{po.id}.json").read_text())
     agg_metrics = po.get_agreement_data().agreement_metrics
+    if variable.endswith("_visual"):
+        variable = variable + "_0"
+    print(variable)
     am = agg_metrics.all_variables.get(variable)
-    return
-    #conflicts = agreement_data["conflicts"]
-    relevant_conflicts_p_ids = [c["platform_id"] for c in conflicts if c["variable"] == variable]
-    # print(relevant_conflicts_p_ids)
+    if not am or not len(am.conflicts):
+        all_c = po.get_agreement_data().conflicts
+
+        dd_t = []
+        for c in all_c:
+            # print(c)
+            if c.variable == variable:
+                dd_t.append(c)
+            task_ids = [c.task_id for c in dd_t][:50]
+    else:
+        # for the broken version, single are strings of task-id and _0
+        if isinstance(am, SingleChoiceAgreement):
+            task_ids = [int(s.split("_")[0]) for s in am.conflicts][:30]
+
+        else:
+            task_ids = [int(str(s.task_id)[:-1]) for s in am.conflicts][:30]
 
     title = f"conflict:{variable}"
     view = ProjectMgmt.create_view(ProjectViewCreate.model_validate({"project": po.id, "data": {
         "title": title,
-        "filters": build_platform_id_filter(relevant_conflicts_p_ids)}}))
-    pass
+        "filters": build_platform_id_filter(task_ids, "task_id")}}))
     url = f"{SETTINGS.LS_HOSTNAME}/projects/{po.id}/data?tab={view.id}"
     print(url)
+
     return url
 
 
@@ -548,7 +564,7 @@ def build_extension_index(
     from ls_helper.annot_extension import build_extension_index as _build_extension_index
 
     if project_ids:
-        projects = [platforms_overview.get_project(get_p_access(id)) for id in project_ids]
+        projects = [_project(get_p_access(id)) for id in project_ids]
     elif take_all_defaults:
         projects = list(platforms_overview.default_map.values())
     else:
@@ -560,12 +576,45 @@ def build_extension_index(
 
 
 @app.command()
-def build_ls_labeling_interface(config_build_file_path: Path):
-    if not config_build_file_path.is_absolute():
-        config_build_file_path = SETTINGS.labeling_configs_dir / "build_configs" / config_build_file_path
-        build_config = LabelingInterfaceBuildConfig.model_validate_json(config_build_file_path.read_text())
-        build_from_template(build_config)
+def build_ls_labeling_interface(
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Option()] = None,
+        language: Annotated[str, typer.Option()] = None,
+        alternative_template: Annotated[str, typer.Argument()] = None,
+) -> Optional[Path]:
+    po = _project(id, alias, platform, language)
+    build = po.build_ls_labeling_config()
+    print(build)
+    return None
 
+
+@app.command()
+def delete_view(view_id: int):
+    ls_client().delete_view(view_id)
+
+
+@app.command()
+def check_labelling_config(
+        build_file_name: str,
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Option()] = None,
+        language: Annotated[str, typer.Option()] = None
+):
+    po = _project(((id, alias, platform, language)))
+
+    existing_struct = po.interface
+
+    if not build_file_name.endswith(".xml") :
+        build_file_name += ".xml"
+    fp =  SETTINGS.built_labeling_configs / build_file_name
+
+    new_config = parse_label_config_xml(fp.read_text())
+    print(type(new_config), type(existing_struct))
+    diff = DeepDiff(new_config, existing_struct)
+    print(diff.to_json(indent=2))
+    pass
 
 if __name__ == "__main__":
     twitter = "twitter"
@@ -580,7 +629,13 @@ if __name__ == "__main__":
     # status(**_default)
     # annotations(**_default)
     # download_project_data(**_default)
-    # agreements(**_default, accepted_ann_age=12)
-    create_conflict_view(**_default, variable="nature_text")
+    # agreements(**_default, accepted_ann_age=120)
+    # delete_view(110)
+    # download_project_views(**_default)
+    # create_conflict_view(**_default, variable="landscape-type_text")
+    # create_conflict_view(**_default, variable="landscape-type_visual")
     # create_conflict_view("nature_text",**_default)
     # update_coding_game(**_default)
+
+    print(build_ls_labeling_interface(39))
+    #check_labelling_config("twitter_reduced", **_default)

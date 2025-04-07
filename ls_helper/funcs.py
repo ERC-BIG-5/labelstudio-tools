@@ -1,7 +1,7 @@
 import csv
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal
 
 import httpx
 import jsonpath_ng
@@ -150,14 +150,21 @@ def update_coding_game(client: LabelStudioBase,
         print(resp.json())
 
 
-def build_platform_id_filter(platform_ids: list[str]):
+def build_platform_id_filter(platform_ids: list[str|int], ls_main_field: Literal["platform_id","task_id"]):
+    """
+    should be simpler. this is only that complicated, cuz of the bad conflict models.
+    :param platform_ids:
+    :param ls_main_field:
+    :return:
+    """
     new_items = []
     new_filters = {"conjunction": "or", "items": new_items}
-
+    filter_term = "filter:tasks:data.platform_id" if ls_main_field == "platform_id" else "filter:tasks:id"
+    filter_type = "String" if ls_main_field == "platform_id" else "Number"
     for p_id in platform_ids:
         # print(for_coding_game)
         new_items.append({
-            "filter": "filter:tasks:data.platform_id",
+            "filter": filter_term,
             "operator": "equal",
             "type": "String",
             "value": p_id
