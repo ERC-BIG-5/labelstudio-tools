@@ -1,0 +1,5 @@
+<View className="title_view">
+    <Text name="gap1" value=" "/>
+    <Text name="text_{{{index}}}_t" value="{{{title}}}:"/>
+    <Text name="text_{{{index}}}" value="$text_{{{index}}}" selectionEnabled="false"/>
+</View>

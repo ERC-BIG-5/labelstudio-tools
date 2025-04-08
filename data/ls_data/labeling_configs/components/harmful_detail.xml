@@ -1,0 +1,7 @@
+<View>
+    <View visibleWhen="choice-selected" whenTagName="harmful_any"
+          whenChoiceValue="Text,Video">
+        <Text name="harmful_detail_t" value="Why is this content harmful?"/>
+        <TextArea name="harmful_detail" toName="title"/>
+    </View>
+</View>

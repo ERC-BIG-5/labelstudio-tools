@@ -86,23 +86,6 @@ def find_duplicates(xml_file):
     }
 
 
-def check_references(root) -> dict[str, list[str]]:
-    names = list(find_all_names(root).keys())
-    # print(names)
-    refs = find_tag_name_refs(root).items()
-    broken_refs = {}
-    for ref_name, depending in refs:
-        if ref_name not in names:
-            # print(ref)
-            deps = [f'{d.tag}:{d.attrib.get("name","")}' for d in depending]
-            broken_refs[ref_name] = deps
-    if broken_refs:
-        print("broken references:")
-        for ref, dep in broken_refs.items():
-            print(f"{ref}:{dep}")
-    else:
-        print("all refs ok")
-    return broken_refs
 
 def parse_label_config_xml(xml_string) -> InterfaceData:
     root: ET.Element = ET.fromstring(xml_string)

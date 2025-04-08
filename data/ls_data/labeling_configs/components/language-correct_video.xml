@@ -1,0 +1,17 @@
+<View>
+    <Header value="Language"/>
+    <View className="language_detection_block" style="display: flex; ">
+        <Text name="language_t" value="Detected language (only for Youtube): " selectionEnabled="false"/>
+        <Text name="language" value="$language" selectionEnabled="false"/>
+    </View>
+    <Text name="lang_correct"
+          value="Is the language from TITLE AND DESCRIPTION as detected correctly? This is only for videos. (default: Yes)"/>
+    <Choices name="language_correct" toName="language" showInline="true">
+        <Choice value="No"/>
+    </Choices>
+    <Text name="lang_video_same"
+          value="Does the video language (or original subtitles) correspond to the detected language? (default: Yes)"/>
+    <Choices name="language_video_same" toName="language" showInline="true">
+        <Choice value="No"/>
+    </Choices>
+</View>

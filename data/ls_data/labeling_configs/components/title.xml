@@ -1,0 +1,5 @@
+<View className="title_view">
+    <Header value="Text content"/>
+    <Text name="text_1_t" value="Text 1:"/>
+    <Text name="title" value="$text_1" selectionEnabled="false" id="title_text"/>
+</View>

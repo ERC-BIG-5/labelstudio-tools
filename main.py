@@ -12,7 +12,7 @@ from ls_helper.agreements import fix_users, AgreementReport, SingleChoiceAgreeme
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
 from ls_helper.config_helper import check_config_update, parse_label_config_xml
-from ls_helper.exp.build_configs import build_configs, LabelingInterfaceBuildConfig, build_from_template
+from ls_helper.exp.build_configs import build_configs
 from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter
 from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, FieldExtension
 from ls_helper.my_labelstudio_client.client import ls_client
@@ -584,9 +584,8 @@ def build_ls_labeling_interface(
         alternative_template: Annotated[str, typer.Argument()] = None,
 ) -> Optional[Path]:
     po = _project(id, alias, platform, language)
-    build = po.build_ls_labeling_config()
-    print(build)
-    return None
+    build_path = po.build_ls_labeling_config(alternative_template)
+    return build_path
 
 
 @app.command()
@@ -637,5 +636,5 @@ if __name__ == "__main__":
     # create_conflict_view("nature_text",**_default)
     # update_coding_game(**_default)
 
-    print(build_ls_labeling_interface(39))
+    build_ls_labeling_interface(**_default,alternative_template="youtube")
     #check_labelling_config("twitter_reduced", **_default)

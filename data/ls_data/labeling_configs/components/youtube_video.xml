@@ -1,0 +1,46 @@
+<View>
+    <Header value="Video"/>
+    <Collapse>
+        <Panel value="Filtered video">
+            <Text name="video_ann_info">Please use the filtered video, for marking up to 4 frames of the video.</Text>
+            <HyperText name="video_url" value="" inline="true" clickableLinks="true">
+                <a href="$video_url" target="_blank">YOUTUBE LINK</a>
+            </HyperText>
+            <Style>
+                #filtered canvas { filter: blur(3px) grayscale(1); }
+            </Style>
+            <View idAttr="filtered">
+                <Video name="video_local_filtered" value="$video_local"/>
+                <TimelineLabels name="video-frames" toName="video_local_filtered">
+                    <Label value="Frame 1" background="#944BFF"/>
+                    <Label value="Frame 2" background="#98C84E"/>
+                    <Label value="Frame 3" background="#E44BFF"/>
+                    <Label value="Frame 4" background="#9878FE"/>
+                </TimelineLabels>
+            </View>
+        </Panel>
+        <Panel value="Original video">
+            <View>
+                <Video name="video_local" value="$video_local"/>
+            </View>
+        </Panel>
+    </Collapse>
+    <Header value="Backup. Embedded" size="6"/>
+    <Collapse>
+        <Panel value="Filtered video">
+            <Style>
+                #filtered embed { filter: blur(3px) grayscale(1); }
+            </Style>
+            <View idAttr="filtered">
+                <HyperText name="video_filtered" width="540" height="auto" value="$video_embedd" inline="true"/>
+            </View>
+        </Panel>
+        <Panel value="Original video">
+            <HyperText name="video" width="540" height="auto" value="$video_embedd" inline="true"/>
+        </Panel>
+    </Collapse>
+
+    <HyperText name="video_link" value="" inline="true" clickableLinks="true">
+        <a href="$video_url" target="_blank">YOUTUBE LINK</a>
+    </HyperText>
+</View>

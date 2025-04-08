@@ -1,6 +1,6 @@
 <View>
-    <Header value="Any Nauture?"/>
-    <Text name="nature_any_t" value="Is there nature in any of TEXT or VISUAL content? (default: No)"
+    <Header value="Any Nature?"/>
+    <Text name="nature_any_t" value="Is there nature in any of TEXT or VISUAL content?"
           selectionEnabled="false"/>
     <Choices name="nature_any" toName="title" showInline="true">
         <Choice value="No" selected="true"/>

@@ -1,0 +1,4 @@
+<View className="source_view" style="display: flex; color: orchid; font-style: italic;">
+    <Text name="p_id_t" value="Platform id :"/>
+    <Text name="platform_id" value="$platform_id"/>
+</View>

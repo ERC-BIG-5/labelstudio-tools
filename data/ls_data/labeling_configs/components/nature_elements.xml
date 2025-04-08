@@ -2,7 +2,7 @@
     <!-- nature_elements -->
     <!-- variables: var, title -->
     <Header value="Nature Elements/Processes"/>
-    <Text value="What are the Nature Elements/Process in the title?" name="nep_{{{var}}}_t"/>
+    <Text value="What are the Nature Elements/Process in the {{{title}}}?" name="nep_{{{var}}}_t"/>
     <Text value="Materiality" name="nep_materiality_{{{var}}}_t"/>
     <Choices name="nep_materiality_{{{var}}}" toName="title" showInline="true" required="false"
              choice="single">

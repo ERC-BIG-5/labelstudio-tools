@@ -1,0 +1,8 @@
+<View>
+    <!-- {title, var}  -->
+    <Text name="nature_{{{var}}}_t" value="Is there nature in the {{{title}}} content?"/>
+    <Choices name="nature_{{{var}}}" toName="title" showInline="true" required="true">
+        <Choice value="No" selected="true"/>
+        <Choice value="Yes"/>
+    </Choices>
+</View>

@@ -3,27 +3,28 @@ import json
 import os
 from pathlib import Path
 from string import Template
-from typing import Optional, Iterable, Any
+from typing import Optional, Any
 
 import pystache
 from lxml import etree
-from lxml.etree import _Element, _Comment
-from pydantic import BaseModel, field_validator, Field
-from pystache.parsed import ParsedTemplate
+from lxml.etree import _Comment
+from pydantic import BaseModel, Field
 
-from ls_helper.config_helper import check_references
+from ls_helper.config_helper import  find_tag_name_refs, find_all_names
 from ls_helper.exp.configs import find_duplicate_names
 from ls_helper.settings import SETTINGS
 from tools.files import levenhstein_get_similar_filenames
 from tools.pydantic_annotated_types import SerializablePath
 
+SRC_COMPONENT = "src-component"
+
 
 class LabelingInterfaceBuildConfig(BaseModel):
     template: SerializablePath = Field(...,
                                        description="the fundamental template. relative to 'labelling_configs/templates'")
-    destination_path: Path = Field(..., description="The result file. relative to 'labelling_configs/builds'.  ")
     generic_config: Optional[dict] = Field(default_factory=dict)
     test_input_data: Optional[dict] = Field(default_factory=dict)
+
 
 def validate_template_against_data(template_str: str, data: dict):
     root = etree.fromstring(template_str)
@@ -278,12 +279,41 @@ def build_configs() -> dict[str, Path]:
     return result_dict
 
 
-def build_from_template(config: LabelingInterfaceBuildConfig):
+def check_references(root) -> dict[str, list[str]]:
+    names = list(find_all_names(root).keys())
+    # print(names)
+    refs = find_tag_name_refs(root).items()
+    broken_refs = {}
+    for ref_name, depending in refs:
+        if ref_name not in names:
+            # print(ref)
+            component = None
+            for d_elem in depending:
+                cur_elem = d_elem
+                while True:
+                    comp = cur_elem.attrib.get(SRC_COMPONENT)
+                    if comp:
+                        component = comp
+                        break
+                    if not comp:
+                        if p := cur_elem.getparent():
+                            cur_elem = p
 
-    def read_pystache2lxml_tree(fp: Path, attrib: dict[str,Any]) -> etree.ElementTree: # tree
-        print(fp.name, attrib)
+            deps = [f'{d.tag}:{d.attrib.get("name", "")} [component:{component}]' for d in depending]
+            broken_refs[ref_name] = deps
+    if broken_refs:
+        print("broken references:")
+        for ref, dep in broken_refs.items():
+            print(f"{ref}:{dep}")
+    else:
+        print("all refs ok")
+    return broken_refs
+
+
+def build_from_template(config: LabelingInterfaceBuildConfig) -> etree.ElementTree:
+    def read_pystache2lxml_tree(fp: Path, attrib: dict[str, Any]) -> etree.ElementTree:  # tree
         raw_text = fp.read_text(encoding="utf-8")
-        #parsed: ParsedTemplate = pystache.parse(raw_text)
+        # parsed: ParsedTemplate = pystache.parse(raw_text)
         result = pystache.render(raw_text, context=attrib)
         return etree.ElementTree(etree.fromstring(result))
 
@@ -293,13 +323,16 @@ def build_from_template(config: LabelingInterfaceBuildConfig):
         if not parent_attrib:
             parent_attrib = {}
         for node in sub_tree.iter():
-            if node.tag in ['Style', "Collapse", "Panel", 'Choices', "Header","Text","Image","TextArea", "Choice"]:
+            # some LSElements and basic html elements to ignore
+            if node.tag in ['Style', "Collapse", "Panel", 'Choices', "Header", "Text", "Image", "TextArea", "Choice",
+                            "Video", "HyperText", "Label", "TimelineLabels", "a", "div", "script"]:
                 continue
-            if isinstance(node,_Comment):
+            if isinstance(node, _Comment):
                 continue
             if node.tag == 'View':
                 if (_if := node.attrib.get('if')) and (_is := node.attrib.get("is")):
-                    node.attrib.clear()
+                    del node.attrib["if"]
+                    del node.attrib["is"]
                     node.attrib.update({"visibleWhen": "choice-selected", "whenTagName": _if, "whenChoiceValue": _is})
                 continue
 
@@ -307,11 +340,14 @@ def build_from_template(config: LabelingInterfaceBuildConfig):
 
             if not src_file.exists():
                 print(
-                    f"file for key: {node.tag} not found, maybe: {levenhstein_get_similar_filenames(str(node.tag), components_dir)}")
+                    f"file for component: '{node.tag}' not found, maybe: {levenhstein_get_similar_filenames(str(node.tag), components_dir)}")
                 continue
             updated_attrib = parent_attrib | dict(node.attrib)
             component_tree = read_pystache2lxml_tree(src_file, updated_attrib)
             component_node = parse_tree(component_tree, updated_attrib)
+            comment = etree.Comment(f'component:{node.tag}')
+            component_node.attrib[SRC_COMPONENT] = node.tag
+            component_node.insert(1, comment)  # 1 is the index where comment is inserted
             node.getparent().replace(node, component_node)
         return sub_tree.getroot()
 
@@ -323,5 +359,4 @@ def build_from_template(config: LabelingInterfaceBuildConfig):
     dupl_names = find_duplicate_names(root)
     print(f"duplicate name: {dupl_names}")
 
-    _tree.write(config.destination_path, encoding="utf-8", pretty_print=True)
-
+    return _tree

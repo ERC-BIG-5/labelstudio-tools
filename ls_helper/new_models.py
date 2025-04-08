@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional, Any
 
 import pandas as pd
+from lxml.etree import ElementTree
 from pandas import DataFrame
 from pydantic import BaseModel, Field, model_validator, ConfigDict
 
@@ -102,22 +103,22 @@ class ProjectData(ProjectCreate):
         self._project_data = LSProjectModel.model_validate_json(fin.read_text())
         return self._project_data
 
+    def build_ls_labeling_config(self, alternative_template: Optional[str] = None) -> tuple[Path,ElementTree]:
 
-    def build_ls_labeling_config(self):
-        # todo here bring in eventual path parameter
-        template_path = self.path_for(SETTINGS.labeling_templates,".xml")
-        print(template_path)
+        # todo, this could be a nice abstraction. Input/Output files
+        if alternative_template:
+            template_path = SETTINGS.labeling_templates / f"{alternative_template}.xml"
+            destination_path = SETTINGS.built_labeling_configs / f"{alternative_template}.xml"
+        else:
+            template_path = self.path_for(SETTINGS.labeling_templates, ".xml")
+            destination_path = self.path_for(SETTINGS.built_labeling_configs, ".xml")
+
         if not template_path.exists():
-            logger.info(f"Creating template for {self.id},{self.alias}")
-            # todo that should happen during project creation
-            print("NO template File. setting default")
-            template_path.write_text("<View></View>")
-            # print(self.project_data.label_config)
-            return None
-        build_config = LabelingInterfaceBuildConfig(template=template_path,
-                                                    destination_path=self.path_for(SETTINGS.built_labeling_configs))
-        build_from_template(build_config)
-
+            raise FileNotFoundError(f"No template File: {template_path.stem}")
+        build_config = LabelingInterfaceBuildConfig(template=template_path)
+        built_tree = build_from_template(build_config)
+        built_tree.write(destination_path, encoding="utf-8", pretty_print=True)
+        return self.path_for(SETTINGS.built_labeling_configs), built_tree
 
     @property
     def fields(self) -> dict[str, FieldModel]:
@@ -144,11 +145,9 @@ class ProjectData(ProjectCreate):
 
         return variables
 
-
     @property
     def choices(self) -> dict[str, FieldModelChoice]:
         return {k: v for k, v in self.fields.items() if isinstance(v, FieldModelChoice)}
-
 
     @property
     def interface(self) -> InterfaceData:
@@ -162,7 +161,6 @@ class ProjectData(ProjectCreate):
 
         self._interface_data = parse_label_config_xml(self.project_data.label_config)
         return self._interface_data
-
 
     @property
     def field_extensions(self) -> ProjectFieldsExtensions:
@@ -181,7 +179,6 @@ class ProjectData(ProjectCreate):
         self._field_extensions = data_extensions
         return data_extensions
 
-
     def get_views(self) -> Optional[list[ProjectViewModel]]:
         view_file = SETTINGS.view_dir / f"{self.id}.json"
         if not view_file.exists():
@@ -189,11 +186,9 @@ class ProjectData(ProjectCreate):
         data = json.load(view_file.open())
         return [ProjectViewModel.model_validate(v) for v in data]
 
-
     @property
     def view_file(self) -> Optional[Path]:
         return SETTINGS.view_dir / f"{self.id}.json"
-
 
     def validate_extensions(self) -> list[str]:
         """
@@ -207,7 +202,6 @@ class ProjectData(ProjectCreate):
                 redundant_extensions.append(var)
                 # logger.warning(f"variable from fixes is redundant {var}")
         return redundant_extensions
-
 
     def get_annotations_results(self,
                                 accepted_ann_age: Optional[int] = 6) -> "ProjectResult":
@@ -233,10 +227,8 @@ class ProjectData(ProjectCreate):
             mp.assignment_df.to_parquet(SETTINGS.annotations_dir / f"ass_{self.id}.pqt")
         return mp
 
-
     def get_agreement_results(self, accepted_ann_age: Optional[int] = 6) -> "ProjectAgreementResult":
         pass
-
 
     # todo, move somewhere else?
     @staticmethod
@@ -248,7 +240,6 @@ class ProjectData(ProjectCreate):
             return users
         else:
             return UserInfo.model_validate(json.load(pp.open()))
-
 
     def store_agreement_report(self, agreement_report: AgreementReport, gen_csv_tables: bool = True):
         (p := self.path_for(ItemType.agreement_report)).write_text(
@@ -265,7 +256,6 @@ class ProjectData(ProjectCreate):
             print(f"agreement_report -> {p_csv.as_posix()}")
 
         return p
-
 
     def get_agreement_data(self) -> AgreementReport:
         return AgreementReport.model_validate_json(self.path_for(ItemType.agreement_report).read_text())
@@ -327,7 +317,7 @@ class ProjectOverView(BaseModel):
                 return self.projects[str(id)]
             elif platform and language:
                 return self.default_map[(platform, language)]
-            raise ValueError(f"{id=} {platform=} {language=}, {alias=} not a valid project-access")
+            raise ValueError(f"\n\nYour project parameters where not right: {id=} {platform=} {language=}, {alias=} not a valid project-access")
         raise ValueError(f"unknown project access: {p_access}")
 
     def add_project(self, p: ProjectCreate, save: bool = True):

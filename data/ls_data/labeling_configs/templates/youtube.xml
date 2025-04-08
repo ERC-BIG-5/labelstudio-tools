@@ -1,0 +1,45 @@
+<View>
+    <input_platform_id/>
+    <base_style/>
+    <title/>
+    <!-- Platform elements -->
+    <View>
+        <text_input index="2" title="Video description"/>
+        <youtube_video/>
+        <harmful_any/>
+        <harmful_detail/>
+        <language-correct_video/>
+    </View>
+    <Text name="gap2" value=" "/>
+    <nature_any/>
+    <View if="nature_any" is="Yes">
+        <extras/>
+        <nature_text_visual/>
+    </View>
+
+    <View className="text_part" if="nature_text" is="Yes">
+        <Header value="Visual"/>
+        <value-expr title="Text" suffix="text"/>
+        <relational-value title="Text" var="text"/>
+    </View>
+
+
+    <View if="nature_visual" is="Yes" className="visual_part">>
+        <Header value="Text"/>
+        <Collapse>
+            <panel_nep_val-expr_rel-value title="Frame 1" var="visual_0"/>
+        </Collapse>
+        <Collapse>
+            <panel_nep_val-expr_rel-value title="Frame 2" var="visual_1"/>
+        </Collapse>
+        <Collapse>
+            <panel_nep_val-expr_rel-value title="Frame 2" var="visual_2"/>
+        </Collapse>
+        <Collapse>
+            <panel_nep_val-expr_rel-value title="Frame 3" var="visual_3"/>
+        </Collapse>
+    </View>
+
+    <coding-game/>
+
+</View>

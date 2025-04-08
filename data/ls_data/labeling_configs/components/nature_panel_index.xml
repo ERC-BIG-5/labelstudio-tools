@@ -1,0 +1,6 @@
+<Panel value="{{{title}}} {{{index}}}">
+    <nature_visual_index index="{{{index}}}"/>
+    <View if="nature_visual_{{{index}}}" is="Yes">
+        <nature_elements var="{{{var}}}_{{{index}}}" title="{{{title}}}"/>
+    </View>
+</Panel>
