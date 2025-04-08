@@ -51,10 +51,7 @@ class ProjectCreate(BaseModel):
     description: Optional[str] = None
     alias: Optional[str] = None
     default: Optional[bool] = Field(False, deprecated="default should be on the Overview model")
-    # label_config_template: Optional[str] = None
-    # label_config_additions: Optional[list[str]] = Field(default_factory=list)
     coding_game_view_id: Optional[int] = None
-    templates: Optional[dict[str, str]] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def post_build(cls, data: "ProjectData") -> "ProjectData":
