@@ -100,7 +100,7 @@ class ProjectData(ProjectCreate):
         self._project_data = LSProjectModel.model_validate_json(fin.read_text())
         return self._project_data
 
-    def build_ls_labeling_config(self, alternative_template: Optional[str] = None) -> tuple[Path,ElementTree]:
+    def build_ls_labeling_config(self, alternative_template: Optional[str] = None) -> tuple[Path, ElementTree]:
 
         # todo, this could be a nice abstraction. Input/Output files
         if alternative_template:
@@ -115,7 +115,11 @@ class ProjectData(ProjectCreate):
         build_config = LabelingInterfaceBuildConfig(template=template_path)
         built_tree = build_from_template(build_config)
         built_tree.write(destination_path, encoding="utf-8", pretty_print=True)
+        print(f"labelstudio xml labeling config written to {destination_path}")
         return self.path_for(SETTINGS.built_labeling_configs), built_tree
+
+    def read_labeling_config(self) -> str:
+        return self.path_for(SETTINGS.built_labeling_configs, ".xml").read_text(encoding="utf-8")
 
     @property
     def fields(self) -> dict[str, FieldModel]:

@@ -23,10 +23,13 @@ from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
 from tools.files import read_data
 from tools.project_logging import get_logger
+from ls_helper.command_labeling_conf import labeling_conf_app, build_ls_labeling_interface, update_labeling_config
 
 logger = get_logger(__file__)
 
 app = typer.Typer(name="Labelstudio helper", pretty_exceptions_show_locals=True)
+
+app.add_typer(labeling_conf_app, name="items")
 
 """
 id_ = typer.Option(None, "--id"),
@@ -104,31 +107,6 @@ def generate_labeling_configs(
     # platform_projects.
     # check_against_fixes(next_conf, )
 
-
-@app.command(help="[ls maint] Upload labeling config")
-def update_labeling_configs(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
-):
-    # todo, if we do that. save it
-    # download_project_data(platform, language)
-    client = ls_client()
-    po = _project(get_p_access(id, platform, language, alias))
-
-    label_config = (SETTINGS.labeling_configs_dir / f"{po.platform}.xml").read_text(encoding="utf-8")
-
-    resp = client.validate_project_labeling_config(id, label_config)
-    if resp.status_code != 200:
-        print(resp.status_code)
-        print(resp.json())
-        return
-    res = client.patch_project(id, {"label_config": label_config})
-    if not res:
-        print(f"Could not update labeling config for {platform}/{language}/{id}")
-        return
-    print(f"updated labeling config for {platform}/{language}/{id}")
 
 
 @app.command(short_help="[ls maint] Update tasks. Files must be matching lists of {id: , data:}")
@@ -234,7 +212,6 @@ def download_project_data(
         language: Annotated[Optional[str], typer.Argument()] = None,
 ):
     p = _project(get_p_access(id, alias, platform, language))
-
     project_data = ls_client().get_project(p.id)
     if not project_data:
         raise ValueError(f"No project found: {p.id}")
@@ -575,18 +552,6 @@ def build_extension_index(
     print(f"index saved to {dest}")
 
 
-@app.command()
-def build_ls_labeling_interface(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Option()] = None,
-        language: Annotated[str, typer.Option()] = None,
-        alternative_template: Annotated[str, typer.Argument()] = None,
-) -> Optional[Path]:
-    po = _project(id, alias, platform, language)
-    build_path = po.build_ls_labeling_config(alternative_template)
-    return build_path
-
 
 @app.command()
 def delete_view(view_id: int):
@@ -617,9 +582,11 @@ def check_labelling_config(
 
 if __name__ == "__main__":
     twitter = "twitter"
+    youtube = "youtube"
     en = "en"
     tw_en = {"platform": twitter, "language": en}
-    _default = tw_en
+    yt_en4 = {"id":50}
+    _default = yt_en4
 
     # generate_result_fixes_template(**_default)
     # build_ls_labeling_interface(Path("twitter-2.json"))
@@ -636,5 +603,6 @@ if __name__ == "__main__":
     # create_conflict_view("nature_text",**_default)
     # update_coding_game(**_default)
 
-    build_ls_labeling_interface(**_default,alternative_template="youtube")
+    # build_ls_labeling_interface(**_default)
+    update_labeling_config(**_default)
     #check_labelling_config("twitter_reduced", **_default)
