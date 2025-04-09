@@ -12,9 +12,9 @@ from pydantic import BaseModel, Field, model_validator, ConfigDict
 from ls_helper.agreements import AgreementReport, export_agreement_metrics_to_csv, analyze_coder_agreement
 from ls_helper.config_helper import parse_label_config_xml
 from ls_helper.exp.build_configs import LabelingInterfaceBuildConfig, build_from_template
-from ls_helper.models.field_models import FieldModel as FieldModel, ChoiceFieldModel as FieldModelChoice
+from ls_helper.models.variable_models import VariableModel as FieldModel, ChoiceVariableModel as FieldModelChoice
 from ls_helper.models.interface_models import FullAnnotationRow
-from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, IChoices, PrincipleRow
+from ls_helper.models.interface_models import InterfaceData, ProjectVariableExtensions, IChoices, PrincipleRow
 from ls_helper.my_labelstudio_client.models import ProjectModel as LSProjectModel, ProjectViewModel, TaskResultModel
 from ls_helper.settings import SETTINGS, DFCols, DFFormat
 from tools.project_logging import get_logger
@@ -82,12 +82,17 @@ class ProjectData(ProjectCreate):
     id: int
     _project_data: Optional[LSProjectModel] = None
     _interface_data: Optional[InterfaceData] = None
-    _field_extensions: Optional[ProjectFieldsExtensions] = None
+    _variable_extensions: Optional[ProjectVariableExtensions] = None
 
     # views, predictions, results
 
     def path_for(self, base_p: Path, alternative: Optional[str] = None, ext: Optional[str] = ".json") -> Path:
+        if not ext:
+            ext = ".json"
         return base_p / f"{alternative if alternative else self.id}{ext}"
+
+    def __repr__(self) -> str:
+        return f"{self.id}/{self.alias}/{self.platform}/{self.language}"
 
     @property
     def project_data(self) -> LSProjectModel:
@@ -97,9 +102,14 @@ class ProjectData(ProjectCreate):
         if (p_i := SETTINGS.projects_dir / f"{self.id}.json").exists():
             fin = p_i
         if not fin:
-            raise FileNotFoundError(f"project data file for {self.id}: platform-language does not exist")
+            raise FileNotFoundError(f"project data file for {self.id}: platform-language does not exist. Call ")
         self._project_data = LSProjectModel.model_validate_json(fin.read_text())
         return self._project_data
+
+    def save_project_data(self, project_data: "LSProjectModel") -> None:
+        dest = self.path_for(SETTINGS.projects_dir)
+        dest.write_text(project_data.model_dump_json())
+        print(f"project-data saved for {repr(self)}: -> {dest}")
 
     def build_ls_labeling_config(self, alternative_template: Optional[str] = None) -> tuple[Path, ElementTree]:
 
@@ -118,17 +128,17 @@ class ProjectData(ProjectCreate):
         return self.path_for(SETTINGS.built_labeling_configs, alternative_build, ".xml").read_text(encoding="utf-8")
 
     @property
-    def fields(self) -> dict[str, FieldModel]:
+    def fields(self) -> dict[str, VariableModel]:
         variables = {}
 
-        for orig_name, field in self.interface.ordered_fields_map.items():
+        for orig_name, field in self.raw_interface_struct.ordered_fields_map.items():
 
-            field_extension = self.field_extensions.extensions[orig_name]
-            name = self.field_extensions.name_fixes[orig_name]
+            field_extension = self.variable_extensions.extensions[orig_name]
+            name = self.variable_extensions.name_fixes[orig_name]
             data = {
                 "name": name,
                 "orig_name": orig_name,
-                "type": self.interface.field_type(orig_name),
+                "type": self.raw_interface_struct.field_type(orig_name),
             }
 
             if isinstance(field, IChoices):
@@ -138,7 +148,7 @@ class ProjectData(ProjectCreate):
                 data["default"] = field_extension.default
                 variables[name] = FieldModelChoice.model_validate(data)
             else:
-                variables[name] = FieldModel.model_validate(data)
+                variables[name] = VariableModel.model_validate(data)
 
         return variables
 
@@ -147,7 +157,7 @@ class ProjectData(ProjectCreate):
         return {k: v for k, v in self.fields.items() if isinstance(v, FieldModelChoice)}
 
     @property
-    def interface(self) -> InterfaceData:
+    def raw_interface_struct(self) -> InterfaceData:
         """
         caches the structure.
         :param include_text:
@@ -159,22 +169,37 @@ class ProjectData(ProjectCreate):
         self._interface_data = parse_label_config_xml(self.project_data.label_config)
         return self._interface_data
 
-    @property
-    def field_extensions(self) -> ProjectFieldsExtensions:
-        if self._field_extensions:
-            return self._field_extensions
-        if (fi := SETTINGS.fixes_dir / "unifixes.json").exists():
-            data_extensions = ProjectFieldsExtensions.model_validate(json.load(fi.open()))
-        else:
-            print(f"no unifixes.json file yet in {SETTINGS.fixes_dir / 'unifix.json'}")
-            data_extensions = {}
-        if (p_fixes_file := SETTINGS.fixes_dir / f"{self.id}.json").exists():
-            p_fixes = ProjectFieldsExtensions.model_validate_json(p_fixes_file.read_text(encoding="utf-8"))
+    def save_and_log(self,
+                     path_dir: Path,
+                     data: InterfaceData | ProjectVariableExtensions | Any,
+                     alternative: Optional[str] = None,
+                     extension: Optional[str] = None):
+        p = self.path_for(path_dir, alternative, extension)
+        p.write_text(data.model_dump_json())
+        logger.info(f"Save {type(data).__name__} to: {p}")
 
-            data_extensions.extensions.update(p_fixes.extensions)
-            data_extensions.extension_reverse_map.update(p_fixes.extension_reverse_map)
-        self._field_extensions = data_extensions
-        return data_extensions
+    def save_extensions(self, raw_interf: ProjectVariableExtensions, alternative: Optional[str] = None) -> None:
+        self.save_and_log(SETTINGS.var_extensions_dir, raw_interf, alternative)
+
+    @property
+    def variable_extensions(self) -> ProjectVariableExtensions:
+        if self._variable_extensions:
+            return self._variable_extensions
+        if (fi := SETTINGS.var_extensions_dir / "unifixes.json").exists():
+            extensions = ProjectVariableExtensions.model_validate(json.load(fi.open()))
+        else:
+            print(f"no unifixes.json file yet in {SETTINGS.var_extensions_dir / 'unifix.json'}")
+            extensions = {}
+        if (p_fixes_file := SETTINGS.var_extensions_dir / f"{self.id}.json").exists():
+            p_fixes = ProjectVariableExtensions.model_validate_json(p_fixes_file.read_text(encoding="utf-8"))
+
+            extensions.extensions.update(p_fixes.extensions)
+            extensions.extension_reverse_map.update(p_fixes.extension_reverse_map)
+        else:
+            logger.error(
+                f"{repr(self)} has no 'variable_extensions' file. Call: 'generate_variable_extensions_template'")
+        self._variable_extensions = extensions
+        return extensions
 
     def get_views(self) -> Optional[list[ProjectViewModel]]:
         view_file = self.path_for(SETTINGS.view_dir)
@@ -189,44 +214,45 @@ class ProjectData(ProjectCreate):
 
     def validate_extensions(self) -> list[str]:
         """
-        go through all fixes and mark those, which are not in the structure:
+        go through all extensions and mark those, which are not in the structure:
         :return:
         """
-        interface = self.interface()
+        interface = self.raw_interface_struct
         redundant_extensions = []
-        for var in self.field_extensions.extensions:
+        for var in self.variable_extensions.extensions:
             if var not in interface:
                 redundant_extensions.append(var)
-                # logger.warning(f"variable from fixes is redundant {var}")
+                logger.info(f"variable from extensions is redundant {var}")
         return redundant_extensions
 
-    def get_annotations_results(self,
-                                accepted_ann_age: Optional[int] = 6) -> "ProjectResult":
+    def get_raw_annotations_results(self,
+                                    accepted_ann_age: Optional[int] = 6) -> "ProjectAnnotationResultsModel":
         # project_data = p_info.project_data()
-
-        data_extensions = self.field_extensions
+        data_extensions = self.variable_extensions
         # todo should happen inside that function or when post_init
-        self.interface.apply_extension(data_extensions)
-        mp = ProjectResult(project_data=self)
-
+        self.raw_interface_struct.apply_extension(data_extensions)
         from ls_helper.project_mgmt import ProjectMgmt
-        # todo, only build df, when we have a new file.
-        #
+        _, raw_annotation_result = ProjectMgmt.get_recent_annotations(self.id, accepted_ann_age)
+        return raw_annotation_result
+
+    def get_annotations_results(self, accepted_ann_age: Optional[int] = 6) -> "ProjectResult":
+        from ls_helper.project_mgmt import ProjectMgmt
+        mp = ProjectResult(project_data=self)
         from_existing, mp.raw_annotation_result = ProjectMgmt.get_recent_annotations(mp.id, accepted_ann_age)
         if from_existing:
-            mp.raw_annotation_df = pd.read_csv(SETTINGS.annotations_dir / f"raw_{self.id}.csv")
-            # this, cuz values are lists.
-            mp.raw_annotation_df['value'] = mp.raw_annotation_df['value'].apply(ast.literal_eval)
-            mp.raw_annotation_df['platform_id'] = mp.raw_annotation_df['platform_id'].astype(str)
-            mp.assignment_df = pd.read_csv(SETTINGS.annotations_dir / f"ass_{self.id}.pqt")
-        else:
-            mp.raw_annotation_df, mp.assignment_df = mp.get_annotation_df()
-            mp.raw_annotation_df.to_parquet(SETTINGS.annotations_dir / f"raw_{self.id}.csv")
-            mp.assignment_df.to_parquet(SETTINGS.annotations_dir / f"ass_{self.id}.csv")
+            raw_df_file = SETTINGS.annotations_dir / f"raw_{self.id}.csv"
+            if raw_df_file.exists():
+                mp.raw_annotation_df = pd.read_pickle(raw_df_file)
+                mp.assignment_df = pd.read_pickle(SETTINGS.annotations_dir / f"ass_{self.id}.csv")
+                # this, cuz values are lists.
+                mp.raw_annotation_df['value'] = mp.raw_annotation_df['value'].apply(ast.literal_eval)
+                mp.raw_annotation_df['platform_id'] = mp.raw_annotation_df['platform_id'].astype(str)
+                return mp
+        # new file or there is no raw_dataframe
+        mp.raw_annotation_df, mp.assignment_df = mp.get_annotation_df()
+        mp.raw_annotation_df.to_pickle(SETTINGS.annotations_dir / f"raw_{self.id}.csv")
+        mp.assignment_df.to_pickle(SETTINGS.annotations_dir / f"ass_{self.id}.csv")
         return mp
-
-    def get_agreement_results(self, accepted_ann_age: Optional[int] = 6) -> "ProjectAgreementResult":
-        pass
 
     # todo, move somewhere else?
     @staticmethod
@@ -322,7 +348,6 @@ class ProjectOverView(BaseModel):
     def add_project(self, p: ProjectCreate, save: bool = True):
         from ls_helper.project_mgmt import ProjectMgmt
 
-
         if p.alias in self.alias_map:
             raise ValueError(f"alias {p.alias} already exists")
         if p.default:
@@ -350,18 +375,21 @@ class ProjectOverView(BaseModel):
 
 platforms_overview: ProjectOverView = ProjectOverView.load()
 
-def get_project(id:Optional[int] = None,
+
+def get_project(id: Optional[int] = None,
                 alias: Optional[str] = None,
                 platform: Optional[str] = None,
                 language: Optional[str] = None) -> ProjectData:
-    return platforms_overview.get_project((id,alias,platform, language))
+    po = platforms_overview.get_project((id, alias, platform, language))
+    logger.info(repr(po))
+    return po
 
 
 class ProjectResult(BaseModel):
     project_data: ProjectData
     # annotation_structure: ResultStruct
-    data_extensions: Optional[ProjectFieldsExtensions] = None
-    raw_annotation_result: Optional[list[TaskResultModel]] = None
+    data_extensions: Optional[ProjectVariableExtensions] = None
+    raw_annotation_result: Optional["ProjectAnnotationResultsModel"] = None
     project_views: Optional[list[ProjectViewModel]] = None
     raw_annotation_df: Optional[pd.DataFrame] = None
     assignment_df: Optional[pd.DataFrame] = None
@@ -374,7 +402,7 @@ class ProjectResult(BaseModel):
 
     @property
     def interface(self) -> InterfaceData:
-        return self.project_data.interface
+        return self.project_data.raw_interface_struct
 
     def get_annotation_df(self, debug_task_limit: Optional[int] = None,
                           drop_cancels: bool = True) -> tuple[DataFrame, DataFrame]:
@@ -389,11 +417,13 @@ class ProjectResult(BaseModel):
                 return fix.name_fix
             return k
 
-        q_extens = {k: var_method(k, v) for k, v in self.project_data.field_extensions.extensions.items()}
+        extension_keys = set(self.project_data.variable_extensions.extensions)
+
+        q_extens = {k: var_method(k, v) for k, v in self.project_data.variable_extensions.extensions.items()}
 
         debug_mode = debug_task_limit is not None
 
-        for task in self.raw_annotation_result:
+        for task in self.raw_annotation_result.task_results:
             # print(task.id)
             for ann in task.annotations:
                 # print(f"{task.id=} {ann.id=}")
@@ -410,7 +440,11 @@ class ProjectResult(BaseModel):
                 )
 
                 for q_id, question in enumerate(ann.result):
-                    new_name = q_extens[question.from_name]
+                    orig_name = question.from_name
+                    if orig_name not in extension_keys:
+                        raise ValueError(
+                            f"{orig_name} Not found in extensions. Update extension of project {repr(self.project_data)}")
+                    new_name = q_extens.get(question.from_name)
                     if not new_name:
                         continue
                     # print(question)
@@ -741,7 +775,7 @@ class ProjectAnnotationResultsModel(BaseModel):
             ann_new = [ann for ann in t.annotations if not ann.was_cancelled]
             rea_c += len(t.annotations) - len(ann_new)
             tasks.append(t.model_copy(update={"annotations": ann_new,
-                                              "cancelled_annotations":0}))
+                                              "cancelled_annotations": 0}))
         return ProjectAnnotationResultsModel(task_results=tasks,
                                              timestamp=self.timestamp,
                                              dropped_cancellations=canceled)

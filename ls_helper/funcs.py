@@ -197,17 +197,6 @@ def get_latest_annotation_file(project_id: int) -> Optional[Path]:
     return sorted(annotation_files)[-1]
 
 
-def get_latest_annotation(project_id: int) -> Optional[list[TaskResultModel]]:
-    annotation_file = get_latest_annotation_file(project_id)
-    if not annotation_file:
-        ls_logger.warning("No annotation file?!")
-        return None
-    return [TaskResultModel.model_validate(t) for t in json.load(annotation_file.open(encoding="utf-8"))]
-
-
-
-
-
 
 def download_project_views(project_id: int, store: bool = True):
     views_resp = httpx.get(f"{SETTINGS.LS_HOSTNAME}/api/dm/views/?project={project_id}", headers={

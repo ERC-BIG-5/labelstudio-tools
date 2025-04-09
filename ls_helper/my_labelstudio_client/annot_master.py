@@ -83,7 +83,7 @@ def prep_single_select_agreement(df: DataFrame, question: str, indices: bool = T
     )
     if not indices:
         return pivot_df
-    value_indices = [c.annot_val for c in mp.interface.orig_choices[question].options]
+    value_indices = [c.annot_val for c in mp.raw_interface_struct.orig_choices[question].options]
 
     deff = pivot_df.apply(
         lambda col: col.map(lambda x: value_indices.index(x) if (not pd.isna(x) and x in value_indices) else x))

@@ -4,7 +4,7 @@ from pathlib import Path
 from deepdiff import DeepDiff
 from lxml.etree import Element
 
-from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, IField, IChoice, IChoices, \
+from ls_helper.models.interface_models import InterfaceData, ProjectVariableExtensions, IField, IChoice, IChoices, \
     ITextArea, IText
 #from ls_helper.new_models import ProjectData
 from ls_helper.settings import SETTINGS
@@ -132,7 +132,7 @@ def check_config_update(platform_configs: dict[str, Path]):
         print(diff)
 
 
-def check_against_fixes(label_config: str | InterfaceData, fixes: ProjectFieldsExtensions):
+def check_against_fixes(label_config: str | InterfaceData, fixes: ProjectVariableExtensions):
     """
     Do
     :param label_config: xml config string

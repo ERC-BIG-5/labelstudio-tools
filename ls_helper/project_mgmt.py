@@ -6,7 +6,7 @@ from typing import Any, Optional, Annotated
 
 import orjson
 
-from ls_helper.funcs import get_latest_annotation_file, get_latest_annotation
+from ls_helper.funcs import get_latest_annotation_file
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel, ProjectViewCreate, TaskResultModel
 from ls_helper.new_models import ProjectCreate, platforms_overview, ProjectData, ProjectAnnotationResultsModel
@@ -14,11 +14,13 @@ from ls_helper.settings import SETTINGS, ls_logger, TIMESTAMP_FORMAT
 from tools.env_root import root
 from tools.files import read_data
 
+
 class FileType(Enum):
     LSProject = auto()
     LSAnnotation = auto()
     LSView = auto()
     Extension = auto()
+
 
 class ProjectMgmt:
     DEFAULT_VIEW_HIDDEN_COLUMNS_FP = root() / "data/ls_data/default/ls_project_view_hiddenColumns.json"
@@ -34,7 +36,6 @@ class ProjectMgmt:
     @staticmethod
     def get_latest_file(p_id: int, file_type: FileType) -> Optional[Path]:
         raise NotImplemented
-
 
     @staticmethod
     def update_projects():
@@ -72,8 +73,6 @@ class ProjectMgmt:
         views = ls_client().get_project_views(po.id)
         po.view_file.write_text(json.dumps([v.model_dump() for v in views]))
 
-
-
     @classmethod
     def create_project(cls, p: ProjectCreate, add_coding_game_view: bool = True) -> tuple[
         ProjectModel, Optional[ProjectViewModel]]:
@@ -89,7 +88,8 @@ class ProjectMgmt:
         return project, coding_game_view
 
     @staticmethod
-    def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[tuple[Annotated[bool,"use_local"], ProjectAnnotationResultsModel]]:
+    def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[
+        tuple[Annotated[bool, "use_local"], ProjectAnnotationResultsModel]]:
         """
 
         :param project_id:
@@ -103,31 +103,23 @@ class ProjectMgmt:
             # print(file_dt, datetime.now(), datetime.now() - file_dt)
             if datetime.now() - file_dt < timedelta(hours=accepted_age):
                 ls_logger.info(f"Get recent, gets latest annotation: {file_dt:%m%d_%H%M}")
-                return True, get_latest_annotation(project_id)
 
-        # todo this stuff is old. needs refactoring love
+                annotation_file = get_latest_annotation_file(project_id)
+                if not annotation_file:
+                    ls_logger.warning("No annotation file?!")
+                    return None
+                task_results =  [TaskResultModel.model_validate(t) for t in json.load(annotation_file.open(encoding="utf-8"))]
+
+                return True, ProjectAnnotationResultsModel(task_results=task_results,
+                                                           timestamp=file_dt)
+
+        # todo this stuff is old. needs refactoring love. move to ProjectData model
         print("downloading annotations")
         result = ls_client().get_project_annotations(project_id)
-        res_path = (SETTINGS.annotations_dir / str(project_id) / f"{datetime.now().strftime(TIMESTAMP_FORMAT)}.json")
+        ts = datetime.now()
+        res_path = (SETTINGS.annotations_dir / str(project_id) / f"{ts.strftime(TIMESTAMP_FORMAT)}.json")
         res_path.parent.mkdir(parents=True, exist_ok=True)
         print(f"dumping project annotations to {res_path}")
-        json.dump(result, res_path.open("w", encoding="utf-8"))
-
-        return False, result
-
-    # @staticmethod
-    # def get_annotations(platform: str, language: str):
-    #     project_data = ProjectOverview.project_data(platform, language)
-    #     project_id = project_data["id"]
-    #
-    #     conf = parse_label_config_xml(project_data["label_config"],
-    #                                   project_id=project_id,
-    #                                   include_text=True)
-    #
-    #     annotations = SETTINGS.client.get_project_annotations(project_id)
-    #
-    #     mp = MyProject(project_data=project_data, annotation_structure=conf,
-    #                    raw_annotation_result=annotations)
-    #     mp.calculate_results()
-    #     mp.results2csv(Path("t.csv"), with_defaults=False)
-    #     return mp
+        pa = ProjectAnnotationResultsModel(task_results=result, timestamp=ts)
+        json.dump([r.model_dump() for r in result], res_path.open("w", encoding="utf-8"))
+        return False, pa

@@ -6,7 +6,7 @@ from typing import Optional, Literal, Any, Iterable, Annotated
 from deprecated.classic import deprecated
 from pydantic import BaseModel, Field, model_validator, PlainSerializer
 
-from ls_helper.models.field_models import FieldType
+from ls_helper.models.variable_models import VariableType
 from tools import fast_levenhstein
 from tools.project_logging import get_logger
 
@@ -115,7 +115,7 @@ class InterfaceData(BaseModel):
         return result
 
     def apply_extension(self,
-                        data_extensions: "ProjectFieldsExtensions",
+                        data_extensions: "ProjectVariableExtensions",
                         allow_non_existing_defaults: bool = True):
         if self._extension_applied:
             return
@@ -161,7 +161,7 @@ class InterfaceData(BaseModel):
             self.free_text[self.free_text.index(old)] = new
         self._extension_applied = True
 
-    def field_type(self, q) -> FieldType:
+    def field_type(self, q) -> VariableType:
         """
         in some parts, we turn column indices into $, so this is the
         way to get the original type
@@ -175,11 +175,11 @@ class InterfaceData(BaseModel):
             # not required when catching during validation...
             raise ValueError(f"Field {q} has not been defined")
         if isinstance(field,IChoices):
-            return FieldType.choice
+            return VariableType.choice
         elif isinstance(field, IText):
-            return FieldType.text
+            return VariableType.text
         elif isinstance(field, ITextArea):
-            return FieldType.text
+            return VariableType.text
         else:
         # if "$" in q:
         #     q = q.replace("$", "0")
@@ -189,7 +189,7 @@ class InterfaceData(BaseModel):
         #     return FieldType.text
         # else:
             logger.error(f"unknown question type for {q}: {type(field)}. defaulting to text")
-            return FieldType.text
+            return VariableType.text
 
     def __contains__(self, item):
         return item in self.ordered_fields
@@ -212,7 +212,7 @@ class FieldExtension(BaseModel):
     deprecated: Optional[bool] = None
 
 
-class ProjectFieldsExtensions(BaseModel):
+class ProjectVariableExtensions(BaseModel):
     extensions: dict[str, FieldExtension]
     extension_reverse_map: dict[str, str] = Field(description="fixes[k].name_fix = fixes[k]", default_factory=dict,
                                                   exclude=True)

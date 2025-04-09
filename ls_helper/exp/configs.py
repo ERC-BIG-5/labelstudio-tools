@@ -4,7 +4,7 @@ from typing import Any
 from lxml import etree
 from lxml.etree import Element
 
-from ls_helper.models.interface_models import ProjectFieldsExtensions
+from ls_helper.models.interface_models import ProjectVariableExtensions
 
 
 def find_duplicate_names(root) -> dict[str, int]:
@@ -41,7 +41,7 @@ def find_names(root) -> dict[str, Element]:
 
 
 def config_file_name_changes(config_path: Path,
-                             fixes: ProjectFieldsExtensions,
+                             fixes: ProjectVariableExtensions,
                              dest_path: Path):
     tree = etree.parse(config_path)
     root = tree.getroot()

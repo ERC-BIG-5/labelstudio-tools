@@ -4,7 +4,7 @@ from pathlib import Path
 from pandas import DataFrame
 from tqdm import tqdm
 
-from ls_helper.models.field_models import ChoiceFieldModel, NO_SINGLE_CHOICE
+from ls_helper.models.variable_models import ChoiceVariableModel, NO_SINGLE_CHOICE
 from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
@@ -786,7 +786,7 @@ def analyze_coder_agreement(raw_annotations, assignments, choices,
     return AgreementReport.model_validate(agreement_report_dict)
 
 
-def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info: ChoiceFieldModel,
+def identify_conflicts(agreement_matrix: DataFrame, variable: str, variable_info: ChoiceVariableModel,
                        variable_annotations):
     """
     Identify conflicts for this variable using task_key.
@@ -1212,7 +1212,7 @@ def add_image_index_column(df):
     return base_to_indices
 
 
-def clear_agreement_matrix(agreement_matrix: DataFrame, variable_info: ChoiceFieldModel) -> DataFrame:
+def clear_agreement_matrix(agreement_matrix: DataFrame, variable_info: ChoiceVariableModel) -> DataFrame:
     """
     Transforms agreement matrix for single-select variables by extracting values from lists.
 
@@ -1312,7 +1312,7 @@ def create_annotations_dataframe(raw_annotations):
 def apply_defaults_for_variable(variable_annotations: DataFrame,
                                 assignments_df: DataFrame,
                                 variable: str,
-                                variable_info: ChoiceFieldModel):
+                                variable_info: ChoiceVariableModel):
     """
     Apply default values for a specific variable where annotations are missing.
     Uses task_key (task_id_image_idx) for handling indexed variables.

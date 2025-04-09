@@ -82,12 +82,12 @@ class Settings(BaseSettings):
         return self.BASE_DATA_DIR / "plots"
 
     @property
-    def fixes_dir(self) -> Path:
+    def var_extensions_dir(self) -> Path:
         return self.BASE_DATA_DIR / "variable_extensions"
 
     @property
-    def unifix_file_path(self) -> Path:
-        return self.fixes_dir / "unifixes.json"
+    def unifix_extensions_file_path(self) -> Path:
+        return self.var_extensions_dir / "unifixes.json"
 
     @property
     def temp_file_path(self) -> Path:

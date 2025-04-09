@@ -30,7 +30,7 @@ def build_extension_index(projects: list[ProjectData]) -> DataExtensionIndex:
     variables: dict[str, VariableExtensionIndex] = {}
     for p in projects:
         # annot_results[p.id] = create_annotations_results(p, False)
-        ext = p.field_extensions
+        ext = p.variable_extensions
         for k, v in ext.extensions.items():
             if k not in variables:
                 variables[k] = VariableExtensionIndex.model_validate(v.model_dump())
