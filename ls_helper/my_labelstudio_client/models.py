@@ -306,3 +306,4 @@ class TaskResultModel(BaseModel):
     @property
     def num_coders(self) -> int:
         return len(self.annotations)
+

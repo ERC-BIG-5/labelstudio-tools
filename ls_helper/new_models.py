@@ -18,6 +18,7 @@ from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtens
 from ls_helper.my_labelstudio_client.models import ProjectModel as LSProjectModel, ProjectViewModel, TaskResultModel
 from ls_helper.settings import SETTINGS, DFCols, DFFormat
 from tools.project_logging import get_logger
+from tools.pydantic_annotated_types import SerializableDatetime
 
 PlLang = tuple[str, str]
 ProjectAccess = int | str | PlLang | tuple[Optional[int], Optional[str], Optional[str], Optional[str]]
@@ -85,8 +86,8 @@ class ProjectData(ProjectCreate):
 
     # views, predictions, results
 
-    def path_for(self, base_p: Path, ext: Optional[str] = ".json") -> Path:
-        return base_p / f"{self.id}{ext}"
+    def path_for(self, base_p: Path, alternative: Optional[str] = None, ext: Optional[str] = ".json") -> Path:
+        return base_p / f"{alternative if alternative else self.id}{ext}"
 
     @property
     def project_data(self) -> LSProjectModel:
@@ -102,13 +103,8 @@ class ProjectData(ProjectCreate):
 
     def build_ls_labeling_config(self, alternative_template: Optional[str] = None) -> tuple[Path, ElementTree]:
 
-        # todo, this could be a nice abstraction. Input/Output files
-        if alternative_template:
-            template_path = SETTINGS.labeling_templates / f"{alternative_template}.xml"
-            destination_path = SETTINGS.built_labeling_configs / f"{alternative_template}.xml"
-        else:
-            template_path = self.path_for(SETTINGS.labeling_templates, ".xml")
-            destination_path = self.path_for(SETTINGS.built_labeling_configs, ".xml")
+        template_path = self.path_for(SETTINGS.labeling_templates, alternative_template, ".xml")
+        destination_path = self.path_for(SETTINGS.built_labeling_configs, alternative_template, ".xml")
 
         if not template_path.exists():
             raise FileNotFoundError(f"No template File: {template_path.stem}")
@@ -118,8 +114,8 @@ class ProjectData(ProjectCreate):
         print(f"labelstudio xml labeling config written to {destination_path}")
         return self.path_for(SETTINGS.built_labeling_configs), built_tree
 
-    def read_labeling_config(self) -> str:
-        return self.path_for(SETTINGS.built_labeling_configs, ".xml").read_text(encoding="utf-8")
+    def read_labeling_config(self, alternative_build: Optional[str] = None) -> str:
+        return self.path_for(SETTINGS.built_labeling_configs, alternative_build, ".xml").read_text(encoding="utf-8")
 
     @property
     def fields(self) -> dict[str, FieldModel]:
@@ -181,7 +177,7 @@ class ProjectData(ProjectCreate):
         return data_extensions
 
     def get_views(self) -> Optional[list[ProjectViewModel]]:
-        view_file = SETTINGS.view_dir / f"{self.id}.json"
+        view_file = self.path_for(SETTINGS.view_dir)
         if not view_file.exists():
             return None
         data = json.load(view_file.open())
@@ -209,23 +205,24 @@ class ProjectData(ProjectCreate):
         # project_data = p_info.project_data()
 
         data_extensions = self.field_extensions
-        # should happen inside that function or when post_init
+        # todo should happen inside that function or when post_init
         self.interface.apply_extension(data_extensions)
         mp = ProjectResult(project_data=self)
 
         from ls_helper.project_mgmt import ProjectMgmt
-        # todo, only buuild df, wehn we have a new file
+        # todo, only build df, when we have a new file.
+        #
         from_existing, mp.raw_annotation_result = ProjectMgmt.get_recent_annotations(mp.id, accepted_ann_age)
         if from_existing:
-            mp.raw_annotation_df = pd.read_csv(SETTINGS.annotations_dir / f"raw_{self.id}.pqt")
+            mp.raw_annotation_df = pd.read_csv(SETTINGS.annotations_dir / f"raw_{self.id}.csv")
             # this, cuz values are lists.
             mp.raw_annotation_df['value'] = mp.raw_annotation_df['value'].apply(ast.literal_eval)
             mp.raw_annotation_df['platform_id'] = mp.raw_annotation_df['platform_id'].astype(str)
             mp.assignment_df = pd.read_csv(SETTINGS.annotations_dir / f"ass_{self.id}.pqt")
         else:
             mp.raw_annotation_df, mp.assignment_df = mp.get_annotation_df()
-            mp.raw_annotation_df.to_parquet(SETTINGS.annotations_dir / f"raw_{self.id}.pqt")
-            mp.assignment_df.to_parquet(SETTINGS.annotations_dir / f"ass_{self.id}.pqt")
+            mp.raw_annotation_df.to_parquet(SETTINGS.annotations_dir / f"raw_{self.id}.csv")
+            mp.assignment_df.to_parquet(SETTINGS.annotations_dir / f"ass_{self.id}.csv")
         return mp
 
     def get_agreement_results(self, accepted_ann_age: Optional[int] = 6) -> "ProjectAgreementResult":
@@ -318,11 +315,13 @@ class ProjectOverView(BaseModel):
                 return self.projects[str(id)]
             elif platform and language:
                 return self.default_map[(platform, language)]
-            raise ValueError(f"\n\nYour project parameters where not right: {id=} {platform=} {language=}, {alias=} not a valid project-access")
+            raise ValueError(
+                f"\n\nYour project parameters where not right: {id=} {platform=} {language=}, {alias=} not a valid project-access")
         raise ValueError(f"unknown project access: {p_access}")
 
     def add_project(self, p: ProjectCreate, save: bool = True):
         from ls_helper.project_mgmt import ProjectMgmt
+
 
         if p.alias in self.alias_map:
             raise ValueError(f"alias {p.alias} already exists")
@@ -341,6 +340,7 @@ class ProjectOverView(BaseModel):
         self.alias_map[p.alias] = p_i
         if save:
             self.save()
+        # todo get the label_config: will be <View></View> into the ls_data.labeling_configs/template folder
 
     def save(self):
         projects = {p.id: p for p in self.projects.values()}
@@ -349,6 +349,12 @@ class ProjectOverView(BaseModel):
 
 
 platforms_overview: ProjectOverView = ProjectOverView.load()
+
+def get_project(id:Optional[int] = None,
+                alias: Optional[str] = None,
+                platform: Optional[str] = None,
+                language: Optional[str] = None) -> ProjectData:
+    return platforms_overview.get_project((id,alias,platform, language))
 
 
 class ProjectResult(BaseModel):
@@ -690,3 +696,52 @@ class ProjectResult(BaseModel):
         return dest, agreement_report
 
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
+
+
+class AnnotationResultStats(BaseModel):
+    num_tasks: int
+    total_annotations: int
+    cancelled_annotations: int
+
+
+class ProjectAnnotationResultsModel(BaseModel):
+    task_results: list[TaskResultModel] = Field(..., description="the task results")
+    _stats: Optional[AnnotationResultStats] = None
+    dropped_cancellations: Optional[int] = 0
+    timestamp: SerializableDatetime
+
+    def stats(self):
+        if self._stats:
+            return self._stats
+
+        cancelled = 0
+        total = 0
+        num = len(self.task_results)
+        completed = 0
+        for t in self.task_results:
+            cancelled += t.cancelled_annotations
+            total += t.total_annotations
+            # todo, this one should come from the project_data
+            if t.total_annotations > 1:
+                completed += 1
+        self._stats = AnnotationResultStats(num_tasks=num,
+                                            total_annotations=total,
+                                            cancelled_annotations=cancelled)
+        return self._stats
+
+    def completed(self, min_ann: int = 2) -> int:
+        return sum(1 for t in self.task_results if t.total_annotations >= min_ann)
+
+    def drop_cancellations(self) -> "ProjectAnnotationResultsModel":
+        canceled = 0
+        rea_c = 0
+        tasks = []
+        for t in self.task_results:
+            canceled += t.cancelled_annotations
+            ann_new = [ann for ann in t.annotations if not ann.was_cancelled]
+            rea_c += len(t.annotations) - len(ann_new)
+            tasks.append(t.model_copy(update={"annotations": ann_new,
+                                              "cancelled_annotations":0}))
+        return ProjectAnnotationResultsModel(task_results=tasks,
+                                             timestamp=self.timestamp,
+                                             dropped_cancellations=canceled)

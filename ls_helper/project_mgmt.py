@@ -2,15 +2,15 @@ import json
 from datetime import datetime, timedelta
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Annotated
 
 import orjson
 
 from ls_helper.funcs import get_latest_annotation_file, get_latest_annotation
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import ProjectModel, ProjectViewModel, ProjectViewCreate, TaskResultModel
-from ls_helper.new_models import ProjectCreate, platforms_overview, ProjectData
-from ls_helper.settings import SETTINGS, ls_logger
+from ls_helper.new_models import ProjectCreate, platforms_overview, ProjectData, ProjectAnnotationResultsModel
+from ls_helper.settings import SETTINGS, ls_logger, TIMESTAMP_FORMAT
 from tools.env_root import root
 from tools.files import read_data
 
@@ -89,13 +89,14 @@ class ProjectMgmt:
         return project, coding_game_view
 
     @staticmethod
-    def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[tuple[bool, list[TaskResultModel]]]:
+    def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[tuple[Annotated[bool,"use_local"], ProjectAnnotationResultsModel]]:
         """
 
         :param project_id:
         :param accepted_age:
         :return: true, list of anns; True if existing file
         """
+        # todo change the list back to another model in order to pack some functions like dropping cancelations...
         latest_file = get_latest_annotation_file(project_id)
         if latest_file is not None:
             file_dt = datetime.strptime(latest_file.stem, "%Y%m%d_%H%M")
@@ -104,8 +105,15 @@ class ProjectMgmt:
                 ls_logger.info(f"Get recent, gets latest annotation: {file_dt:%m%d_%H%M}")
                 return True, get_latest_annotation(project_id)
 
+        # todo this stuff is old. needs refactoring love
         print("downloading annotations")
-        return False, ls_client().get_project_annotations(project_id)
+        result = ls_client().get_project_annotations(project_id)
+        res_path = (SETTINGS.annotations_dir / str(project_id) / f"{datetime.now().strftime(TIMESTAMP_FORMAT)}.json")
+        res_path.parent.mkdir(parents=True, exist_ok=True)
+        print(f"dumping project annotations to {res_path}")
+        json.dump(result, res_path.open("w", encoding="utf-8"))
+
+        return False, result
 
     # @staticmethod
     # def get_annotations(platform: str, language: str):

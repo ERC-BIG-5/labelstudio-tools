@@ -83,7 +83,7 @@ class Settings(BaseSettings):
 
     @property
     def fixes_dir(self) -> Path:
-        return self.BASE_DATA_DIR / "fixes"
+        return self.BASE_DATA_DIR / "variable_extensions"
 
     @property
     def unifix_file_path(self) -> Path:
@@ -128,3 +128,5 @@ class DFCols:
 @dataclass
 class AllCols(DFRawCols, DFCols):
     pass
+
+TIMESTAMP_FORMAT = "%Y%m%d_%H%M"

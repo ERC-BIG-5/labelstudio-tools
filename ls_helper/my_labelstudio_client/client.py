@@ -177,10 +177,6 @@ class LabelStudioBase:
 
         result = dl.json()
 
-        res_path = (SETTINGS.annotations_dir / str(project_id) / f"{datetime.now():%Y%m%d_%H%M}.json")
-        res_path.parent.mkdir(parents=True, exist_ok=True)
-        print(f"dumping project annotations to {res_path}")
-        json.dump(result, res_path.open("w", encoding="utf-8"))
         return [TaskResultModel.model_validate(t) for t in result]
 
     def get_project_views(self, project_id: int) -> list[ProjectViewModel]:
@@ -275,8 +271,19 @@ class LabelStudioBase:
         view = ProjectViewModel.model_validate(resp.json())
         return view
 
-    def createTask(self, data: TaskCreate):
+    def create_task(self, data: TaskCreate):
         resp = self._client_wrapper.httpx_client.post(f"/api/tasks/", json=data.model_dump())
+        if resp.status_code != 201:
+            print(resp)
+            raise ValueError(resp.json())
+        return resp
+
+    def import_tasks(self, project_id: int, tasks: list[TaskCreate]):
+        resp = self._client_wrapper.httpx_client.post(f"/api/projects/{project_id}/import",
+                                                      json=[t.model_dump()["data"] for t in tasks])
+        if resp.status_code != 201:
+            print(resp)
+            raise ValueError(resp.json())
         return resp
 
     def delete_view(self, view_id: int):

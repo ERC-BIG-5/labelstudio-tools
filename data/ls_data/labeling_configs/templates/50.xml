@@ -4,7 +4,11 @@
     <title/>
     <!-- Platform elements -->
     <View>
-        <text_input index="2" title="Video description"/>
+        <Collapse>
+            <Panel value="Description">
+                <text_input index="2" title="Video description"/>
+            </Panel>
+        </Collapse>
         <youtube_video/>
         <harmful_any/>
         <harmful_detail/>
@@ -22,7 +26,6 @@
         <value-expr title="Text" suffix="text"/>
         <relational-value title="Text" var="text"/>
     </View>
-
 
     <View if="nature_visual" is="Yes" className="visual_part">>
         <Header value="Text"/>

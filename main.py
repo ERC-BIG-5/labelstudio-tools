@@ -11,33 +11,37 @@ from tqdm import tqdm
 from ls_helper.agreements import fix_users, AgreementReport, SingleChoiceAgreement
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
+from ls_helper.command import labeling_conf
+from ls_helper.command import pipeline
+from ls_helper.command import task
+from ls_helper.command.labeling_conf import labeling_conf_app
+from ls_helper.command.pipeline import pipeline_app
 from ls_helper.config_helper import check_config_update, parse_label_config_xml
 from ls_helper.exp.build_configs import build_configs
 from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter
 from ls_helper.models.interface_models import InterfaceData, ProjectFieldsExtensions, FieldExtension
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectViewCreate, ProjectViewDataModel
-from ls_helper.new_models import platforms_overview, get_p_access, ProjectCreate
+from ls_helper.new_models import platforms_overview, get_p_access, ProjectCreate, get_project
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
 from tools.files import read_data
 from tools.project_logging import get_logger
-from ls_helper.command_labeling_conf import labeling_conf_app, build_ls_labeling_interface, update_labeling_config
 
 logger = get_logger(__file__)
 
 app = typer.Typer(name="Labelstudio helper", pretty_exceptions_show_locals=True)
 
-app.add_typer(labeling_conf_app, name="items")
-
+app.add_typer(labeling_conf_app, name="label_conf")
+app.add_typer(pipeline_app, name="pipeline")
 """
 id_ = typer.Option(None, "--id"),
 platform_ = typer.Option(None, "--platform", "-p"),
 language_ = typer.Option(None, "--language", "-l"),
 alias_ = typer.Option(None, "--alias", "-a"),
 """
-_project = lambda id,al,pl,la : platforms_overview.get_project((id,al,pl,la))
+
 
 def open_image_simple(image_path):
     # Convert to absolute path and URI format
@@ -52,9 +56,9 @@ def generate_result_fixes_template(
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None
 ):
-    po = _project(get_p_access(id, alias, platform, language))
+    po = get_project(id, alias, platform, language)
 
-    conf = po.interface()
+    conf = po.interface
 
     def get_variable_extensions(annotation_struct: InterfaceData) -> ProjectFieldsExtensions:
         data: dict[str, FieldExtension] = {}
@@ -64,7 +68,7 @@ def generate_result_fixes_template(
         for field in annotation_struct.ordered_fields:
             data[field] = FieldExtension()
 
-        return ProjectFieldsExtensions(extensions=data)
+        return ProjectFieldsExtensions(extensions= data)
 
     res_template = get_variable_extensions(conf)
 
@@ -85,13 +89,12 @@ def setup_project_settings(
         alias: Annotated[str, typer.Option("-a")] = None,
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None):
-    po = _project(get_p_access(id, platform, language, alias))
+    po = get_project(id, alias, platform, language)
     values = ProjectMgmt.default_project_values()
     del values["color"]
     res = ls_client().patch_project(po.id, values)
     if not res:
         print("error updating project settings")
-
 
 @app.command(
     short_help="[setup] run build_config function and copy it into 'labeling_configs_dir'. Run 'update_labeling_configs' afterward")
@@ -106,7 +109,6 @@ def generate_labeling_configs(
     pass  # TODO
     # platform_projects.
     # check_against_fixes(next_conf, )
-
 
 
 @app.command(short_help="[ls maint] Update tasks. Files must be matching lists of {id: , data:}")
@@ -211,7 +213,7 @@ def download_project_data(
         platform: Annotated[Optional[str], typer.Argument()] = None,
         language: Annotated[Optional[str], typer.Argument()] = None,
 ):
-    p = _project(get_p_access(id, alias, platform, language))
+    p = get_project(id, alias, platform, language)
     project_data = ls_client().get_project(p.id)
     if not project_data:
         raise ValueError(f"No project found: {p.id}")
@@ -229,7 +231,7 @@ def download_project_views(
 ) -> list[
     ProjectViewModel]:
     p_a = get_p_access(id, alias, platform, language)
-    po = _project(p_a)
+    po = get_project(p_a)
     views = ProjectMgmt.refresh_views(po)
     logger.debug(f"view file -> {po.view_file}")
     return views
@@ -245,7 +247,7 @@ def status(
     from ls_helper import main_funcs
     main_funcs.status(get_p_access(id, alias, platform, language), accepted_ann_age)
 
-    po = _project(get_p_access(id, alias, platform, language))
+    po = get_project(id, alias, platform, language)
     po.validate_extensions()
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
@@ -267,7 +269,7 @@ def total_over_time(
             int, typer.Option(help="Download annotations if older than x hours")] = 6,
 ):
     print(get_p_access(id, alias, platform, language))
-    po = _project(get_p_access(id, alias, platform, language))
+    po = get_project(id, alias, platform, language)
     annotations = ProjectMgmt.get_recent_annotations(po.id, accepted_ann_age)
     df = annotation_total_over_time(annotations)
     temp_file = plot_cumulative_annotations(df,
@@ -285,7 +287,7 @@ def annotation_lead_times(id: Annotated[int, typer.Option()] = None,
                           language: Annotated[str, typer.Argument()] = None,
                           accepted_ann_age: Annotated[
                               int, typer.Option(help="Download annotations if older than x hours")] = 6):
-    po = _project(get_p_access(id, alias, platform, language))
+    po = get_project(id, alias, platform, language)
     project_annotations = ProjectMgmt.get_recent_annotations(po.id, accepted_ann_age)
 
     df = get_annotation_lead_times(project_annotations)
@@ -305,7 +307,7 @@ def set_view_items(
         language: Annotated[str, typer.Argument()] = None,
         create_view: Annotated[Optional[bool], typer.Option()] = True
 ):
-    po = _project(get_p_access(id, alias, platform, language))
+    po = get_project(id, alias, platform, language)
     views = po.get_views()
     if not views and not create_view:
         print("No views found")
@@ -348,7 +350,7 @@ def update_coding_game(
 
     """
     p_a = get_p_access(id, alias, platform, language)
-    po = _project(p_a)
+    po = get_project(p_a)
     logger.info(po.alias)
     view_id = po.coding_game_view_id
     if not view_id:
@@ -370,7 +372,7 @@ def update_coding_game(
         return None
     view_ = view_[0]
 
-    po = _project(get_p_access(id, alias, platform, language))
+    po = get_project(id, alias, platform, language)
     # project_annotations = _get_recent_annotations(po.id, accepted_ann_age)
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # project_annotations = _get_recent_annotations(po.id, 0)
@@ -394,7 +396,7 @@ def annotations(
             int, typer.Option(help="Download annotations if older than x hours")] = 6,
         min_coders: Annotated[int, typer.Option()] = 2) -> tuple[
     Path, str]:
-    po = _project(get_p_access(id, alias, platform, language))
+    po = get_project(id, alias, platform, language)
     po.validate_extensions()
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
@@ -417,7 +419,7 @@ def agreements(
         variables: Annotated[list[str], typer.Argument()] = None
 
 ) -> tuple[Path, AgreementReport]:
-    dest, agreement_report = (_project((id, alias, platform, language))
+    dest, agreement_report = (get_project((id, alias, platform, language))
                               .get_annotations_results(
         accepted_ann_age=accepted_ann_age)
                               .get_coder_agreements(min_num_coders, variables, True))
@@ -439,41 +441,14 @@ def create_project(
     ))
 
 
-@app.command()
-def reformat_for_datapipelines(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
-        destination: Annotated[Path, typer.Argument()] = None,
-):
-    """
-    create a file with a dict platform_id: annotation, which can be ingested by the pipeline
-    :param platform:
-    :param language:
-    :param destination:
-    :return:
-    """
-    # does extra calculation but ok.
-    po = _project(get_p_access(id, alias, platform, language))
-    mp = po.get_annotations_results(0)
-    res = {}
-
-    for task_result in mp.raw_annotation_result:
-        res[task_result.data["platform_id"]] = {po.id: task_result.model_dump(exclude={"data"})}
-    if not destination:
-        destination = SETTINGS.temp_file_path / f"annotations_for_datapipelines_{po.id}.json"
-        destination.write_text(json.dumps(res))
-        print(f"annotations reformatted -> {destination.as_posix()}")
-
-
 def get_all_variable_names(
         id: Annotated[int, typer.Option()] = None,
         alias: Annotated[str, typer.Option("-a")] = None,
         platform: Annotated[str, typer.Option()] = None,
         language: Annotated[str, typer.Option()] = None
 ):
-    po = _project(get_p_access(id, alias, platform, language))
+    po = get_project(id, alias, platform, language)
+    # todo redo and test...
     struct = po.interface(include_text=False, apply_extension=True)
     return list(struct.orig_choices.keys()) + struct.free_text
 
@@ -487,7 +462,7 @@ def create_conflict_view(
         language: Annotated[str, typer.Option()] = None,
         variable_option: Annotated[str, typer.Option()] = None
 ):
-    po = _project(get_p_access(id, alias, platform, language))
+    po = get_project(id, alias, platform, language)
     # po.validate_extensions()
     # mp = po.get_annotations_results()
 
@@ -541,7 +516,7 @@ def build_extension_index(
     from ls_helper.annot_extension import build_extension_index as _build_extension_index
 
     if project_ids:
-        projects = [_project(get_p_access(id)) for id in project_ids]
+        projects = [get_project(id) for id in project_ids]
     elif take_all_defaults:
         projects = list(platforms_overview.default_map.values())
     else:
@@ -550,7 +525,6 @@ def build_extension_index(
     dest = SETTINGS.temp_file_path / f"annot_ext_index_{'_'.join(str(p.id) for p in projects)}.json"
     dest.write_text(index.model_dump_json(indent=2))
     print(f"index saved to {dest}")
-
 
 
 @app.command()
@@ -566,13 +540,13 @@ def check_labelling_config(
         platform: Annotated[str, typer.Option()] = None,
         language: Annotated[str, typer.Option()] = None
 ):
-    po = _project(((id, alias, platform, language)))
+    po = get_project(id, alias, platform, language)
 
     existing_struct = po.interface
 
-    if not build_file_name.endswith(".xml") :
+    if not build_file_name.endswith(".xml"):
         build_file_name += ".xml"
-    fp =  SETTINGS.built_labeling_configs / build_file_name
+    fp = SETTINGS.built_labeling_configs / build_file_name
 
     new_config = parse_label_config_xml(fp.read_text())
     print(type(new_config), type(existing_struct))
@@ -580,13 +554,14 @@ def check_labelling_config(
     print(diff.to_json(indent=2))
     pass
 
+
 if __name__ == "__main__":
     twitter = "twitter"
     youtube = "youtube"
     en = "en"
     tw_en = {"platform": twitter, "language": en}
-    yt_en4 = {"id":50}
-    _default = yt_en4
+    yt_en4 = {"id": 50}
+    _default = tw_en
 
     # generate_result_fixes_template(**_default)
     # build_ls_labeling_interface(Path("twitter-2.json"))
@@ -603,6 +578,20 @@ if __name__ == "__main__":
     # create_conflict_view("nature_text",**_default)
     # update_coding_game(**_default)
 
-    # build_ls_labeling_interface(**_default)
-    update_labeling_config(**_default)
-    #check_labelling_config("twitter_reduced", **_default)
+    # alternative builts possible
+    # sub apps:
+    labeling_conf
+    pipeline
+    task
+
+    setup_project_settings(platform="youtube", language="en")
+    #
+    # labeling_conf.build_ls_labeling_interface(platform="youtube", language="en")
+    # labeling_conf.update_labeling_config(platform="youtube", language="en")
+    # pipeline.reformat_for_datapipelines(33,0)
+    # check_labelling_config("twitter_reduced", **_default)
+
+    # DONE!!
+    # task.create_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/youtube-en-4"),
+    #                   True,
+    #                   None, "youtube-en-4")

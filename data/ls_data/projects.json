@@ -14,7 +14,7 @@
     "language": "en",
     "description": null,
     "title": "YT - en - part1",
-    "alias": "yt_-_en_-_part1",
+    "alias": "youtube-en-2",
     "default": false,
     "coding_game_view_id": 56,
     "id": 33
@@ -94,7 +94,7 @@
     "language": "en",
     "title": "Youtube - EN - protocol.v4",
     "alias": "youtube-en-4",
-    "default": false,
+    "default": true,
     "coding_game_view_id": null,
     "id": 50
   }

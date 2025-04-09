@@ -1,5 +1,4 @@
 <View>
-    <!-- harmful_any -->
     <Header value="Is there any harmful content?"/>
     <Choices name="harmful_any" toName="title" showInline="true" choice="multiple">
         <Choice value="Text" alias="text"/>

@@ -1,0 +1,19 @@
+<View>
+    <Header value="Backup. Embedded" size="6"/>
+    <Collapse>
+        <Panel value="Filtered video">
+            <Style>
+                #filtered embed { filter: blur(3px) grayscale(1); }
+            </Style>
+            <View idAttr="filtered">
+                <HyperText name="video_filtered" width="540" height="auto" value="$video_embedd" inline="true"/>
+            </View>
+        </Panel>
+        <Panel value="Original video">
+            <HyperText name="video" width="540" height="auto" value="$video_embedd" inline="true"/>
+        </Panel>
+    </Collapse>
+    <HyperText name="video_link" value="" inline="true" clickableLinks="true">
+        <a href="$video_url" target="_blank">YOUTUBE LINK</a>
+    </HyperText>
+</View>

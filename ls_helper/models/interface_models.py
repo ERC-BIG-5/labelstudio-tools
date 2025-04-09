@@ -213,7 +213,7 @@ class FieldExtension(BaseModel):
 
 
 class ProjectFieldsExtensions(BaseModel):
-    extensions: dict[str, FieldExtension] = Field(alias="fixes")
+    extensions: dict[str, FieldExtension]
     extension_reverse_map: dict[str, str] = Field(description="fixes[k].name_fix = fixes[k]", default_factory=dict,
                                                   exclude=True)
 
