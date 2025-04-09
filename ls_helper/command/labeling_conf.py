@@ -4,19 +4,17 @@ from typing import Annotated, Optional, Callable
 import typer
 
 from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.new_models import platforms_overview, ProjectData
+from ls_helper.new_models import platforms_overview, ProjectData, get_project
 from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 
 labeling_conf_app = typer.Typer(name="Labeling config", pretty_exceptions_show_locals=True)
-_app = labeling_conf_app
 
 # todo duplicate in main
-_project: Callable = lambda id, al, pl, la: platforms_overview.get_project((id, al, pl, la))
 
 
-@_app.command()
+@labeling_conf_app.command()
 def build_ls_labeling_interface(
         id: Annotated[int, typer.Option()] = None,
         alias: Annotated[str, typer.Option("-a")] = None,
@@ -24,13 +22,13 @@ def build_ls_labeling_interface(
         language: Annotated[str, typer.Option()] = None,
         alternative_template: Annotated[str, typer.Argument()] = None,
 ) -> Optional[Path]:
-    po = _project(id, alias, platform, language)
+    po = get_project(id, alias, platform, language)
     path, tree = po.build_ls_labeling_config(alternative_template)
     return path
 
 
 
-@_app.command(help="[ls maint] Upload labeling config")
+@labeling_conf_app.command(help="[ls maint] Upload labeling config")
 def update_labeling_config(
         id: Annotated[int, typer.Option()] = None,
         alias: Annotated[str, typer.Option("-a")] = None,
@@ -41,7 +39,7 @@ def update_labeling_config(
     # todo, if we do that. save it
     # download_project_data(platform, language)
     client = ls_client()
-    po = _project(id, alias, platform, language)
+    po = get_project(id, alias, platform, language)
 
     label_config = po.read_labeling_config(alternative_built)
 
@@ -52,12 +50,12 @@ def update_labeling_config(
         print(resp.json())
         return
     
-    res = client.patch_project(po.id, {"label_config": label_config})
-    if not res:
+    project = client.patch_project(po.id, {"label_config": label_config})
+    if not project:
         print(f"Could not update labeling config for {platform}/{language}/{id}")
         return
-
-    # po.save_project_data()
+    pass
+    po.save_project_data(project)
     # dest = SETTINGS.projects_dir / f"{p.id}.json"
     # dest.write_text(project_data.model_dump_json())
 

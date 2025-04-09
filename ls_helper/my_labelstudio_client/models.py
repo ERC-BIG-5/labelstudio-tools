@@ -245,10 +245,19 @@ class TextValue(BaseModel):
         return self.text
 
 
+class TimelineLabelsRange(BaseModel):
+    start: int
+    end: int
+
+class TimelineLabels(BaseModel):
+    ranges: list[TimelineLabelsRange]
+    timelinelabels: list[str]
+
+
 class AnnotationResult(BaseModel):
     id: str
     type: str
-    value: ChoicesValue | TextValue
+    value: ChoicesValue | TextValue | TimelineLabels
     origin: str
     to_name: str
     from_name: str
@@ -306,4 +315,3 @@ class TaskResultModel(BaseModel):
     @property
     def num_coders(self) -> int:
         return len(self.annotations)
-

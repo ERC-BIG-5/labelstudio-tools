@@ -1,11 +1,10 @@
 import json
 from pathlib import Path
-from typing import Annotated, Callable
+from typing import Annotated
 
 import typer
 
-from ls_helper.my_labelstudio_client.models import TaskResultModel
-from ls_helper.new_models import platforms_overview, ProjectAnnotationResultsModel, get_project
+from ls_helper.new_models import ProjectAnnotationResultsModel, get_project
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from tools.project_logging import get_logger
