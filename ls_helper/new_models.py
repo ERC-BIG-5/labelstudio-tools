@@ -12,7 +12,8 @@ from pydantic import BaseModel, Field, model_validator, ConfigDict
 from ls_helper.agreements import AgreementReport, export_agreement_metrics_to_csv, analyze_coder_agreement
 from ls_helper.config_helper import parse_label_config_xml
 from ls_helper.exp.build_configs import LabelingInterfaceBuildConfig, build_from_template
-from ls_helper.models.variable_models import VariableModel as FieldModel, ChoiceVariableModel as FieldModelChoice
+from ls_helper.models.variable_models import VariableModel as FieldModel, ChoiceVariableModel as FieldModelChoice, \
+    VariableModel
 from ls_helper.models.interface_models import FullAnnotationRow
 from ls_helper.models.interface_models import InterfaceData, ProjectVariableExtensions, IChoices, PrincipleRow
 from ls_helper.my_labelstudio_client.models import ProjectModel as LSProjectModel, ProjectViewModel, TaskResultModel
@@ -240,18 +241,18 @@ class ProjectData(ProjectCreate):
         mp = ProjectResult(project_data=self)
         from_existing, mp.raw_annotation_result = ProjectMgmt.get_recent_annotations(mp.id, accepted_ann_age)
         if from_existing:
-            raw_df_file = SETTINGS.annotations_dir / f"raw_{self.id}.csv"
+            raw_df_file = SETTINGS.annotations_dir / f"raw_{self.id}.pickle"
             if raw_df_file.exists():
                 mp.raw_annotation_df = pd.read_pickle(raw_df_file)
-                mp.assignment_df = pd.read_pickle(SETTINGS.annotations_dir / f"ass_{self.id}.csv")
+                mp.assignment_df = pd.read_pickle(SETTINGS.annotations_dir / f"ass_{self.id}.pickle")
                 # this, cuz values are lists.
-                mp.raw_annotation_df['value'] = mp.raw_annotation_df['value'].apply(ast.literal_eval)
-                mp.raw_annotation_df['platform_id'] = mp.raw_annotation_df['platform_id'].astype(str)
+                # mp.raw_annotation_df['value'] = mp.raw_annotation_df['value'].apply(ast.literal_eval)
+                # mp.raw_annotation_df['platform_id'] = mp.raw_annotation_df['platform_id'].astype(str)
                 return mp
         # new file or there is no raw_dataframe
         mp.raw_annotation_df, mp.assignment_df = mp.get_annotation_df()
-        mp.raw_annotation_df.to_pickle(SETTINGS.annotations_dir / f"raw_{self.id}.csv")
-        mp.assignment_df.to_pickle(SETTINGS.annotations_dir / f"ass_{self.id}.csv")
+        mp.raw_annotation_df.to_pickle(SETTINGS.annotations_dir / f"raw_{self.id}.pickle")
+        mp.assignment_df.to_pickle(SETTINGS.annotations_dir / f"ass_{self.id}.pickle")
         return mp
 
     # todo, move somewhere else?
@@ -498,113 +499,6 @@ class ProjectResult(BaseModel):
         # Apply the function to create the new column
         result_df['single_value'] = result_df.apply(extract_single_value, axis=1)
         return result_df
-
-    def get_annotation_df2(self, debug_task_limit: Optional[int] = None,
-                           insert_defaults: bool = True) -> DataFrame:
-        """
-        this one creates task_id, ann_id rows
-        :param debug_task_limit:
-        :return:
-        """
-        rows = []
-
-        def var_method(k, fix):
-            if fix.deprecated:
-                return None
-            if fix.name_fix:
-                return fix.name_fix
-            return k
-
-        q_extens = {k: var_method(k, v) for k, v in self.data_extensions.extensions.items()}
-
-        debug_mode = debug_task_limit is not None
-
-        for task in self.raw_annotation_result.annotations:
-            # print(task.id)
-            for ann in task.annotations:
-                # print(f"{task.id=} {ann.id=}")
-                if ann.was_cancelled:
-                    # print(f"{task.id=} {ann.id=} C")
-                    continue
-                # print(f"{task.id=} {ann.id=} {len(ann.result)=}")
-
-                row_data = {}
-                for q_id, question in enumerate(ann.result):
-                    new_name = q_extens.get(question.from_name, None)
-                    if not new_name:
-                        continue
-                    row_data[new_name] = question.value.direct_value
-                rows.append(FullAnnotationRow(task_id=task.id,
-                                              platform_id=task.data.get("platform_id", ""),
-                                              ann_id=ann.id,
-                                              user_id=ann.completed_by,
-                                              updated_at=ann.updated_at,
-                                              results=row_data).model_dump(by_alias=True))
-            if debug_mode:
-                debug_task_limit -= 1
-                if debug_task_limit == 0:
-                    break
-
-        df = DataFrame(rows)
-
-        self.raw_annotation_df = df.astype(
-            {"task_id": "int32", "ann_id": "int32", 'user_id': "category"})
-        return self.raw_annotation_df
-
-    def get_default_df(self, df: DataFrame, question: str) -> DataFrame:
-        # todo, this should use the reverse map , as we want to work with fixed names from here on
-        if "$" in question:
-            question = question.replace("$", "0")
-        rev_name = self.data_extensions.extension_reverse_map[question]
-        if not (question_da := self.data_extensions.extensions.get(rev_name)):
-            raise ValueError(f"unknown question: {question} options: {list(self.data_extensions.extensions.keys())}")
-        if not (default := question_da.default):
-            raise ValueError(f"no default: {question}")
-
-        # Get the valid task_id and ann_id combinations that exist in the original data
-        valid_combinations = df[['task_id', 'ann_id', 'user_id']].drop_duplicates()
-
-        # Create a complete DataFrame with valid combinations for the specific question
-        complete_df = valid_combinations.copy()
-        complete_df['question'] = question
-
-        # Filter the original DataFrame for the specific question
-        question_df = df[df["question"] == question].copy()
-
-        # Then merge with question-specific data
-        result = pd.merge(
-            complete_df,
-            question_df[['task_id', 'ann_id', "updated_at", 'question', 'value_idx', 'value']],
-            on=['task_id', 'ann_id', 'question'],
-            how='left'
-        )
-
-        # Fill missing values with default
-        result['value'] = result['value'].fillna(default)
-        result['value_idx'] = result['value_idx'].fillna(0).astype('int32')
-
-        # Add any other columns needed from the original DataFrame
-        if 'type' in df.columns:
-            if len(question_df) > 0:
-                result['type'] = question_df['type'].iloc[0]  # Use type from the question data
-            else:
-                type_col = df[df['question'] == question]['type'].iloc[0] if len(
-                    df[df['question'] == question]) > 0 else \
-                    df['type'].iloc[
-                        0]
-                result['type'] = type_col
-        # todo verify
-        if 'updated_at' in df.columns:
-            if len(question_df) > 0:
-                result['updated_at'] = question_df['updated_at'].iloc[0]  # Use type from the question data
-            else:
-                type_col = df[df['question'] == question]['updated_at'].iloc[0] if len(
-                    df[df['question'] == question]) > 0 else \
-                    df['updated_at'].iloc[
-                        0]
-                result['updated_at'] = type_col
-
-        return result
 
     # Simple formatting function that avoids pandas/numpy array checks
     def format_df_for_csv(self, df: DataFrame) -> DataFrame:

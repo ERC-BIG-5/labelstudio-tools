@@ -10,20 +10,22 @@ logger = get_logger(__file__)
 NO_SINGLE_CHOICE = "NONE"
 NO_SINGLE_CHOICE_INDEX = 99
 
-class FieldType(Enum):
+
+class VariableType(Enum):
     input= auto()
     choice= auto()
     text= auto()
+    range= auto()
 
-class FieldModel(BaseModel):
+class VariableModel(BaseModel):
     orig_name: str
     name: str
-    type: FieldType
+    type: VariableType
     required: bool = False
 
 
 
-class ChoiceFieldModel(FieldModel):
+class ChoiceVariableModel(VariableModel):
     orig_options: list[str]
     _all_options: Optional[list[str]] = None
     default: Optional[str]
