@@ -242,7 +242,7 @@ class PrincipleRow(BaseModel):
     platform_id: str
     ts: datetime
     type: str
-    category: str
+    variable: str
     value: list[str]
 
 

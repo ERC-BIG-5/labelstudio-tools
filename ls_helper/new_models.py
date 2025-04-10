@@ -8,6 +8,7 @@ import pandas as pd
 from lxml.etree import ElementTree
 from pandas import DataFrame
 from pydantic import BaseModel, Field, model_validator, ConfigDict
+from tqdm import tqdm
 
 from ls_helper.agreements import AgreementReport, export_agreement_metrics_to_csv, analyze_coder_agreement
 from ls_helper.config_helper import parse_label_config_xml
@@ -407,7 +408,7 @@ class ProjectResult(BaseModel):
 
     def get_annotation_df(self, debug_task_limit: Optional[int] = None,
                           drop_cancels: bool = True) -> tuple[DataFrame, DataFrame]:
-
+        logger.info(f"Building raw annotaions dataframe")
         assignment_df_rows = []
         rows = []
 
@@ -424,7 +425,7 @@ class ProjectResult(BaseModel):
 
         debug_mode = debug_task_limit is not None
 
-        for task in self.raw_annotation_result.task_results:
+        for task in tqdm(self.raw_annotation_result.task_results):
             # print(task.id)
             for ann in task.annotations:
                 # print(f"{task.id=} {ann.id=}")
@@ -456,12 +457,12 @@ class ProjectResult(BaseModel):
                     else:
                         print("unknown question type")
                         type_ = "x"
-                    rows.append(PrincipleRow(task_id=task.id,
+                    rows.append(PrincipleRow.model_construct(task_id=task.id,
                                              ann_id=ann.id,
                                              platform_id=task.data[DFCols.P_ID],
                                              user_id=ann.completed_by,
                                              ts=ann.updated_at,
-                                             category=new_name,
+                                             variable=new_name,
                                              type=type_,
                                              value=question.value.direct_value).model_dump(by_alias=True))
 
@@ -471,6 +472,7 @@ class ProjectResult(BaseModel):
                     break
 
         df = DataFrame(rows)
+        # todo, shall we still use this metadata thingy??
         df.attrs["format"] = DFFormat.raw_annotation
         assignment_df = DataFrame(assignment_df_rows)
         """

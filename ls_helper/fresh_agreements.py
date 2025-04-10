@@ -1,140 +1,189 @@
 import re
-from typing import Optional
+from datetime import date
+from typing import Optional, Annotated, Any, Literal, Generator
 
 import irrCAC.raw
 import pandas as pd
+from deprecated.classic import deprecated
 from numpy import nan
+from pandas import DataFrame
+from pydantic import BaseModel
 
 from ls_helper.new_models import ProjectData, get_project
 
-from pandas import DataFrame
+
+# experimental...
+class DFAgreementsInitModel(BaseModel):
+    task_id: int
+    variable: Annotated[int, {"dtype": "category"}]
 
 
-def find_groups(variables):
-    pattern = re.compile(r'^(.+)_(\d+)$')
+class Agreements():
 
-    groups: dict[str, dict[str, int]] = {}
-    for var in variables:
-        match = re.match(pattern, var)
-        if match:
-            base_name, idx = match.groups()
-            idx = int(idx)
-            # print(var, base_name,idx)
-            groups.setdefault(base_name, {})[var] = idx
-
-    return groups
+    def __init__(self, po: ProjectData):
+        self.po = po
+        # group-name: variable-name: index
+        self._groups: dict[str, dict[str,int]] = self.find_groups(list(po.variable_extensions.extensions.keys()))
+        self._init_df: Optional[DataFrame] = self.create_init_df()
 
 
-def prepare_indexed_var(df, df_in) -> DataFrame:
-    return df.merge(df_in, on="variable", how='left')
+    @staticmethod
+    def find_groups(variables):
+        pattern = re.compile(r'^(.+)_(\d+)$')
 
+        groups: dict[str, dict[str, int]] = {}
+        for var in variables:
+            match = re.match(pattern, var)
+            if match:
+                base_name, idx = match.groups()
+                idx = int(idx)
+                # print(var, base_name,idx)
+                groups.setdefault(base_name, {})[var] = idx
 
-def select_variables(df, variables: list[str], groups: dict[str, dict[str, int]]) -> dict[str, DataFrame]:
-    group_names = list(groups.keys())
-    selected_orig_vars = []
-    has_groups = False
-    assignments = {}
+        return groups
 
-    # collect all originals
-    # todo: put that somewhere else?
-    # iter through all vars
-    for var in variables:
-        # its a group var!
-        if var in group_names:
-            # number of group items
-            idx_vars = list(groups[var].keys())
-            # add the items to keep
-            selected_orig_vars.extend(idx_vars)
-            # add orig name with
-            # todo: make this a dict not list/tuple
-            assignments.update(
-                {idx_v: [var, groups[var][idx_v]] for idx_v in idx_vars}
-            )
-            has_groups = True
-            # print(assignments)
+    @deprecated
+    def prepare_indexed_var(self, df, df_in) -> DataFrame:
+        return df.merge(df_in, on="variable", how='left')
+
+    @staticmethod
+    def base_df(df: DataFrame) -> DataFrame:
+        index_ = df.index.names
+        if "task_id" in index_ and "user_id" in index_:
+            return df
         else:
-            selected_orig_vars.append(var)
+            return df.set_index(["task_id", "user_id"])
 
-    # select all relevant variables
-    orig_vars_groups = df[df["variable"].isin(selected_orig_vars)].groupby("variable")
 
-    if not has_groups:
-        return {name: group for name, group in orig_vars_groups}
+    def select_variables(self,
+                         variables: list[str],
+                         always_as_dict: bool = True) -> dict[str, DataFrame] | DataFrame:
+        df = self.get_init_df()
+        group_names = list(self._groups.keys())
+        selected_orig_vars = []
+        has_groups = False
+        assignments = {}
 
-    result_groups: dict[str, DataFrame] = {}
-    for variable, group_df in orig_vars_groups:
-        if variable in assignments:
-            groupe_name = assignments[variable][0]
-            group_df["variable"] = groupe_name  # group-name
-            group_df["idx"] = assignments[variable][1]  # index
-            if groupe_name not in result_groups:
-                # print(f"adding {gn=}")
-                result_groups[groupe_name] = group_df
+        # collect all originals
+        # todo: put that somewhere else? Another model
+        # iter through all vars
+        for var in variables:
+            # its a group var!
+            if var in group_names:
+                # number of group items
+                idx_vars = list(self._groups[var].keys())
+                # add the items to keep
+                selected_orig_vars.extend(idx_vars)
+                # add orig name with
+                assignments.update(
+                    {idx_v: {"group": var, "gr_variable": self._groups[var][idx_v]} for idx_v in idx_vars}
+                )
+                has_groups = True
+                # print(assignments)
             else:
-                result_groups[groupe_name] = pd.concat([result_groups[groupe_name], group_df])
-        else:
-            result_groups[variable] = group_df
+                selected_orig_vars.append(var)
 
-    for rg in result_groups.values():
-        rg["idx"] = rg["idx"].astype(int)
-    return result_groups
+        # select all relevant variables
+        orig_vars_groups = df[df["variable"].isin(selected_orig_vars)].groupby("variable")
 
+        if not has_groups:
+            group_dict = {name: group for name, group in orig_vars_groups}
+            if not always_as_dict and len(group_dict) == 1:
+                return list(group_dict.values())[0]
+            return group_dict
 
-def prepare_single_select(df):
-    return df.explode("value")
+        result_groups: dict[str, DataFrame] = {}
+        for variable, group_df in orig_vars_groups:
+            if variable in assignments:
+                groupe_name = assignments[variable]["group"]
+                group_df["variable"] = groupe_name  # group-name
+                group_df["idx"] = assignments[variable]["gr_variable"]  # index
+                if groupe_name not in result_groups:
+                    # print(f"adding {gn=}")
+                    result_groups[groupe_name] = group_df
+                else:
+                    result_groups[groupe_name] = pd.concat([result_groups[groupe_name], group_df])
+            else:
+                result_groups[variable] = group_df
 
-def calc_agreement(df) -> float:
-    if len(df) == 0:
-        return nan
-    df = df.reset_index()
-    index = ["task_id"] + (["idx"] if "idx" in df.columns else [])
-    pv_df = df.pivot(columns="user_id", values="value", index=index)
-    try:
-        cac = irrCAC.raw.CAC(pv_df)
-        return cac.gwet()["est"]["coefficient_value"]
-    except (ValueError, ZeroDivisionError):
-        return nan
+        for rg in result_groups.values():
+            rg["idx"] = rg["idx"].astype(int)
+        if not always_as_dict and len(result_groups) == 1:
+            return list(result_groups.values())[0]
+        return result_groups
 
+    @staticmethod
+    def prepare_single_select(df: DataFrame) -> DataFrame:
+        return df.explode("value")
 
-def agreement_calc(po: ProjectData, variables: list[str],
-                   force_default: Optional[str] = "NONE", max_coders: int = 2):
-    df = po.get_annotations_results().raw_annotation_df.copy()
-    #df_ts = df[["task_id", "user_id", "ts"]]
-    #df_ts.set_index(["task_id", "user_id"], inplace=True)
-    #df_ts = df_ts[~df_ts.index.duplicated(keep='first')]
+    @staticmethod
+    def create_coder_pivot_df(df: DataFrame) -> DataFrame:
+        df = df.reset_index()
+        index = ["task_id"] + (["idx"] if "idx" in df.columns else [])
+        pv_df = df.pivot(columns="user_id", values="value", index=index)
+        return pv_df
 
-    df = df.rename(columns={"category": "variable"})
-    df = df.drop(["ann_id", "platform_id"], axis=1)
+    @staticmethod
+    def calc_agreements(df: DataFrame, agreement_types: list[Literal["gwet", "kappa"]] = ('gwet',)) -> dict[
+        str, float]:
+        if len(df) == 0:
+            return {_: nan for _ in agreement_types}
+        pv_df = Agreements.create_coder_pivot_df(df)
+        result = {}
+        for aggr_type in agreement_types:
+            try:
+                cac = irrCAC.raw.CAC(pv_df)
+                result[aggr_type] = cac.gwet()["est"]["coefficient_value"]
+            except (ValueError, ZeroDivisionError):
+                result[aggr_type] = nan
+        return result
 
-    df = df.set_index(["task_id", "user_id"])
+    # this annotated stuff is just experimental...
+    def create_init_df(self) -> Annotated[DataFrame, DFAgreementsInitModel]:
+        df: DataFrame = self.po.get_annotations_results().raw_annotation_df.copy()
+        #df.rename(columns={"category": "variable"},
+        #          inplace=True)  # todo fix further up in logic. when reading ls studio response
+        df.drop(["ann_id", "platform_id"], axis=1, inplace=True)
+        df['date'] = df['ts'].dt.date
+        df.set_index(["task_id", "user_id"], inplace=True)
+        self._init_df = df
+        return df
 
-    groups = find_groups(list(po.variable_extensions.extensions.keys()))
-    variables_dfs = select_variables(df, variables, groups)
-    for n, df in variables_dfs.items():
-        print(n, len(df))
+    def get_init_df(self) -> DataFrame:
+        return self._init_df.copy()
 
-    def prepare_var(df, force_default: Optional[str] = None):
-        if "variable" in df.columns:
-            df = df.drop("variable", axis=1)
-        df = df.groupby("task_id").filter(lambda x: len(x.index.get_level_values(1).unique()) > 1)
+    def get_variables_groups(self, variables: list[str]) -> Any:
+        pass
+
+    def drop_unfinished_tasks(df_: DataFrame) -> DataFrame:
+        df__ = Agreements.base_df(df_)
+        return df__.groupby("task_id").filter(
+            lambda x: len(x.index.get_level_values(1).unique()) > 1)
+
+    @staticmethod
+    def time_move(df_: DataFrame) -> Generator[tuple[date, DataFrame], None, None]:
+        for day in sorted(df_.date.unique()):
+            yield day, df_[df_["date"] <= day]
+
+    @staticmethod
+    def prepare_var(base_df, force_default_: Optional[str] = "NONE"):
+        if "variable" in base_df.columns:
+            base_df = base_df.drop("variable", axis=1)
+
+        base_df = Agreements.drop_unfinished_tasks(base_df)
 
         # this part to throw out all with more than x coder. get the times, and only keep the latest 2.
-        #df = df.join(df_ts)
-        #df = df.sort_values("ts", ascending=False).groupby(level=0).head(max_coders).sort_index()
-        if df.iloc[0]["type"] == "single":
-            df = prepare_single_select(df)
+        # df = df.join(df_ts)
+        # df = df.sort_values("ts", ascending=False).groupby(level=0).head(max_coders).sort_index()
+        if base_df.iloc[0]["type"] == "single":
+            base_df = Agreements.prepare_single_select(base_df)
         else:
             pass  # todo
-        #df = df.drop("type", axis=1)
-        df.fillna(force_default, inplace=True)
-        return df
+        # df = df.drop("type", axis=1)
+        base_df.fillna(force_default_, inplace=True)
+        return base_df
 
-    def time_move(df):
-        if "ts" not in df.columns:
-            return df
-
-        df['date'] = df['ts'].dt.date
-        return df
+        # nice for when having time_move
         # Plot
         """
         df = df.sort_values('ts')
@@ -144,29 +193,36 @@ def agreement_calc(po: ProjectData, variables: list[str],
             title='Cumulative Number of Rows Over Time'
         )
         plt.show()
-        """
+    """
 
-    for var, v_df in variables_dfs.items():
-        v_df = prepare_var(v_df, force_default).reset_index()
+    def agreement_calc(self, variables: list[str],
+                       force_default: Optional[str] = "NONE", max_coders: int = 2):
+        df = self.get_init_df()
 
-        calc_agreement(v_df)
+        variables_dfs = self.select_variables(variables)
+        for n, df in variables_dfs.items():
+            print(n, len(df))
 
-        v_df = time_move(v_df)
-        for day in sorted(v_df.date.unique()):
-            day_v_df = v_df[v_df["date"] <= day]
+        for var, v_df in variables_dfs.items():
+            v_df = Agreements.prepare_var(v_df, force_default).reset_index()
+            self.calc_agreements(v_df)
 
-            day_v_df = day_v_df.set_index(["task_id", "user_id"]).groupby("task_id").filter(lambda x: len(x.index.get_level_values(1).unique()) > 1)
-            print(day, len(day_v_df), calc_agreement(day_v_df))
-        # minimal...
+            for day, accum_df in self.time_move(v_df):
+                pass
+                #print(day, len(accum_df), self.calc_agreements(accum_df))
+            # minimal...
 
-        index = ["task_id"] + (["idx"] if "idx" in df.columns else [])
-        min_index = index + ["user_id"]
-        df_min = v_df.copy().set_index(min_index)
-        df_min['position'] = df_min.groupby(level=0).cumcount()
-        df_min = df_min.droplevel('user_id', axis=0)
+            """
+            index = ["task_id"] + (["idx"] if "idx" in df.columns else [])
+            min_index = index + ["user_id"]
+            df_min = v_df.copy().set_index(min_index)
+            df_min['position'] = df_min.groupby(level=0).cumcount()
+            df_min = df_min.droplevel('user_id', axis=0)
+            """
 
+        return df
 
 
 if __name__ == "__main__":
     po = get_project(43)
-    agreement_calc(po, ["nature_any", "nature_text","nature_visual", "nep_material_visual"])
+    Agreements(po).agreement_calc( ["nature_any", "nature_text", "nature_visual", "nep_material_visual"])
