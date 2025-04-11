@@ -10,7 +10,7 @@ from lxml import etree
 from lxml.etree import _Comment
 from pydantic import BaseModel, Field
 
-from ls_helper.config_helper import  find_tag_name_refs, find_all_names
+from ls_helper.config_helper import find_tag_name_refs, find_all_names
 from ls_helper.exp.configs import find_duplicate_names
 from ls_helper.settings import SETTINGS
 from tools.files import levenhstein_get_similar_filenames
@@ -319,7 +319,9 @@ def build_from_template(config: LabelingInterfaceBuildConfig) -> etree.ElementTr
 
     components_dir = SETTINGS.labeling_configs_dir / f"components"
 
-    def parse_tree(sub_tree: etree.ElementTree, parent_attrib: Optional[dict] = None) -> etree.Element:
+    def parse_tree(sub_tree: etree.ElementTree,
+                   parent_attrib: Optional[dict] = None,
+                   parent_slot_fillers: Optional[list[etree.Element]] = ()) -> etree.Element:
         if not parent_attrib:
             parent_attrib = {}
         for node in sub_tree.iter():
@@ -335,6 +337,11 @@ def build_from_template(config: LabelingInterfaceBuildConfig) -> etree.ElementTr
                     del node.attrib["is"]
                     node.attrib.update({"visibleWhen": "choice-selected", "whenTagName": _if, "whenChoiceValue": _is})
                 continue
+            if node.tag == "slot":
+                # todo, for now, just take the first
+                if parent_slot_fillers:
+                    node.getparent().replace(node, parent_slot_fillers[0])  #
+                continue
 
             src_file = components_dir / f"{node.tag}.xml"
 
@@ -342,12 +349,23 @@ def build_from_template(config: LabelingInterfaceBuildConfig) -> etree.ElementTr
                 print(
                     f"file for component: '{node.tag}' not found, maybe: {levenhstein_get_similar_filenames(str(node.tag), components_dir)}")
                 continue
+
+            # parse slot-filler elements and collect
+            slot_filler_nodes = []
+            for slot_elem in node.getchildren():
+                slot_filler_nodes.append(parse_tree(etree.ElementTree(slot_elem), parent_attrib))
+
+            # merge attributes
             updated_attrib = parent_attrib | dict(node.attrib)
+            # read file and do mustache rendering
             component_tree = read_pystache2lxml_tree(src_file, updated_attrib)
-            component_node = parse_tree(component_tree, updated_attrib)
+            # recursive tree parsing
+            component_node = parse_tree(component_tree, updated_attrib, slot_filler_nodes)
+            # add metadata
             comment = etree.Comment(f'component:{node.tag}')
+            component_node.insert(0, comment)  # 1 is the index where comment is inserted
             component_node.attrib[SRC_COMPONENT] = node.tag
-            component_node.insert(1, comment)  # 1 is the index where comment is inserted
+
             node.getparent().replace(node, component_node)
         return sub_tree.getroot()
 

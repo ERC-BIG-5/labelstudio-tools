@@ -26,7 +26,9 @@
     <View if="nature_visual" is="Yes" className="visual_part">>
         <Header value="Text"/>
         <Collapse>
-            <panel_nep_val-expr_rel-value title="Frame 1" var="visual_0"/>
+            <panel_nep_val-expr_rel-value title="Frame 1" var="visual_0">
+                <View name="HAPPPY"/>
+            </panel_nep_val-expr_rel-value>
         </Collapse>
         <Collapse>
             <panel_nep_val-expr_rel-value title="Frame 2" var="visual_1"/>

@@ -1,4 +1,5 @@
 <Panel value="{{{title}}}">
+    <slot/>
     <nature title="{{{title}}}" var="{{{var}}}"/>
     <View if="nature_{{{var}}}" is="Yes">
         <nature_elements var="{{{var}}}" title="{{{title}}}"/>

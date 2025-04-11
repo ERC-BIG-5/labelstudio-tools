@@ -53,13 +53,18 @@ def setup_project_settings(
         id: Annotated[int, typer.Option()] = None,
         alias: Annotated[str, typer.Option("-a")] = None,
         platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None):
+        language: Annotated[str, typer.Argument()] = None,
+        maximum_annotations: Annotated[int, typer.Option()] = None):
     po = get_project(id, alias, platform, language)
     values = ProjectMgmt.default_project_values()
+    if maximum_annotations:
+        values["maximum_annotations"] = maximum_annotations
     del values["color"]
     res = ls_client().patch_project(po.id, values)
+    # todo project-model. store it
     if not res:
         print("error updating project settings")
+
 
 @app.command(
     short_help="[setup] run build_config function and copy it into 'labeling_configs_dir'. Run 'update_labeling_configs' afterward")
@@ -184,7 +189,6 @@ def download_project_data(
     if not project_data:
         raise ValueError(f"No project found: {po.id}")
     po.save_project_data(project_data)
-
 
 
 @app.command(short_help="[maint]")
@@ -513,7 +517,7 @@ if __name__ == "__main__":
     # status(**_default)
     # annotations(**_default)
     # download_project_data(**_default)
-    #agreements(**_default, accepted_ann_age=0)
+    # agreements(**_default, accepted_ann_age=0)
     # delete_view(110)
     # download_project_views(**_default)
     # create_conflict_view(**_default, variable="landscape-type_text")
@@ -523,18 +527,19 @@ if __name__ == "__main__":
 
     # alternative builts possible
     # sub apps:
-    #labeling_conf
+    # labeling_conf
     # pipeline
     # task
     # annotations
-    #generate_variable_extensions_template(50)
-    #build_extension_index(project_ids=[50,43,33,39])
-    #annotations.annotations(platform="twitter", language="en")
+    # generate_variable_extensions_template(50)
+    # build_extension_index(project_ids=[50,43,33,39])
+    # annotations.annotations(platform="twitter", language="en")
 
     # setup_project_settings(platform="youtube", language="en")
     #
+    #setup_project_settings(platform=twitter, language=en,maximum_annotations=1)
     labeling_conf.build_ls_labeling_interface(platform="youtube", language="en")
-    labeling_conf.update_labeling_config(platform="youtube", language="en")
+    #labeling_conf.update_labeling_config(platform="youtube", language="en")
     # pipeline.reformat_for_datapipelines(33,0)
     # check_labelling_config("twitter_reduced", **_default)
 
