@@ -1,5 +1,10 @@
-<View className="title_view">
-    <Text name="gap1" value=" "/>
-    <Text name="text_{{{index}}}_t" value="{{{title}}}:"/>
-    <Text name="text_{{{index}}}" value="$text_{{{index}}}" selectionEnabled="false"/>
+<View>
+    <Style>
+        .{{{className}}} .lsf-richtext__line {font-size: {{{fontSize}}}px;}
+    </Style>
+    <View className="{{{className}}}">
+        <Text name="gap1" value=" "/>
+        <Header size="3" value="{{{title}}}:"/>
+        <Text name="text_{{{index}}}" value="$text_{{{index}}}" selectionEnabled="false"/>
+    </View>
 </View>

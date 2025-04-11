@@ -4,11 +4,7 @@
     <title/>
     <!-- Platform elements -->
     <View>
-        <Collapse>
-            <Panel value="Description">
-                <text_input index="2" title="Video description"/>
-            </Panel>
-        </Collapse>
+        <text_input index="2" title="Video description" className="video_description" fontSize="18"/>
         <youtube_video/>
         <harmful_any/>
         <harmful_detail/>

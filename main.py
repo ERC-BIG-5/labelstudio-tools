@@ -513,7 +513,7 @@ if __name__ == "__main__":
     # status(**_default)
     # annotations(**_default)
     # download_project_data(**_default)
-    # agreements(**_default, accepted_ann_age=120)
+    #agreements(**_default, accepted_ann_age=0)
     # delete_view(110)
     # download_project_views(**_default)
     # create_conflict_view(**_default, variable="landscape-type_text")
@@ -523,18 +523,18 @@ if __name__ == "__main__":
 
     # alternative builts possible
     # sub apps:
-    labeling_conf
+    #labeling_conf
     # pipeline
     # task
     # annotations
-    generate_variable_extensions_template(50)
-    build_extension_index(project_ids=[50,43,33,39])
+    #generate_variable_extensions_template(50)
+    #build_extension_index(project_ids=[50,43,33,39])
     #annotations.annotations(platform="twitter", language="en")
 
     # setup_project_settings(platform="youtube", language="en")
     #
-    # labeling_conf.build_ls_labeling_interface(platform="youtube", language="en")
-    #labeling_conf.update_labeling_config(platform="youtube", language="en")
+    labeling_conf.build_ls_labeling_interface(platform="youtube", language="en")
+    labeling_conf.update_labeling_config(platform="youtube", language="en")
     # pipeline.reformat_for_datapipelines(33,0)
     # check_labelling_config("twitter_reduced", **_default)
 

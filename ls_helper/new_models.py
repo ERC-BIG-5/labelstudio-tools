@@ -123,7 +123,7 @@ class ProjectData(ProjectCreate):
         build_config = LabelingInterfaceBuildConfig(template=template_path)
         built_tree = build_from_template(build_config)
         built_tree.write(destination_path, encoding="utf-8", pretty_print=True)
-        print(f"labelstudio xml labeling config written to {destination_path}")
+        print(f"labelstudio xml labeling config written to file://{destination_path.absolute()}")
         return self.path_for(SETTINGS.built_labeling_configs), built_tree
 
     def read_labeling_config(self, alternative_build: Optional[str] = None) -> str:
