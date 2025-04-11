@@ -93,6 +93,10 @@ class Settings(BaseSettings):
     def temp_file_path(self) -> Path:
         return self.BASE_DATA_DIR / "temp"
 
+    @property
+    def tasks_dir(self) -> Path:
+        return self.BASE_DATA_DIR / "tasks"
+
 
 SETTINGS = Settings()
 DEV_SETTINGS = Settings(_env_file=".dev.env")

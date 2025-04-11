@@ -55,7 +55,3 @@ def generate_variable_extensions_template(
         po.save_extensions(res_template, "alt")
 
 
-
-@setup_app.command(short_help="[setup] ...")
-def e():
-    pass

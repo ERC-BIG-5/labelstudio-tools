@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional, Any, TypedDict, Literal, Annotated
 
-from pydantic import BaseModel, Field, PlainSerializer, ConfigDict
+from pydantic import BaseModel, Field, PlainSerializer, ConfigDict, RootModel
 
 from tools.pydantic_annotated_types import SerializableDatetimeAlways
 
@@ -187,9 +187,20 @@ class ViewType(str, Enum):
 class TaskCreate(BaseModel):
     project: int
     data: dict[str, Any]
-    #
-    meta_view_type: Optional[ViewType] = None
 
+
+class Task(TaskCreate):
+    id: int
+    # todo, there is actually much more...
+
+    model_config = ConfigDict(extra="allow")
+
+class TaskCreateList(RootModel):
+    root: list[TaskCreate]
+
+
+class TaskList(RootModel):
+    root: list[Task]
 
 # from LS
 class ProjectViewModel(ProjectViewCreate):
@@ -248,6 +259,7 @@ class TextValue(BaseModel):
 class TimelineLabelsRange(BaseModel):
     start: int
     end: int
+
 
 class TimelineLabels(BaseModel):
     ranges: list[TimelineLabelsRange]

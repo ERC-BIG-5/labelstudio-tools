@@ -1,4 +1,3 @@
-import ast
 import json
 from enum import Enum, auto
 from pathlib import Path
@@ -13,11 +12,11 @@ from tqdm import tqdm
 from ls_helper.agreements import AgreementReport, export_agreement_metrics_to_csv, analyze_coder_agreement
 from ls_helper.config_helper import parse_label_config_xml
 from ls_helper.exp.build_configs import LabelingInterfaceBuildConfig, build_from_template
-from ls_helper.models.variable_models import VariableModel as FieldModel, ChoiceVariableModel as FieldModelChoice, \
-    VariableModel
-from ls_helper.models.interface_models import FullAnnotationRow
 from ls_helper.models.interface_models import InterfaceData, ProjectVariableExtensions, IChoices, PrincipleRow
-from ls_helper.my_labelstudio_client.models import ProjectModel as LSProjectModel, ProjectViewModel, TaskResultModel
+from ls_helper.models.variable_models import ChoiceVariableModel as FieldModelChoice, \
+    VariableModel
+from ls_helper.my_labelstudio_client.models import ProjectModel as LSProjectModel, ProjectViewModel, TaskResultModel, \
+    Task as LSTask, TaskList as LSTaskList
 from ls_helper.settings import SETTINGS, DFCols, DFFormat
 from tools.project_logging import get_logger
 from tools.pydantic_annotated_types import SerializableDatetime
@@ -286,6 +285,15 @@ class ProjectData(ProjectCreate):
     def get_agreement_data(self) -> AgreementReport:
         return AgreementReport.model_validate_json(self.path_for(ItemType.agreement_report).read_text())
 
+    def get_tasks(self) -> LSTaskList:
+        return LSTaskList.model_validate_json(self.path_for(SETTINGS.tasks_dir).read_text())
+
+    def save_tasks(self, tasks: list[LSTask]):
+        self.path_for(SETTINGS.tasks_dir).write_text(
+            json.dumps([t.model_dump(include={"data","id", "project"}) for t in tasks], indent=2)
+        )
+
+
 
 class ProjectOverView(BaseModel):
     projects: dict[ProjectAccess, ProjectData]
@@ -458,13 +466,14 @@ class ProjectResult(BaseModel):
                         print("unknown question type")
                         type_ = "x"
                     rows.append(PrincipleRow.model_construct(task_id=task.id,
-                                             ann_id=ann.id,
-                                             platform_id=task.data[DFCols.P_ID],
-                                             user_id=ann.completed_by,
-                                             ts=ann.updated_at,
-                                             variable=new_name,
-                                             type=type_,
-                                             value=question.value.direct_value).model_dump(by_alias=True))
+                                                             ann_id=ann.id,
+                                                             platform_id=task.data[DFCols.P_ID],
+                                                             user_id=ann.completed_by,
+                                                             ts=ann.updated_at,
+                                                             variable=new_name,
+                                                             type=type_,
+                                                             value=question.value.direct_value).model_dump(
+                        by_alias=True))
 
             if debug_mode:
                 debug_task_limit -= 1
@@ -661,6 +670,7 @@ class ProjectAnnotationResultsModel(BaseModel):
 
     def completed(self, min_ann: int = 2) -> int:
         return sum(1 for t in self.task_results if t.total_annotations >= min_ann)
+
 
     def drop_cancellations(self) -> "ProjectAnnotationResultsModel":
         canceled = 0

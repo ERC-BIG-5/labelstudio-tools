@@ -85,6 +85,7 @@ def generate_labeling_configs(
 # todo: more testing
 def strict_update_project_tasks(new_data_file: Path,
                                 existing_data_file: Optional[Path] = None):
+    raise NotImplementedError("client.patch_task parameters changed")
     client = ls_client()
     new_data_list = json.loads(new_data_file.read_text(encoding="utf-8"))
     if existing_data_file:
@@ -538,12 +539,18 @@ if __name__ == "__main__":
     # setup_project_settings(platform="youtube", language="en")
     #
     #setup_project_settings(platform=twitter, language=en,maximum_annotations=1)
-    labeling_conf.build_ls_labeling_interface(platform="youtube", language="en")
-    labeling_conf.update_labeling_config(platform="youtube", language="en")
+    # labeling_conf.build_ls_labeling_interface(platform="youtube", language="en")
+    # labeling_conf.update_labeling_config(platform="youtube", language="en")
     # pipeline.reformat_for_datapipelines(33,0)
     # check_labelling_config("twitter_reduced", **_default)
 
     # DONE!!
+
+
+    from ls_helper.command.task import get_tasks,patch_tasks
+    from ls_helper.command import task
     # task.create_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/youtube-en-4"),
-    #                   True,
-    #                   None, "youtube-en-4")
+    #                   alias="youtube-en-4" )
+
+    get_tasks(**yt_en4)
+    patch_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/youtube-en-4"),**yt_en4)

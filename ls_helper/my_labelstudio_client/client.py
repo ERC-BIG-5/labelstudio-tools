@@ -12,6 +12,7 @@ from httpx import Response
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectModel, UserModel, ProjectViewCreate, \
     TaskCreate, TaskResultModel
 from ls_helper.settings import SETTINGS, DEV_SETTINGS
+from ls_helper.my_labelstudio_client.models import Task
 
 if typing.TYPE_CHECKING:
     from ls_helper.models import ProjectAnnotations
@@ -217,14 +218,14 @@ class LabelStudioBase:
     def get_task_list(self,
                       *,
                       page: Optional[int] = None,
-                      page_size: Optional[int] = 2000,
+                      page_size: Optional[int] = 3000,
                       project: Optional[int] = None,
                       view: Optional[int] = None,
                       resolve_url: Optional[bool] = False,
                       fields: Optional[typing.Literal["all", "task_only"]] = "all",
                       review: Optional[bool] = None,
                       include: Optional[str] = None,
-                      query: Optional[str] = None) -> Response:
+                      query: Optional[str] = None) -> list[Task]:
         # https://api.labelstud.io/api-reference/api-reference/tasks/list
         params = {}
         if page is not None:
@@ -245,13 +246,17 @@ class LabelStudioBase:
             params["include"] = include
         if query is not None:
             params["query"] = query
-        return self._client_wrapper.httpx_client.get("/api/tasks", params=params, timeout=60)
+        resp = self._client_wrapper.httpx_client.get("/api/tasks", params=params, timeout=60)
+        if resp.status_code != 200:
+            raise ValueError(f"failed to get tasks: {resp.status_code}\n{resp.json()}")
+        tasks_data = resp.json()["tasks"]
+        return [Task.model_validate(t) for t in tasks_data]
 
     def delete_task(self, task_id: int):
         pass
 
-    def patch_task(self, task_id: int, data: dict):
-        resp = self._client_wrapper.httpx_client.patch(f"/api/tasks/{task_id}", json=data)
+    def patch_task(self, task_id: int, task: Task):
+        resp = self._client_wrapper.httpx_client.patch(f"/api/tasks/{task_id}", json=task.model_dump()["data"])
         return resp
 
     def list_import_storages(self, project: Optional[int] = None) -> Response:
@@ -279,7 +284,7 @@ class LabelStudioBase:
         return resp
 
     def import_tasks(self, project_id: int, tasks: list[TaskCreate]):
-        resp = self._client_wrapper.httpx_client.post(f"/api/projects/{project_id}/import",
+        resp = self._client_wrapper.httpx_client.post(f"/api/projects/{project_id}/import?return_task_ids=true",
                                                       json=[t.model_dump()["data"] for t in tasks])
         if resp.status_code != 201:
             print(resp)
@@ -289,6 +294,7 @@ class LabelStudioBase:
     def delete_view(self, view_id: int):
         resp = self._client_wrapper.httpx_client.delete(f"/api/dm/views/{view_id}")
         print(resp)
+
 
 _GLOBAL_CLIENT: Optional[LabelStudioBase] = None
 
