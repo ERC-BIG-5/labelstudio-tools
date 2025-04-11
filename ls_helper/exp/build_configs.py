@@ -329,14 +329,17 @@ def build_from_template(config: LabelingInterfaceBuildConfig) -> etree.ElementTr
             if node.tag in ['Style', "Collapse", "Panel", 'Choices', "Header", "Text", "Image", "TextArea", "Choice",
                             "Video", "HyperText", "Label", "TimelineLabels", "a", "div", "script"]:
                 continue
+
             if isinstance(node, _Comment):
                 continue
+
             if node.tag == 'View':
                 if (_if := node.attrib.get('if')) and (_is := node.attrib.get("is")):
                     del node.attrib["if"]
                     del node.attrib["is"]
                     node.attrib.update({"visibleWhen": "choice-selected", "whenTagName": _if, "whenChoiceValue": _is})
                 continue
+
             if node.tag == "slot":
                 # todo, for now, just take the first
                 if parent_slot_fillers:

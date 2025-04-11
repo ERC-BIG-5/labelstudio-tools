@@ -27,17 +27,23 @@
         <Header value="Text"/>
         <Collapse>
             <panel_nep_val-expr_rel-value title="Frame 1" var="visual_0">
-                <View name="HAPPPY"/>
+                <text var="nep_name_visual_0" info="Name nature Element of Frame 1"/>
             </panel_nep_val-expr_rel-value>
         </Collapse>
         <Collapse>
-            <panel_nep_val-expr_rel-value title="Frame 2" var="visual_1"/>
+            <panel_nep_val-expr_rel-value title="Frame 2" var="visual_1">
+                <text var="nep_name_visual_1" info="Name nature Element of Frame 2"/>
+            </panel_nep_val-expr_rel-value>
         </Collapse>
         <Collapse>
-            <panel_nep_val-expr_rel-value title="Frame 2" var="visual_2"/>
+            <panel_nep_val-expr_rel-value title="Frame 3" var="visual_2">
+                <text var="nep_name_visual_2" info="Name nature Element of Frame 3"/>
+            </panel_nep_val-expr_rel-value>
         </Collapse>
         <Collapse>
-            <panel_nep_val-expr_rel-value title="Frame 3" var="visual_3"/>
+            <panel_nep_val-expr_rel-value title="Frame 3" var="visual_3">
+                <text var="nep_name_visual_3" info="Name nature Element of Frame 4"/>
+            </panel_nep_val-expr_rel-value>
         </Collapse>
     </View>
 
