@@ -2,6 +2,7 @@
       whenChoiceValue="Explicit,Implicit">
     <!-- relational-value -->
     <!-- {var,title} -->
+    <Header value="Relational values" size="3"/>
     <Text name="rel-value_{{{var}}}_t"
           value="For the {{{title}}} content: What are the RVs expressed?"/>
     <Choices name="rel-value_{{{var}}}" toName="title" showInline="true" choice="multiple">
@@ -29,6 +30,7 @@
     <TextArea name="rel-value_{{{var}}}_expl" toName="title" showSubmitButton="true"/>
 
     <!-- CONFUSION -->
+    <Header value="Confusion" size="5"/>
     <View>
         <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
               whenChoiceValue="personal-identity">

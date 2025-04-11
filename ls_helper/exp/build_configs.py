@@ -9,6 +9,8 @@ import pystache
 from lxml import etree
 from lxml.etree import _Comment
 from pydantic import BaseModel, Field
+from pystache.parsed import ParsedTemplate
+from pystache.parser import _LiteralNode
 
 from ls_helper.config_helper import find_tag_name_refs, find_all_names
 from ls_helper.exp.configs import find_duplicate_names
@@ -310,10 +312,34 @@ def check_references(root) -> dict[str, list[str]]:
     return broken_refs
 
 
+def validate_variables_against_mustache_template(template: ParsedTemplate, variables: dict[str, Any]) -> tuple[
+    set[str], list[str]]:
+    """
+    check if all variables in a mustache template are covered by the given variables.
+    :param tempalte:
+    :param variables:
+    :return: a list of missing variables.
+    """
+    missing_variables: set[str] = set()
+    literal_node_keys = []
+    redundant_variables:list[str] = []
+    for e in template._parse_tree:
+        if isinstance(e, _LiteralNode):
+            literal_node_keys.append(e.key)
+            if e.key not in variables:
+                missing_variables.add(e.key)
+    for var in variables:
+        if var not in literal_node_keys:
+            redundant_variables.append(var)
+    return missing_variables, redundant_variables
+
 def build_from_template(config: LabelingInterfaceBuildConfig) -> etree.ElementTree:
     def read_pystache2lxml_tree(fp: Path, attrib: dict[str, Any]) -> etree.ElementTree:  # tree
         raw_text = fp.read_text(encoding="utf-8")
-        # parsed: ParsedTemplate = pystache.parse(raw_text)
+        template: ParsedTemplate = pystache.parse(raw_text)
+        missing, redundant = validate_variables_against_mustache_template(template, attrib)
+        if missing or redundant:
+            print(f"Missing variables: {missing} / redundant variables: {redundant} for template of file: '{fp.name}'")
         result = pystache.render(raw_text, context=attrib)
         return etree.ElementTree(etree.fromstring(result))
 

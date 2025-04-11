@@ -4,7 +4,7 @@
     </Style>
     <View className="{{{className}}}">
         <Text name="gap1" value=" "/>
-        <Header size="3" value="{{{title}}}:"/>
+        <Header size="4" value="{{{title}}}:"/>
         <Text name="text_{{{index}}}" value="$text_{{{index}}}" selectionEnabled="false"/>
     </View>
 </View>

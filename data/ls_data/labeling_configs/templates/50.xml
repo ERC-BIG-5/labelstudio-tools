@@ -18,31 +18,32 @@
     </View>
 
     <View className="text_part" if="nature_text" is="Yes">
-        <Header value="Visual"/>
-        <value-expr title="Text" suffix="text"/>
+        <Header value="Text Part" size="3"/>
+        <nature_elements title="Text" var="test"/>
+        <value-expr title="Text" suffix="text" var="text"/>
         <relational-value title="Text" var="text"/>
     </View>
 
     <View if="nature_visual" is="Yes" className="visual_part">>
-        <Header value="Text"/>
+        <Header value="Visual Part"/>
         <Collapse>
             <panel_nep_val-expr_rel-value title="Frame 1" var="visual_0">
-                <text var="nep_name_visual_0" info="Name nature Element of Frame 1"/>
+                <text var="nep_name_visual_0" info="Name nature Element of Frame 1" required="true"/>
             </panel_nep_val-expr_rel-value>
         </Collapse>
         <Collapse>
             <panel_nep_val-expr_rel-value title="Frame 2" var="visual_1">
-                <text var="nep_name_visual_1" info="Name nature Element of Frame 2"/>
+                <text var="nep_name_visual_1" info="Name nature Element of Frame 2" required="true"/>
             </panel_nep_val-expr_rel-value>
         </Collapse>
         <Collapse>
             <panel_nep_val-expr_rel-value title="Frame 3" var="visual_2">
-                <text var="nep_name_visual_2" info="Name nature Element of Frame 3"/>
+                <text var="nep_name_visual_2" info="Name nature Element of Frame 3" required="true"/>
             </panel_nep_val-expr_rel-value>
         </Collapse>
         <Collapse>
             <panel_nep_val-expr_rel-value title="Frame 3" var="visual_3">
-                <text var="nep_name_visual_3" info="Name nature Element of Frame 4"/>
+                <text var="nep_name_visual_3" info="Name nature Element of Frame 4" required="true"/>
             </panel_nep_val-expr_rel-value>
         </Collapse>
     </View>

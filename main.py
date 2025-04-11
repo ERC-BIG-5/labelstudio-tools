@@ -539,7 +539,7 @@ if __name__ == "__main__":
     #
     #setup_project_settings(platform=twitter, language=en,maximum_annotations=1)
     labeling_conf.build_ls_labeling_interface(platform="youtube", language="en")
-    #labeling_conf.update_labeling_config(platform="youtube", language="en")
+    labeling_conf.update_labeling_config(platform="youtube", language="en")
     # pipeline.reformat_for_datapipelines(33,0)
     # check_labelling_config("twitter_reduced", **_default)
 
