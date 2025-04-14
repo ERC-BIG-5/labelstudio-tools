@@ -15,17 +15,22 @@ from ls_helper.new_models import ProjectData, get_project
 # experimental...
 class DFAgreementsInitModel(BaseModel):
     task_id: int
-    variable: Annotated[int, {"dtype": "category"}]
+#     variable: Annotated[int, {"dtype": "category"}]
 
 
-class Agreements():
+Agreement_types= list[Literal["gwet", "kappa", "ratio","abs"]]
 
-    def __init__(self, po: ProjectData):
+
+class Agreements:
+
+    def __init__(self, po: ProjectData, accepted_ann_age: int = 6,
+                 agreement_types: Agreement_types = ('gwet', "ratio", "abs")) -> None:
         self.po = po
+        self.accepted_ann_age = accepted_ann_age
+        self.agreement_types = agreement_types
         # group-name: variable-name: index
-        self._groups: dict[str, dict[str,int]] = self.find_groups(list(po.variable_extensions.extensions.keys()))
+        self._groups: dict[str, dict[str, int]] = self.find_groups(list(po.variable_extensions.extensions.keys()))
         self._init_df: Optional[DataFrame] = self.create_init_df()
-
 
     @staticmethod
     def find_groups(variables):
@@ -53,7 +58,6 @@ class Agreements():
             return df
         else:
             return df.set_index(["task_id", "user_id"])
-
 
     def select_variables(self,
                          variables: list[str],
@@ -86,6 +90,7 @@ class Agreements():
         # select all relevant variables
         orig_vars_groups = df[df["variable"].isin(selected_orig_vars)].groupby("variable")
 
+        # if there are no groups we can for convenience also just return the single variable df
         if not has_groups:
             group_dict = {name: group for name, group in orig_vars_groups}
             if not always_as_dict and len(group_dict) == 1:
@@ -93,17 +98,24 @@ class Agreements():
             return group_dict
 
         result_groups: dict[str, DataFrame] = {}
+        # go through all variables and concat their dataframes when in a group
         for variable, group_df in orig_vars_groups:
             if variable in assignments:
-                groupe_name = assignments[variable]["group"]
-                group_df["variable"] = groupe_name  # group-name
-                group_df["idx"] = assignments[variable]["gr_variable"]  # index
-                if groupe_name not in result_groups:
+                group_name = assignments[variable]["group"]
+                group_df["variable"] = group_name
+                group_df["idx"] = assignments[variable]["gr_variable"]
+                # set or concat
+                if group_name not in result_groups:
                     # print(f"adding {gn=}")
-                    result_groups[groupe_name] = group_df
+                    result_groups[group_name] = group_df
                 else:
-                    result_groups[groupe_name] = pd.concat([result_groups[groupe_name], group_df])
+                    result_groups[group_name] = pd.concat([result_groups[group_name], group_df])
+                # todo: TEST THIS APPROACH, remove the outer else, so in case there is none its set...
+                # if existing_df := result_groups.get(group_name):
+                #     result_groups[group_name] = pd.concat(existing_df, group_df)
+                #     continue
             else:
+                group_df["idx"] = 0
                 result_groups[variable] = group_df
 
         for rg in result_groups.values():
@@ -124,24 +136,37 @@ class Agreements():
         return pv_df
 
     @staticmethod
-    def calc_agreements(df: DataFrame, agreement_types: list[Literal["gwet", "kappa"]] = ('gwet',)) -> dict[
+    def calc_agreements(df: DataFrame, agreement_types: Agreement_types) -> dict[
         str, float]:
         if len(df) == 0:
             return {_: nan for _ in agreement_types}
         pv_df = Agreements.create_coder_pivot_df(df)
         result = {}
+
+        _cac = None
+        _conflict_count: Optional[int] = None
         for aggr_type in agreement_types:
-            try:
-                cac = irrCAC.raw.CAC(pv_df)
-                result[aggr_type] = cac.gwet()["est"]["coefficient_value"]
-            except (ValueError, ZeroDivisionError):
-                result[aggr_type] = nan
+            match aggr_type:
+                case "gwet":
+                    try:
+                        if not _cac:
+                            _cac = irrCAC.raw.CAC(pv_df)
+                        result[aggr_type] = round(_cac.gwet()["est"]["coefficient_value"],2)
+                    except (ValueError, ZeroDivisionError):
+                        result[aggr_type] = nan
+                case "ratio":
+                    if not _conflict_count:
+                        _conflict_count = pv_df.apply(lambda row: len(row.dropna().unique() )> 1, axis=1).sum()
+                    result[aggr_type] = round(1 - _conflict_count / len(pv_df),2)
+                case "abs":
+                    result[aggr_type] = len(pv_df) - _conflict_count
+                    result["total"] = len(pv_df)
         return result
 
     # this annotated stuff is just experimental...
     def create_init_df(self) -> Annotated[DataFrame, DFAgreementsInitModel]:
-        df: DataFrame = self.po.get_annotations_results().raw_annotation_df.copy()
-        #df.rename(columns={"category": "variable"},
+        df: DataFrame = self.po.get_annotations_results(self.accepted_ann_age).raw_annotation_df.copy()
+        # df.rename(columns={"category": "variable"},
         #          inplace=True)  # todo fix further up in logic. when reading ls studio response
         df.drop(["ann_id", "platform_id"], axis=1, inplace=True)
         df['date'] = df['ts'].dt.date
@@ -181,7 +206,6 @@ class Agreements():
             pass  # todo
         # df = df.drop("type", axis=1)
         base_df.fillna(force_default_, inplace=True)
-        return base_df
 
         # nice for when having time_move
         # Plot
@@ -193,23 +217,31 @@ class Agreements():
             title='Cumulative Number of Rows Over Time'
         )
         plt.show()
-    """
+        """
+
+        return base_df
+
+
 
     def agreement_calc(self, variables: list[str],
-                       force_default: Optional[str] = "NONE", max_coders: int = 2):
-        df = self.get_init_df()
-
+                       force_default: Optional[str] = "NONE",
+                       max_coders: int = 2,
+                       agreement_types: Optional[Agreement_types] = None) -> dict[str, dict[str,float]]:
         variables_dfs = self.select_variables(variables)
-        for n, df in variables_dfs.items():
-            print(n, len(df))
+        # for n, df in variables_dfs.items():
+        #     print(n, len(df))
 
+        agreements: dict[str,dict[str, float]] = {}
+        if not agreement_types:
+            agreement_types = self.agreement_types
         for var, v_df in variables_dfs.items():
+            print(var, len(v_df))
             v_df = Agreements.prepare_var(v_df, force_default).reset_index()
-            self.calc_agreements(v_df)
+            agreements[var] = self.calc_agreements(v_df, agreement_types)
 
             for day, accum_df in self.time_move(v_df):
                 pass
-                #print(day, len(accum_df), self.calc_agreements(accum_df))
+                # print(day, len(accum_df), self.calc_agreements(accum_df))
             # minimal...
 
             """
@@ -220,9 +252,9 @@ class Agreements():
             df_min = df_min.droplevel('user_id', axis=0)
             """
 
-        return df
+        return agreements
 
 
 if __name__ == "__main__":
     po = get_project(43)
-    Agreements(po).agreement_calc( ["nature_any", "nature_text", "nature_visual", "nep_material_visual"])
+    Agreements(po).agreement_calc(["nature_any", "nature_text", "nature_visual", "nep_material_visual"])

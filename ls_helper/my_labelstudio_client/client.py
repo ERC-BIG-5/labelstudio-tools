@@ -13,6 +13,7 @@ from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectMode
     TaskCreate, TaskResultModel
 from ls_helper.settings import SETTINGS, DEV_SETTINGS
 from ls_helper.my_labelstudio_client.models import Task
+from tools.project_logging import get_logger
 
 if typing.TYPE_CHECKING:
     from ls_helper.models import ProjectAnnotations
@@ -130,6 +131,8 @@ class LabelStudioBase:
             else httpx.Client(timeout=_defaulted_timeout),
             timeout=_defaulted_timeout,
         )
+
+        self.logger = get_logger(__file__)
         """
         self.annotations = AnnotationsClient(client_wrapper=self._client_wrapper)
         self.users = UsersClient(client_wrapper=self._client_wrapper)
@@ -167,11 +170,16 @@ class LabelStudioBase:
         else:
             print(resp.status_code, resp.json())
 
-    def get_project_annotations(self, project_id: int) -> list[TaskResultModel]:
+    def get_project_annotations(self, project_id: int) -> Optional[list[TaskResultModel]]:
         export_create = self._client_wrapper.httpx_client.post(f"/api/projects/{project_id}/exports", json={
             "task_filter_options": {"only_with_annotations": True}
         })
         export_data = export_create.json()
+        if export_create.status_code == 404:
+            self.logger.error(f"project not found: {project_id}\n{export_create.json()}")
+            return None
+        if export_create.status_code != 201:
+                return None
         export_id = export_data["id"]
 
         dl = self._client_wrapper.httpx_client.get(f"api/projects/{project_id}/exports/{export_id}/download")

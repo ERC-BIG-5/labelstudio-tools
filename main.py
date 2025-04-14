@@ -11,21 +11,17 @@ from tqdm import tqdm
 from ls_helper.agreements import fix_users, AgreementReport, SingleChoiceAgreement
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
-from ls_helper.command import annotations, labeling_conf
 from ls_helper.command.labeling_conf import labeling_conf_app
 from ls_helper.command.pipeline import pipeline_app
-from ls_helper.command.setup import generate_variable_extensions_template
 from ls_helper.config_helper import check_config_update, parse_label_config_xml
 from ls_helper.exp.build_configs import build_configs
 from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter
-from ls_helper.models.interface_models import InterfaceData, ProjectVariableExtensions, FieldExtension
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectViewCreate, ProjectViewDataModel
 from ls_helper.new_models import platforms_overview, get_p_access, ProjectCreate, get_project
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
-from tools.files import read_data
 from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
@@ -377,10 +373,11 @@ def agreements(
 @app.command()
 def create_project(
         title: Annotated[str, typer.Option()],
+        alias: Annotated[str, typer.Option()],
         platform: Annotated[str, typer.Option()],
-        language: Annotated[str, typer.Option()],
-        alias: Annotated[str, typer.Option()] = None):
-    platforms_overview.add_project(ProjectCreate(
+        language: Annotated[str, typer.Option()]
+):
+    platforms_overview.create(ProjectCreate(
         title=title,
         platform=platform,
         language=language,
@@ -538,19 +535,18 @@ if __name__ == "__main__":
 
     # setup_project_settings(platform="youtube", language="en")
     #
-    #setup_project_settings(platform=twitter, language=en,maximum_annotations=1)
+    # setup_project_settings(platform=twitter, language=en,maximum_annotations=1)
     # labeling_conf.build_ls_labeling_interface(platform="youtube", language="en")
     # labeling_conf.update_labeling_config(platform="youtube", language="en")
     # pipeline.reformat_for_datapipelines(33,0)
     # check_labelling_config("twitter_reduced", **_default)
 
     # DONE!!
-
-
-    from ls_helper.command.task import get_tasks,patch_tasks
-    from ls_helper.command import task
-    # task.create_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/youtube-en-4"),
-    #                   alias="youtube-en-4" )
-
-    get_tasks(**yt_en4)
-    patch_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/youtube-en-4"),**yt_en4)
+    create_project("Twitter - ES - protocol.v4","twitter-es-4","twitter","es")
+    # from ls_helper.command.task import get_tasks, patch_tasks
+    #
+    # # task.create_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/youtube-en-4"),
+    # #                   alias="youtube-en-4" )
+    #
+    # get_tasks(**yt_en4)
+    # patch_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/youtube-en-4"), **yt_en4)

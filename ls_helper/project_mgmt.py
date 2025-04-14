@@ -89,7 +89,7 @@ class ProjectMgmt:
 
     @staticmethod
     def get_recent_annotations(project_id: int, accepted_age: int) -> Optional[
-        tuple[Annotated[bool, "use_local"], ProjectAnnotationResultsModel]]:
+        tuple[Annotated[bool, "use_local"], Optional[ProjectAnnotationResultsModel]]]:
         """
 
         :param project_id:
@@ -116,6 +116,8 @@ class ProjectMgmt:
         # todo this stuff is old. needs refactoring love. move to ProjectData model
         print("downloading annotations")
         result = ls_client().get_project_annotations(project_id)
+        if not result:
+            return False, None
         ts = datetime.now()
         res_path = (SETTINGS.annotations_dir / str(project_id) / f"{ts.strftime(TIMESTAMP_FORMAT)}.json")
         res_path.parent.mkdir(parents=True, exist_ok=True)

@@ -48,10 +48,10 @@ class UserInfo(BaseModel):
 
 class ProjectCreate(BaseModel):
     title: str
+    alias: str
     platform: Optional[str] = "xx"
     language: Optional[str] = "xx"
     description: Optional[str] = None
-    alias: Optional[str] = None
     default: Optional[bool] = Field(False, deprecated="default should be on the Overview model")
     coding_game_view_id: Optional[int] = None
 
@@ -70,7 +70,7 @@ class ProjectCreate(BaseModel):
         return self.platform, self.language
 
     def save(self):
-        platforms_overview.add_project(self)
+        platforms_overview.create(self)
 
 
 class ItemType(str, Enum):
@@ -129,7 +129,7 @@ class ProjectData(ProjectCreate):
         return self.path_for(SETTINGS.built_labeling_configs, alternative_build, ".xml").read_text(encoding="utf-8")
 
     @property
-    def fields(self) -> dict[str, VariableModel]:
+    def variables(self) -> dict[str, VariableModel]:
         variables = {}
 
         for orig_name, field in self.raw_interface_struct.ordered_fields_map.items():
@@ -154,8 +154,12 @@ class ProjectData(ProjectCreate):
         return variables
 
     @property
+    def variables_names(self) -> list[str]:
+        return list(self.variables.keys())
+
+    @property
     def choices(self) -> dict[str, FieldModelChoice]:
-        return {k: v for k, v in self.fields.items() if isinstance(v, FieldModelChoice)}
+        return {k: v for k, v in self.variables.items() if isinstance(v, FieldModelChoice)}
 
     @property
     def raw_interface_struct(self) -> InterfaceData:
@@ -236,6 +240,12 @@ class ProjectData(ProjectCreate):
         _, raw_annotation_result = ProjectMgmt.get_recent_annotations(self.id, accepted_ann_age)
         return raw_annotation_result
 
+    def fetch_annotations(self) -> "ProjectAnnotationResultsModel":
+        from ls_helper.project_mgmt import ProjectMgmt
+        mp = ProjectResult(project_data=self)
+        _, mp.raw_annotation_result = ProjectMgmt.get_recent_annotations(mp.id, 0)
+        return mp.raw_annotation_result
+
     def get_annotations_results(self, accepted_ann_age: Optional[int] = 6) -> "ProjectResult":
         from ls_helper.project_mgmt import ProjectMgmt
         mp = ProjectResult(project_data=self)
@@ -290,9 +300,8 @@ class ProjectData(ProjectCreate):
 
     def save_tasks(self, tasks: list[LSTask]):
         self.path_for(SETTINGS.tasks_dir).write_text(
-            json.dumps([t.model_dump(include={"data","id", "project"}) for t in tasks], indent=2)
+            json.dumps([t.model_dump(include={"data", "id", "project"}) for t in tasks], indent=2)
         )
-
 
 
 class ProjectOverView(BaseModel):
@@ -355,7 +364,7 @@ class ProjectOverView(BaseModel):
                 f"\n\nYour project parameters where not right: {id=} {platform=} {language=}, {alias=} not a valid project-access")
         raise ValueError(f"unknown project access: {p_access}")
 
-    def add_project(self, p: ProjectCreate, save: bool = True):
+    def create(self, p: ProjectCreate, save: bool = True):
         from ls_helper.project_mgmt import ProjectMgmt
 
         if p.alias in self.alias_map:
@@ -375,11 +384,15 @@ class ProjectOverView(BaseModel):
         self.alias_map[p.alias] = p_i
         if save:
             self.save()
-        # todo get the label_config: will be <View></View> into the ls_data.labeling_configs/template folder
+
+        print(f"project created and saved: {repr(p_i)}")
+        dest = p_i.path_for(SETTINGS.labeling_templates, ext=".xml")
+        dest.write_text(project_model.label_config)
+        print(dest)
 
     def save(self):
         projects = {p.id: p for p in self.projects.values()}
-        pp = Path(SETTINGS.BASE_DATA_DIR / "projects2.json")
+        pp = Path(SETTINGS.BASE_DATA_DIR / "projects.json")
         pp.write_text(json.dumps({id: p.model_dump() for id, p in projects.items()}))
 
 
@@ -459,7 +472,7 @@ class ProjectResult(BaseModel):
                         continue
                     # print(question)
                     if question.type == "choices":
-                        type_ = self.project_data.fields[new_name].choice
+                        type_ = self.project_data.variables[new_name].choice
                     elif question.type == "textarea":
                         type_ = "text"
                     else:
@@ -670,7 +683,6 @@ class ProjectAnnotationResultsModel(BaseModel):
 
     def completed(self, min_ann: int = 2) -> int:
         return sum(1 for t in self.task_results if t.total_annotations >= min_ann)
-
 
     def drop_cancellations(self) -> "ProjectAnnotationResultsModel":
         canceled = 0
