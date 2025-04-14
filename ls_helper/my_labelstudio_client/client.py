@@ -264,7 +264,7 @@ class LabelStudioBase:
         pass
 
     def patch_task(self, task_id: int, task: Task):
-        resp = self._client_wrapper.httpx_client.patch(f"/api/tasks/{task_id}", json=task.model_dump()["data"])
+        resp = self._client_wrapper.httpx_client.patch(f"/api/tasks/{task_id}", json=task.model_dump())
         return resp
 
     def list_import_storages(self, project: Optional[int] = None) -> Response:
@@ -297,7 +297,7 @@ class LabelStudioBase:
         if resp.status_code != 201:
             print(resp)
             raise ValueError(resp.json())
-        return resp
+        return resp.json()
 
     def delete_view(self, view_id: int):
         resp = self._client_wrapper.httpx_client.delete(f"/api/dm/views/{view_id}")

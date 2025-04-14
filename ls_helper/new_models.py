@@ -388,7 +388,9 @@ class ProjectOverView(BaseModel):
         print(f"project created and saved: {repr(p_i)}")
         dest = p_i.path_for(SETTINGS.labeling_templates, ext=".xml")
         dest.write_text(project_model.label_config)
-        print(dest)
+        # print(dest)
+        # todo: create default coding-game view
+        #
 
     def save(self):
         projects = {p.id: p for p in self.projects.values()}

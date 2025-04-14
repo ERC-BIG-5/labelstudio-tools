@@ -26,7 +26,7 @@ logger = get_logger(__file__)
 
 
 class IField(BaseModel):
-    pass
+    required : Optional[bool] = False
 
 
 class AField(IField):

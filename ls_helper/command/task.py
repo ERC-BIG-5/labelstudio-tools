@@ -1,13 +1,13 @@
 import json
 from pathlib import Path
-from typing import Annotated, Iterable
+from typing import Annotated
 
 import typer
 from tqdm import tqdm
 
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import TaskCreate as LSTaskCreate, Task as LSTask, TaskList as LSTaskList, \
-    TaskCreateList as LSTaskCreateList
+    TaskCreateList as LSTaskCreateList, Task as LSTask
 from ls_helper.new_models import get_project, ProjectData
 from tools.project_logging import get_logger
 
@@ -63,15 +63,20 @@ def create_tasks(
     """
     po = get_project(id, alias, platform, language)
     batch: list[LSTaskCreate] = []
-    if src_path.exists():
-        # load individual tasks
-        if src_path.is_dir():
-            for t_f in src_path.glob("*.json"):
-                batch.append(LSTaskCreate(project=po.id, data=json.loads(t_f.read_text())["data"]))
-        else:
-            batch = [LSTaskCreate(project=po.id, data=t["data"]) for t in json.loads(src_path.read_text())]
+    if not src_path.exists():
+        print(f"Path not found: {src_path}")
 
-        ls_client().import_tasks(po.id, batch)
+    # load individual tasks
+    if src_path.is_dir():
+        for t_f in src_path.glob("*.json"):
+            batch.append(LSTaskCreate(project=po.id, data=json.loads(t_f.read_text())["data"]))
+    else:
+        batch = [LSTaskCreate(project=po.id, data=t["data"]) for t in json.loads(src_path.read_text())]
+
+    resp_data = ls_client().import_tasks(po.id, batch)
+    task_ids = resp_data["task_ids"]
+    tasks = [LSTask(**t.model_dump(), id=task_ids[idx]) for idx,t in enumerate(batch)]
+    po.save_tasks(tasks)
 
 
 @pipeline_app.command()
@@ -106,7 +111,9 @@ def patch_tasks(
         if not ls_task:
             print(f"Warning: platform_id: {p_id} not present in project tasks: {repr(tasks)}")
         task_id = ls_task.id
-        ls_client().patch_task(task_id, update_task)
+        #update_task.id = task_id
+        res = ls_client().patch_task(task_id, update_task)
+        # TODO store them
 
 @pipeline_app.command()
 def get_tasks(id: Annotated[int, typer.Option()] = None,

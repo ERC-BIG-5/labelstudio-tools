@@ -350,12 +350,14 @@ def build_from_template(config: LabelingInterfaceBuildConfig) -> etree.ElementTr
                    parent_slot_fillers: Optional[list[etree.Element]] = ()) -> etree.Element:
         if not parent_attrib:
             parent_attrib = {}
-        for node in sub_tree.iter():
+
+        nodes_to_process = list(sub_tree.getroot().iter())
+        for node in nodes_to_process:
             # some LSElements and basic html elements to ignore
             if node.tag in ['Style', "Collapse", "Panel", 'Choices', "Header", "Text", "Image", "TextArea", "Choice",
                             "Video", "HyperText", "Label", "TimelineLabels", "a", "div", "script"]:
                 continue
-
+            # print(node.tag)
             if isinstance(node, _Comment):
                 continue
 
@@ -370,9 +372,13 @@ def build_from_template(config: LabelingInterfaceBuildConfig) -> etree.ElementTr
                 # todo, for now, just take the first
                 if parent_slot_fillers:
                     node.getparent().replace(node, parent_slot_fillers[0])  #
+
+                else:
+                    node.getparent().remove(node)
                 continue
 
             src_file = components_dir / f"{node.tag}.xml"
+            # print(src_file)
 
             if not src_file.exists():
                 print(

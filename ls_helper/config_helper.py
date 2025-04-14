@@ -91,7 +91,9 @@ def parse_label_config_xml(xml_string) -> InterfaceData:
     root: ET.Element = ET.fromstring(xml_string)
 
     ordered_fields_map: dict[str, IField] = {}
+    # todo why this?
     input_text_fields: dict[str, str] = {}  # New list for text fields with "$" values
+    # text_areas = dict[str,ITextArea]
 
     for el in root.iter():
         if el.tag == "Choices":
@@ -100,11 +102,10 @@ def parse_label_config_xml(xml_string) -> InterfaceData:
                 raise ValueError("shouldnt happen in a valid interface")
             # print(choices_element.attrib)
             choice_list = [IChoice.model_validate(choice.attrib) for choice in el.findall('./Choice')]
-
-            ordered_fields_map[name] = IChoices.model_validate(el.attrib | {"options": choice_list})
+            ordered_fields_map[name] = IChoices.model_validate(el.attrib | {"options": choice_list, "required":el.attrib.get("required", False)})
         elif el.tag == "TextArea":
             name = el.get('name')
-            ordered_fields_map[name] = ITextArea(name=name)
+            ordered_fields_map[name] = ITextArea(name=name, required=el.attrib.get("required", False))
         elif el.tag == "Text":
             value = el.get('value')
             if value and value.startswith('$'):

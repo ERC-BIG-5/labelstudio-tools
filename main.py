@@ -11,13 +11,16 @@ from tqdm import tqdm
 from ls_helper.agreements import fix_users, AgreementReport, SingleChoiceAgreement
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
+from ls_helper.command import task, labeling_conf, setup, annotations
 from ls_helper.command.labeling_conf import labeling_conf_app
 from ls_helper.command.pipeline import pipeline_app
 from ls_helper.config_helper import check_config_update, parse_label_config_xml
 from ls_helper.exp.build_configs import build_configs
 from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter
+from ls_helper.models.interface_models import IChoices
 from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectViewCreate, ProjectViewDataModel
+from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectViewCreate, ProjectViewDataModel, \
+    ProjectModel
 from ls_helper.new_models import platforms_overview, get_p_access, ProjectCreate, get_project
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
@@ -50,14 +53,14 @@ def setup_project_settings(
         alias: Annotated[str, typer.Option("-a")] = None,
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None,
-        maximum_annotations: Annotated[int, typer.Option()] = None):
+        maximum_annotations: Annotated[int, typer.Option()] = 2):
     po = get_project(id, alias, platform, language)
     values = ProjectMgmt.default_project_values()
     if maximum_annotations:
         values["maximum_annotations"] = maximum_annotations
-    del values["color"]
+    # del values["color"]
     res = ls_client().patch_project(po.id, values)
-    # todo project-model. store it
+    po.save_project_data(res)
     if not res:
         print("error updating project settings")
 
@@ -179,13 +182,14 @@ def download_project_data(
         alias: Annotated[Optional[str], typer.Argument()] = None,
         platform: Annotated[Optional[str], typer.Argument()] = None,
         language: Annotated[Optional[str], typer.Argument()] = None,
-):
+) -> ProjectModel:
     po = get_project(id, alias, platform, language)
     project_data = ls_client().get_project(po.id)
 
     if not project_data:
         raise ValueError(f"No project found: {po.id}")
     po.save_project_data(project_data)
+    return project_data
 
 
 @app.command(short_help="[maint]")
@@ -394,9 +398,23 @@ def get_all_variable_names(
 ):
     po = get_project(id, alias, platform, language)
     # todo redo and test...
-    struct = po.raw_interface_struct(include_text=False, apply_extension=True)
-    return list(struct.orig_choices.keys()) + struct.free_text
+    struct = po.raw_interface_struct
+    return list(struct.ordered_fields_map.keys())
 
+def get_variables_info(
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Option()] = None,
+        language: Annotated[str, typer.Option()] = None
+):
+    po = get_project(id, alias, platform, language)
+    return [
+        {
+            "name":k,
+            "required":v.required,
+            "choice_type": v.choice if isinstance(v, IChoices) else None,
+        } for k,v in po.raw_interface_struct.ordered_fields_map.items()
+    ]
 
 @app.command()
 def create_conflict_view(
@@ -525,9 +543,10 @@ if __name__ == "__main__":
 
     # alternative builts possible
     # sub apps:
+    setup
     # labeling_conf
     # pipeline
-    # task
+    task
     # annotations
     # generate_variable_extensions_template(50)
     # build_extension_index(project_ids=[50,43,33,39])
@@ -542,7 +561,7 @@ if __name__ == "__main__":
     # check_labelling_config("twitter_reduced", **_default)
 
     # DONE!!
-    create_project("Twitter - ES - protocol.v4","twitter-es-4","twitter","es")
+    # create_project("Twitter - ES - protocol.v4","twitter-es-4","twitter","es")
     # from ls_helper.command.task import get_tasks, patch_tasks
     #
     # # task.create_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/youtube-en-4"),
@@ -550,3 +569,16 @@ if __name__ == "__main__":
     #
     # get_tasks(**yt_en4)
     # patch_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/youtube-en-4"), **yt_en4)
+    # task.create_tasks(
+    #     Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/p1_twitter-es-4"),
+    #                       alias="twitter-es-4"
+    # )
+    # labeling_conf.build_ls_labeling_interface(alias="twitter-es-4")
+    # labeling_conf.update_labeling_config(alias="twitter-es-4")
+    # setup_project_settings(alias="twitter-es-4")
+    # task.patch_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/p1_twitter-es-4"), alias="twitter-es-4")
+    # setup.generate_variable_extensions_template(alias="twitter-es-4")
+    setup_project_settings(id=50,maximum_annotations=1)
+    print(download_project_data(id=50).maximum_annotations)
+    # print(list(f["name"] for f in filter(lambda f: f["required"], get_variables_info(alias="twitter-es-4"))))
+    # annotations.annotations(alias="twitter-es-4")
