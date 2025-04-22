@@ -1,0 +1,9 @@
+<Panel value="{{{title}}}">
+    <nature title="{{{title}}}" var="{{{var}}}"/>
+    <View if="nature_{{{var}}}" is="Yes">
+        <slot/>
+        <nature_elements var="{{{var}}}" title="{{{title}}}"/>
+        <value-expr title="{{{title}}}" suffix="{{{var}}}"/>
+        <relational-value title="{{{title}}}" var="{{{var}}}"/>
+    </View>
+</Panel>

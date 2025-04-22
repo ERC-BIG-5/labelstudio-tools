@@ -1,0 +1,9 @@
+<View>
+    <Header value="Language"/>
+    <Text name="lang_correct"
+          value="Is the language of the text correct?"/>
+    <Choices name="language_correct" toName="title" showInline="true">
+        <Choice value="Yes" selected="true"/>
+        <Choice value="No"/>
+    </Choices>
+</View>

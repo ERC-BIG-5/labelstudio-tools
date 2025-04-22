@@ -1,0 +1,19 @@
+<View>
+    <View className="text_underline">
+        <Text name="nature_text_t" value="Is there nature in the TEXT content?"
+              selectionEnabled="false"/>
+        <Choices name="nature_text" toName="title" showInline="true" required="true">
+            <Choice value="No" selected="true"/>
+            <Choice value="Yes"/>
+        </Choices>
+    </View>
+
+    <View className="visual_underline">
+        <Text name="nature_visual_t" value="Is there nature in the VISUAL content?"
+              selectionEnabled="false"/>
+        <Choices name="nature_visual" toName="title" showInline="true" required="true">
+            <Choice value="No" selected="true"/>
+            <Choice value="Yes"/>
+        </Choices>
+    </View>
+</View>

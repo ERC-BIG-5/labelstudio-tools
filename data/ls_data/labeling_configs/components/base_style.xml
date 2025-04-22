@@ -1,0 +1,19 @@
+<View idAttr="base_style">
+    <Style>
+        .title_view .lsf-richtext__line {font-size: 22px;}
+
+        .text_part {border-left: 2px solid #aba3ff; padding-left: 3px;}
+        .text_part h4 {text-decoration-line: underline;text-decoration-color: #aba3ff;text-decoration-thickness:3px }
+        .visual_part {border-left: 2px solid #c6dcff; padding-left: 3px;}
+        .visual_part h4 {text-decoration-line: underline;text-decoration-color: #c6dcff;text-decoration-thickness:3px }
+
+        .text_underline .lsf-richtext__line { text-decoration: underline; text-decoration-color:
+        #aba3ff;text-decoration-thickness:2px }
+        .visual_underline .lsf-richtext__line { text-decoration: underline; text-decoration-color:
+        #c6dcff;text-decoration-thickness:2px }
+
+        .hidden {display: none;}
+        .deprecated {border: 2px red solid;}
+    </Style>
+    <View/>
+</View>

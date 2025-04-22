@@ -5,7 +5,7 @@ import pandas as pd
 from irrCAC.raw import CAC
 from pandas import DataFrame
 
-from ls_helper.models import MyProject
+from ls_helper.new_models import ProjectResult
 
 
 def get_default_df(df: DataFrame, question: str, default: str) -> DataFrame:
@@ -83,7 +83,7 @@ def prep_single_select_agreement(df: DataFrame, question: str, indices: bool = T
     )
     if not indices:
         return pivot_df
-    value_indices = [c.annot_val for c in mp.annotation_structure.choices[question].options]
+    value_indices = [c.annot_val for c in mp.raw_interface_struct.orig_choices[question].options]
 
     deff = pivot_df.apply(
         lambda col: col.map(lambda x: value_indices.index(x) if (not pd.isna(x) and x in value_indices) else x))
@@ -181,7 +181,7 @@ def prep_multi_select_agreement(df, question, options) -> dict[str, DataFrame]:
     return result_dfs
 
 
-def export_annotations2csv(mp: MyProject) -> Path:
+def export_annotations2csv(mp: ProjectResult) -> Path:
     df = mp.raw_annotation_df.copy()
     df = df.drop(["ann_id", "user", "updated_at"], axis=1)
     # drop the task_id,ann_id base rows

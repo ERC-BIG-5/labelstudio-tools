@@ -1,0 +1,4 @@
+<View>
+    <Text name="{{{var}}}_t" value="{{{info}}}"/>
+    <TextArea name="{{{var}}}" toName="title" require="{{{required}}}"/>
+</View>

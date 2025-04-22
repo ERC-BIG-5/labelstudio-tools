@@ -1,0 +1,5 @@
+<View>
+    <Choices visibleWhen="choice-selected" toName="title" whenTagName="harmful_any" name="harmful_visual"
+             whenChoiceValue="visual" value="$image_options" showInline="true">
+    </Choices>
+</View>

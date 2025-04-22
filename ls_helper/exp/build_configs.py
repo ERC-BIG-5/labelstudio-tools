@@ -2,47 +2,30 @@ import copy
 import json
 import os
 from pathlib import Path
-from typing import Optional
-from lxml import etree
 from string import Template
-from pystache.parsed import ParsedTemplate
+from typing import Optional, Any
+
 import pystache
-from pydantic import BaseModel, field_validator, Field
+from lxml import etree
+from lxml.etree import _Comment
+from pydantic import BaseModel, Field
+from pystache.parsed import ParsedTemplate
+from pystache.parser import _LiteralNode
 
-from ls_helper.config_helper import check_references
-from ls_helper.exp.configs import find_elem_with_attribute_value, find_duplicate_names
-from ls_helper.models import SerializablePath
+from ls_helper.config_helper import find_tag_name_refs, find_all_names
+from ls_helper.exp.configs import find_duplicate_names
 from ls_helper.settings import SETTINGS
+from tools.files import levenhstein_get_similar_filenames
+from tools.pydantic_annotated_types import SerializablePath
+
+SRC_COMPONENT = "src-component"
 
 
-class BuildConfig(BaseModel):
+class LabelingInterfaceBuildConfig(BaseModel):
     template: SerializablePath = Field(...,
                                        description="the fundamental template. relative to 'labelling_configs/templates'")
-    platform_data_view: Path = Field(...,
-                                     description="the platform data display elements. relative to 'labelling_configs/components'")
-    destination_path: Path = Field(..., description="The result file. relative to 'labelling_configs/builds'")
     generic_config: Optional[dict] = Field(default_factory=dict)
     test_input_data: Optional[dict] = Field(default_factory=dict)
-    conditions: Optional[dict] = Field(default_factory=dict)
-
-    @field_validator("template")
-    def validate_template(cls, value):
-        assert not value.is_absolute(), f"Path should be relative to {SETTINGS.labeling_configs_dir}/templates"
-        p = SETTINGS.labeling_configs_dir / "templates" / value
-        assert p.exists()
-        return p
-
-    @field_validator("platform_data_view", mode="after")
-    def validate_platform_data_view(cls, v):
-        assert not v.is_absolute(), f"Path should be relative to {SETTINGS.labeling_configs_dir}"
-        p = SETTINGS.labeling_configs_dir / "components" / v.name
-        assert p.exists()
-        return p
-
-    @field_validator("destination_path", mode="after")
-    def validate_destination_path(cls, v):
-        assert not v.is_absolute(), f"Path should be relative to {SETTINGS.labeling_configs_dir}"
-        return SETTINGS.labeling_configs_dir / "builds" / v.name
 
 
 def validate_template_against_data(template_str: str, data: dict):
@@ -298,89 +281,135 @@ def build_configs() -> dict[str, Path]:
     return result_dict
 
 
-def build_from_template(config: BuildConfig):
+def check_references(root) -> dict[str, list[str]]:
+    names = list(find_all_names(root).keys())
+    # print(names)
+    refs = find_tag_name_refs(root).items()
+    broken_refs = {}
+    for ref_name, depending in refs:
+        if ref_name not in names:
+            # print(ref)
+            component = None
+            for d_elem in depending:
+                cur_elem = d_elem
+                while True:
+                    comp = cur_elem.attrib.get(SRC_COMPONENT)
+                    if comp:
+                        component = comp
+                        break
+                    if not comp:
+                        if p := cur_elem.getparent():
+                            cur_elem = p
+
+            deps = [f'{d.tag}:{d.attrib.get("name", "")} [component:{component}]' for d in depending]
+            broken_refs[ref_name] = deps
+    if broken_refs:
+        print("broken references:")
+        for ref, dep in broken_refs.items():
+            print(f"{ref}:{dep}")
+    else:
+        print("all refs ok")
+    return broken_refs
+
+
+def validate_variables_against_mustache_template(template: ParsedTemplate, variables: dict[str, Any]) -> tuple[
+    set[str], list[str]]:
     """
-    Include platform_data as a {{{var:platform_data}}}
-
-    :return:
+    check if all variables in a mustache template are covered by the given variables.
+    :param tempalte:
+    :param variables:
+    :return: a list of missing variables.
     """
-    raw_text = config.template.read_text(encoding="utf-8")
-    parsed: ParsedTemplate = pystache.parse(raw_text)
-    platform_data_config = config.platform_data_view.read_text()
+    missing_variables: set[str] = set()
+    literal_node_keys = []
+    redundant_variables:list[str] = []
+    for e in template._parse_tree:
+        if isinstance(e, _LiteralNode):
+            literal_node_keys.append(e.key)
+            if e.key not in variables:
+                missing_variables.add(e.key)
+    for var in variables:
+        if var not in literal_node_keys:
+            redundant_variables.append(var)
+    return missing_variables, redundant_variables
 
-    context = {
-        "var:platform_data": platform_data_config
-    }
-    for e in parsed._parse_tree:
-        if not isinstance(e, str):
-            # print(e.key)
-            if (key := e.key).startswith("xml:"):
-                fn = f'{key[len("xml:"):]}.xml'
-                # print(key)
-                src_file = SETTINGS.labeling_configs_dir / "components" / fn
-                # print(src_file.absolute())
-                if not src_file.exists():
-                    print(f"file for key: {key} not found")
-                    continue
-                context[key] = src_file.read_text(encoding="utf-8")
-            elif (key := e.key).startswith("generic-xml"):
-                # print(f"GEN: {key}")
-                fn, g_key = key.split(":")[1:]
-                # print(key)
-                fn = f'{fn}.xml'
-                src_file = SETTINGS.labeling_configs_dir / "templates" / fn
-                if not src_file.exists():
-                    print(f"file for key: {key} not found")
-                    continue
-                if g_key not in config.generic_config:
-                    print(f"Generic config for key: '{g_key}' not found. options: {config.generic_config.keys()}")
-                    continue
-                # print(generic_config)
-                gen_text = src_file.read_text(encoding="utf-8")
-                rendered_text = pystache.render(gen_text, config.generic_config[g_key])
-                context[key] = rendered_text
-            elif e.key not in context:
-                print(f"{e.key} MISSING")
+def build_from_template(config: LabelingInterfaceBuildConfig) -> etree.ElementTree:
+    def read_pystache2lxml_tree(fp: Path, attrib: dict[str, Any]) -> etree.ElementTree:  # tree
+        raw_text = fp.read_text(encoding="utf-8")
+        template: ParsedTemplate = pystache.parse(raw_text)
+        missing, redundant = validate_variables_against_mustache_template(template, attrib)
+        if missing or redundant:
+            print(f"Missing variables: {missing} / redundant variables: {redundant} for template of file: '{fp.name}'")
+        result = pystache.render(raw_text, context=attrib)
+        return etree.ElementTree(etree.fromstring(result))
 
-    # print(list(context.keys()))
-    for gen_name, condition_data in config.conditions.items():
-        if gen_name in context:
-            # print(f"{gen_name} -> context")
-            # print(type(context[k]))
-            root = etree.fromstring(context[gen_name])
-            assert root.tag == "View"
-            for k in ["visibleWhen", "whenTagName", "whenChoiceValue"]:
-                root.attrib[k] = condition_data[k]
-            context[gen_name] = etree.tostring(root)
-            continue
-        else:
-            root = etree.fromstring(raw_text)
-            id_elem = find_elem_with_attribute_value(root, "idAttr", gen_name)
-            if len(id_elem) > 0:
-                # print(f"{gen_name} -> template id Elem")
-                id_elem = list(id_elem.values())[0]
-                for k in ["visibleWhen", "whenTagName", "whenChoiceValue"]:
-                    id_elem.attrib[k] = condition_data[k]
-                raw_text = etree.tostring(root)
+    components_dir = SETTINGS.labeling_configs_dir / f"components"
+
+    def parse_tree(sub_tree: etree.ElementTree,
+                   parent_attrib: Optional[dict] = None,
+                   parent_slot_fillers: Optional[list[etree.Element]] = ()) -> etree.Element:
+        if not parent_attrib:
+            parent_attrib = {}
+
+        nodes_to_process = list(sub_tree.getroot().iter())
+        for node in nodes_to_process:
+            # some LSElements and basic html elements to ignore
+            if node.tag in ['Style', "Collapse", "Panel", 'Choices', "Header", "Text", "Image", "TextArea", "Choice",
+                            "Video", "HyperText", "Label", "TimelineLabels", "a", "div", "script"]:
+                continue
+            # print(node.tag)
+            if isinstance(node, _Comment):
                 continue
 
-        print(f"condition ineffective: {gen_name}")
+            if node.tag == 'View':
+                if (_if := node.attrib.get('if')) and (_is := node.attrib.get("is")):
+                    del node.attrib["if"]
+                    del node.attrib["is"]
+                    node.attrib.update({"visibleWhen": "choice-selected", "whenTagName": _if, "whenChoiceValue": _is})
+                continue
 
-    result = pystache.render(raw_text, context=context)
-    print(f"-> {config.destination_path}")
-    validate_template_against_data(result, config.test_input_data)
+            if node.tag == "slot":
+                # todo, for now, just take the first
+                if parent_slot_fillers:
+                    node.getparent().replace(node, parent_slot_fillers[0])  #
 
-    root = etree.fromstring(result)
-    tree = etree.ElementTree(root)
-    tree.write(config.destination_path, encoding="utf-8", xml_declaration=False, pretty_print=True)
+                else:
+                    node.getparent().remove(node)
+                continue
 
-    # destination_path.write_text(result)
-    find_duplicate_names(root)
+            src_file = components_dir / f"{node.tag}.xml"
+            # print(src_file)
+
+            if not src_file.exists():
+                print(
+                    f"file for component: '{node.tag}' not found, maybe: {levenhstein_get_similar_filenames(str(node.tag), components_dir)}")
+                continue
+
+            # parse slot-filler elements and collect
+            slot_filler_nodes = []
+            for slot_elem in node.getchildren():
+                slot_filler_nodes.append(parse_tree(etree.ElementTree(slot_elem), parent_attrib))
+
+            # merge attributes
+            updated_attrib = parent_attrib | dict(node.attrib)
+            # read file and do mustache rendering
+            component_tree = read_pystache2lxml_tree(src_file, updated_attrib)
+            # recursive tree parsing
+            component_node = parse_tree(component_tree, updated_attrib, slot_filler_nodes)
+            # add metadata
+            comment = etree.Comment(f'component:{node.tag}')
+            component_node.insert(0, comment)  # 1 is the index where comment is inserted
+            component_node.attrib[SRC_COMPONENT] = node.tag
+
+            node.getparent().replace(node, component_node)
+        return sub_tree.getroot()
+
+    _tree: etree.ElementTree = read_pystache2lxml_tree(config.template, {})
+    parse_tree(_tree)
+    root = _tree.getroot()
+
     check_references(root)
     dupl_names = find_duplicate_names(root)
+    print(f"duplicate name: {dupl_names}")
 
-    print(dupl_names)
-
-
-if __name__ == "__main__":
-    build_configs()
+    return _tree

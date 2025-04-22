@@ -1,12 +1,11 @@
 import csv
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal
 
 import httpx
 import jsonpath_ng
 
-from ls_helper.models import VariableExtension, ResultStruct, ProjectAnnotationExtension, MyProject
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
 from ls_helper.my_labelstudio_client.models import UserModel, ProjectViewModel, TaskResultModel
 from ls_helper.settings import SETTINGS, ls_logger
@@ -151,14 +150,21 @@ def update_coding_game(client: LabelStudioBase,
         print(resp.json())
 
 
-def build_platform_id_filter(platform_ids: list[str]):
+def build_platform_id_filter(platform_ids: list[str|int], ls_main_field: Literal["platform_id","task_id"]):
+    """
+    should be simpler. this is only that complicated, cuz of the bad conflict models.
+    :param platform_ids:
+    :param ls_main_field:
+    :return:
+    """
     new_items = []
     new_filters = {"conjunction": "or", "items": new_items}
-
+    filter_term = "filter:tasks:data.platform_id" if ls_main_field == "platform_id" else "filter:tasks:id"
+    filter_type = "String" if ls_main_field == "platform_id" else "Number"
     for p_id in platform_ids:
         # print(for_coding_game)
         new_items.append({
-            "filter": "filter:tasks:data.platform_id",
+            "filter": filter_term,
             "operator": "equal",
             "type": "String",
             "value": p_id
@@ -191,25 +197,6 @@ def get_latest_annotation_file(project_id: int) -> Optional[Path]:
     return sorted(annotation_files)[-1]
 
 
-def get_latest_annotation(project_id: int) -> Optional[list[TaskResultModel]]:
-    annotation_file = get_latest_annotation_file(project_id)
-    if not annotation_file:
-        ls_logger.warning("No annotation file?!")
-        return None
-    return [TaskResultModel.model_validate(t) for t in json.load(annotation_file.open(encoding="utf-8"))]
-
-
-def get_variable_extensions(annotation_struct: ResultStruct) -> ProjectAnnotationExtension:
-    data: dict[str, VariableExtension] = {}
-
-    for field in annotation_struct.inputs:
-        data[field] = VariableExtension()
-    for field in annotation_struct.ordered_fields:
-        data[field] = VariableExtension()
-
-    return ProjectAnnotationExtension(fixes=data)
-
-
 
 def download_project_views(project_id: int, store: bool = True):
     views_resp = httpx.get(f"{SETTINGS.LS_HOSTNAME}/api/dm/views/?project={project_id}", headers={
@@ -225,14 +212,6 @@ def download_project_views(project_id: int, store: bool = True):
     return data
 
 
-def update_project_view(p: MyProject,
-                        view_id: Optional[int],
-                        view_name: Optional[str] = None):
-    if not p.project_views:
-        resp = httpx.get(f"{SETTINGS.LS_HOSTNAME}/api/dm/views/project={p.project_id}", headers={
-            "Authorization": f"Token {SETTINGS.LS_API_KEY}"
-        })
-        # raise NotImplemented("get the view through api")
 
 
 def update_user_nicknames(refresh_users: bool = True):

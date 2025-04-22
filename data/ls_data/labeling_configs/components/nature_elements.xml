@@ -1,0 +1,52 @@
+<View className="V_{{{var}}}">
+    <!-- variables: var, title -->
+    <Header value="Nature Elements/Processes" size="4"/>
+    <!--<Header value="What are the Nature Elements/Process in the {{{title}}}?" name="nep_{{{var}}}_t"/>-->
+    <Header value="Materiality" size="5"/>
+    <Choices name="nep_materiality_{{{var}}}" toName="title" showInline="true" required="false"
+             choice="single">
+        <Choice value="Material" alias="material"/>
+        <Choice value="Immaterial" alias="immaterial"/>
+    </Choices>
+    <Text name="nep_materiality_expl_{{{var}}}_t" value="Optional comments"/>
+    <TextArea name="nep_materiality_expl_{{{var}}}" toName="title"/>
+
+    <Header value="Biological" size="5"/>
+    <Choices name="nep_biological_{{{var}}}" toName="title" showInline="true" required="false"
+             choice="single">
+        <Choice value="Biotic" alias="biotic"/>
+        <Choice value="Abiotic" alias="abiotic"/>
+    </Choices>
+    <Text name="nep_biological_expl_{{{var}}}_t" value="Optional comments"/>
+    <TextArea name="nep_biological_expl_{{{var}}}" toName="title"/>
+
+    <Header value="Landscape type" size="5"/>
+    <Choices name="landscape-type_{{{var}}}" toName="title" showInline="true" required="false"
+             choice="single">
+        <Choice value="None" alias="none" selected="true"/>
+        <Choice value="Artificial surfaces" alias="artificial_surfaces"/>
+        <Choice value="Agricultural areas" alias="agricultural_areas"/>
+        <Choice value="Forest and seminatural areas" alias="forest_and_seminatural_areas"/>
+        <Choice value="Wetlands" alias="wetlands"/>
+        <Choice value="Water bodies" alias="water_bodies"/>
+        <Choice value="Other" alias="other"/>
+    </Choices>
+    <View visibleWhen="choice-selected" whenTagName="landscape-type_{{{var}}}" whenChoiceValue="other">
+        <Text name="landscape-type_other_{{{var}}}_t" value="Describe the Landscape type"/>
+        <TextArea name="landscape-type_other_{{{var}}}" toName="title"/>
+    </View>
+
+    <View visibleWhen="choice-selected" whenTagName="landscape-type_{{{var}}}"
+          whenChoiceValue="forest_and_seminatural_areas">
+        <Text value="Landcover type (default: None)" name="landcover-type_{{{var}}}_t"/>
+        <Choices name="landcover-type_{{{var}}}" toName="title" showInline="true" required="false"
+                 choice="multiple">
+            <Choice value="Mountain" alias="mountain"/>
+            <Choice value="Desert" alias="desert"/>
+            <Choice value="Ice-snowscape" alias="ice-snowscape"/>
+        </Choices>
+    </View>
+    <Text name="landscape-type_expl_{{{var}}}_t" value="Optional comments"/>
+    <TextArea name="landscape-type_expl_{{{var}}}" toName="title"/>
+
+</View>

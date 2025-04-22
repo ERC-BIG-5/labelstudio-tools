@@ -1,0 +1,11 @@
+<View className="V_{{{var}}}">
+    <!-- {title,suffix} e.g. text, visual_0 -->
+    <Header value="Value Expression"/>
+    <Text name="val-expr_{{{suffix}}}_t"
+          value="For the {{{title}}} content: What is the Type of Nature Value Expression?"/>
+    <Choices name="val-expr_{{{suffix}}}" toName="title" showInline="true" required="true">
+        <Choice value="Not codable" selected="true"/>
+        <Choice value="Implicit"/>
+        <Choice value="Explicit"/>
+    </Choices>
+</View>

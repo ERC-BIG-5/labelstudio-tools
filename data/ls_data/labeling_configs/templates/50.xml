@@ -1,0 +1,53 @@
+<View>
+    <input_platform_id/>
+    <base_style/>
+    <title/>
+    <!-- Platform elements -->
+    <View>
+        <text_input index="2" title="Video description" className="video_description" fontSize="18"/>
+        <youtube_video/>
+        <harmful_any/>
+        <harmful_detail/>
+        <language-correct_video/>
+    </View>
+    <Text name="gap2" value=" "/>
+    <nature_any/>
+    <View if="nature_any" is="Yes">
+        <extras/>
+        <nature_text_visual/>
+    </View>
+
+    <View className="text_part" if="nature_text" is="Yes">
+        <Header value="Text Part" size="3"/>
+        <nature_elements title="Text" var="test"/>
+        <value-expr title="Text" suffix="text" var="text"/>
+        <relational-value title="Text" var="text"/>
+    </View>
+
+    <View if="nature_visual" is="Yes" className="visual_part">
+        <Header value="Visual Part"/>
+        <Collapse>
+            <panel_nep_val-expr_rel-value title="Frame 1" var="visual_0">
+                <text var="nep_name_visual_0" info="Name nature Element of Frame 1" required="true"/>
+            </panel_nep_val-expr_rel-value>
+        </Collapse>
+        <Collapse>
+            <panel_nep_val-expr_rel-value title="Frame 2" var="visual_1">
+                <text var="nep_name_visual_1" info="Name nature Element of Frame 2" required="true"/>
+            </panel_nep_val-expr_rel-value>
+        </Collapse>
+        <Collapse>
+            <panel_nep_val-expr_rel-value title="Frame 3" var="visual_2">
+                <text var="nep_name_visual_2" info="Name nature Element of Frame 3" required="true"/>
+            </panel_nep_val-expr_rel-value>
+        </Collapse>
+        <Collapse>
+            <panel_nep_val-expr_rel-value title="Frame 3" var="visual_3">
+                <text var="nep_name_visual_3" info="Name nature Element of Frame 4" required="true"/>
+            </panel_nep_val-expr_rel-value>
+        </Collapse>
+    </View>
+
+    <coding-game/>
+
+</View>

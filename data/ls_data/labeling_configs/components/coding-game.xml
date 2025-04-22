@@ -1,0 +1,10 @@
+<View>
+    <Header value="Do you want to mark this task for the 'coding game'? (default: No)"/>
+    <Choices name="coding-game" toName="title" showInline="true">
+        <Choice value="Yes"/>
+    </Choices>
+    <View visibleWhen="choice-selected" whenTagName="coding-game" whenChoiceValue="Yes">
+        <Text name="coding-game_reason_t" value="Explain, why you want this task for the coding game"/>
+        <TextArea name="coding-game_reason" toName="title"/>
+    </View>
+</View>

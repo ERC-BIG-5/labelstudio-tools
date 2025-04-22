@@ -1,0 +1,471 @@
+<View className="V_{{{var}}}" visibleWhen="choice-selected" whenTagName="val-expr_{{{var}}}"
+      whenChoiceValue="Explicit,Implicit">
+    <!-- {var,title} -->
+    <Header value="Relational values" size="3"/>
+    <Text name="rel-value_{{{var}}}_t"
+          value="For the {{{title}}} content: What are the RVs expressed?"/>
+    <Choices name="rel-value_{{{var}}}" toName="title" showInline="true" choice="multiple" required="true">
+        <Choice value="Personal identity" alias="personal-identity"/>
+        <Choice value="Cultural identity" alias="cultural-identity"/>
+        <Choice value="Social responsibility" alias="social-responsibility"/>
+        <Choice value="Social cohesion" alias="social-cohesion"/>
+        <Choice value="Social memory" alias="social-memory"/>
+        <Choice value="Social relations" alias="social-relations"/>
+        <Choice value="Sense of place" alias="sense-of-place"/>
+        <Choice value="Sense of agency" alias="sense-of-agency"/>
+        <Choice value="Spirituality" alias="spirituality"/>
+        <Choice value="Stewardship principle" alias="stewardship-principle"/>
+        <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+        <Choice value="Literacy" alias="literacy"/>
+        <Choice value="Livelihoods" alias="livelihoods"/>
+        <Choice value="Well-being" alias="well-being"/>
+        <Choice value="Aesthetics" alias="aesthetics"/>
+        <Choice value="Reciprocity" alias="reciprocity"/>
+        <Choice value="Good life" alias="good-life"/>
+        <Choice value="Kinship" alias="kinship"/>
+    </Choices>
+
+    <Text name="rel-value_{{{var}}}_expl_t" value="Optional comments"/>
+    <TextArea name="rel-value_{{{var}}}_expl" toName="title" showSubmitButton="true"/>
+
+    <!-- CONFUSION -->
+    <Header value="Confusion" size="5"/>
+    <View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="personal-identity">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Personal identity' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-personal-identity-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_personal-identity" toName="title" showInline="true" choice="multiple">
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="cultural-identity">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Cultural identity' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-cultural-identity-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_cultural-identity" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="social-responsibility">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Social responsibility' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-social-responsibility-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_social-responsibility" toName="title" showInline="true"
+                     choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="social-cohesion">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Social cohesion' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-social-cohesion-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_social-cohesion" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="social-memory">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Social memory' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-social-memory-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_social-memory" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="social-relations">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Social relations' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-social-relations-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_social-relations" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="sense-of-place">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Sense of place' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-sense-of-place-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_sense-of-place" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="sense-of-agency">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Sense of agency' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-sense-of-agency-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_sense-of-agency" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="spirituality">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Spirituality' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-spirituality-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_spirituality" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="stewardship-principle">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Stewardship principle' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-stewardship-principle-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_stewardship-principle" toName="title" showInline="true"
+                     choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="stewardship-eudaimonia">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Stewardship eudaimonia' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-stewardship-eudaimonia-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_stewardship-eudaimonia" toName="title" showInline="true"
+                     choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="literacy">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Literacy' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-literacy-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_literacy" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="livelihoods">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Livelihoods' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-livelihoods-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_livelihoods" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="well-being">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Well-being' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-well-being-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_well-being" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="aesthetics">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Aesthetics' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-aesthetics-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_aesthetics" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="reciprocity">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Reciprocity' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-reciprocity-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_reciprocity" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Good life" alias="good-life"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="good-life">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Good life' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-good-life-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_good-life" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Kinship" alias="kinship"/>
+            </Choices>
+        </View>
+        <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
+              whenChoiceValue="kinship">
+            <Text value="For the {{{title}}} content: Can the Relational Value 'Kinship' be confused with other RVs?"
+                  name="rel-value_{{{var}}}_conf_-kinship-_t"/>
+            <Choices name="rel-value_{{{var}}}_conf_kinship" toName="title" showInline="true" choice="multiple">
+                <Choice value="Personal identity" alias="personal-identity"/>
+                <Choice value="Cultural identity" alias="cultural-identity"/>
+                <Choice value="Social responsibility" alias="social-responsibility"/>
+                <Choice value="Social cohesion" alias="social-cohesion"/>
+                <Choice value="Social memory" alias="social-memory"/>
+                <Choice value="Social relations" alias="social-relations"/>
+                <Choice value="Sense of place" alias="sense-of-place"/>
+                <Choice value="Sense of agency" alias="sense-of-agency"/>
+                <Choice value="Spirituality" alias="spirituality"/>
+                <Choice value="Stewardship principle" alias="stewardship-principle"/>
+                <Choice value="Stewardship eudaimonia" alias="stewardship-eudaimonia"/>
+                <Choice value="Literacy" alias="literacy"/>
+                <Choice value="Livelihoods" alias="livelihoods"/>
+                <Choice value="Well-being" alias="well-being"/>
+                <Choice value="Aesthetics" alias="aesthetics"/>
+                <Choice value="Reciprocity" alias="reciprocity"/>
+                <Choice value="Good life" alias="good-life"/>
+            </Choices>
+        </View>
+    </View>
+
+</View>

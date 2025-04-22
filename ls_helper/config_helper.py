@@ -2,9 +2,11 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from deepdiff import DeepDiff
+from lxml.etree import Element
 
-from ls_helper.ana_res import parse_label_config_xml
-from ls_helper.models import ProjectAnnotationExtension, ResultStruct
+from ls_helper.models.interface_models import InterfaceData, ProjectVariableExtensions, IField, IChoice, IChoices, \
+    ITextArea, IText
+#from ls_helper.new_models import ProjectData
 from ls_helper.settings import SETTINGS
 
 
@@ -34,15 +36,20 @@ def find_all_names(root):
     return unique_names
 
 
-def find_tag_name_refs(root):
-    refs = {}
+def find_tag_name_refs(root) -> dict[str, list[Element]]:
+    """
+    checks which elements depend on all variables
+    :param root:
+    :return: dict: variable: [depending_0, depending_1, ...]
+    """
+    refs: dict[str, list[str]] = {}
 
     def find_name(element, current_path):
         # Print current element's path
         path = f"{current_path}/{element.tag}"
         # print(path, element.get("name"))
         if _name := element.get("whenTagName"):
-            refs.setdefault(_name, []).append(path)
+            refs.setdefault(_name, []).append(element)
 
         # Recurse through all children
         for child in element:
@@ -79,23 +86,37 @@ def find_duplicates(xml_file):
     }
 
 
-def check_references(root) -> list[str]:
-    names = list(find_all_names(root).keys())
-    # print(names)
-    refs = list(find_tag_name_refs(root).keys())
-    broken_refs = []
-    for ref in refs:
-        if ref not in names:
-            print(ref)
-            broken_refs.append(ref)
-    if broken_refs:
-        print("broken references:")
-        for ref in broken_refs:
-            print(ref)
-    else:
-        print("all refs ok")
-    return broken_refs
 
+def parse_label_config_xml(xml_string) -> InterfaceData:
+    root: ET.Element = ET.fromstring(xml_string)
+
+    ordered_fields_map: dict[str, IField] = {}
+    # todo why this?
+    input_text_fields: dict[str, str] = {}  # New list for text fields with "$" values
+    # text_areas = dict[str,ITextArea]
+
+    for el in root.iter():
+        if el.tag == "Choices":
+            name = el.get('name')
+            if not name:
+                raise ValueError("shouldnt happen in a valid interface")
+            # print(choices_element.attrib)
+            choice_list = [IChoice.model_validate(choice.attrib) for choice in el.findall('./Choice')]
+            ordered_fields_map[name] = IChoices.model_validate(el.attrib | {"options": choice_list, "required":el.attrib.get("required", False)})
+        elif el.tag == "TextArea":
+            name = el.get('name')
+            ordered_fields_map[name] = ITextArea(name=name, required=el.attrib.get("required", False))
+        elif el.tag == "Text":
+            value = el.get('value')
+            if value and value.startswith('$'):
+                name = el.get('name')
+                # keep the $ so we know its a ref to data. done,
+                input_text_fields[name] = value
+                ordered_fields_map[name] = IText()
+
+    return InterfaceData(
+        ordered_fields_map=ordered_fields_map,
+        inputs=input_text_fields)
 
 def check_config_update(platform_configs: dict[str, Path]):
     for platform, fp in platform_configs.items():
@@ -112,7 +133,7 @@ def check_config_update(platform_configs: dict[str, Path]):
         print(diff)
 
 
-def check_against_fixes(label_config: str | ResultStruct, fixes: ProjectAnnotationExtension):
+def check_against_fixes(label_config: str | InterfaceData, fixes: ProjectVariableExtensions):
     """
     Do
     :param label_config: xml config string
@@ -122,8 +143,8 @@ def check_against_fixes(label_config: str | ResultStruct, fixes: ProjectAnnotati
         conf = parse_label_config_xml(label_config)
     else:
         conf = label_config
-    columns = set(list(conf.choices.keys()) + list(conf.free_text))
-    fixes_set = set(fixes.fixes)
+    columns = set(list(conf.orig_choices.keys()) + list(conf.free_text))
+    fixes_set = set(fixes.extensions)
     print(f"columns missing in fixes: {columns - fixes_set}")
     print(f"obsolete fixes: {columns - fixes_set}")
 

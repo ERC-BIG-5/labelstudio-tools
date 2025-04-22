@@ -1,0 +1,7 @@
+<View>
+    <!-- harmful_visual_data_option -->
+    <!-- {variable}} -->
+    <Choices visibleWhen="choice-selected" toName="title" whenTagName="harmful_any" name="harmful_visual"
+             choice="multiple" whenChoiceValue="visual" value="{{{variable}}}" showInline="true">
+    </Choices>
+</View>

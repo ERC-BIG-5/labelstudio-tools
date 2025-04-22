@@ -1,0 +1,8 @@
+<View>
+    <TimelineLabels name="relevant-video-frames" toName="video">
+        <Label value="Frame 1"/>
+        <Label value="Frame 2"/>
+        <Label value="Frame 3"/>
+        <Label value="Frame 4"/>
+    </TimelineLabels>
+</View>

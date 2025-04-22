@@ -1,0 +1,304 @@
+{
+  "extensions": {
+    "platform_id": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "title": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "language_correct": {
+      "name_fix": null,
+      "description": null,
+      "default": "Yes",
+      "deprecated": null
+    },
+    "harmful_any": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "harmful_visual": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nature_any": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "extras": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "media_relevant": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_materiality_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_materiality_expl_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_biological_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_biological_expl_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landcover-type_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_other_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_expl_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_materiality_visual_0": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_materiality_expl_visual_0": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_biological_visual_0": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_biological_expl_visual_0": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_visual_0": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landcover-type_visual_0": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_other_visual_0": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_expl_visual_0": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_materiality_visual_1": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_materiality_expl_visual_1": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_biological_visual_1": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_biological_expl_visual_1": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_visual_1": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landcover-type_visual_1": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_other_visual_1": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_expl_visual_1": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_materiality_visual_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_materiality_expl_visual_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_biological_visual_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_biological_expl_visual_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_visual_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landcover-type_visual_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_other_visual_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_expl_visual_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_materiality_visual_3": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_materiality_expl_visual_3": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_biological_visual_3": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_biological_expl_visual_3": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_visual_3": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landcover-type_visual_3": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_other_visual_3": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_expl_visual_3": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "coding_game": {
+      "name_fix": "coding-game",
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "coding-game_reason": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    }
+  }
+}

@@ -6,7 +6,7 @@ from starlette.requests import Request
 from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from ls_helper.models import MyProject
+from ls_helper.new_models import ProjectResult
 from main import update_coding_game, annotations, agreements, create_conflict_view, get_all_variable_names
 
 # app = FastAPI()
