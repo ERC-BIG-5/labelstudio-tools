@@ -7,12 +7,17 @@ import httpx
 import jsonpath_ng
 
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
-from ls_helper.my_labelstudio_client.models import UserModel, ProjectViewModel, TaskResultModel
-from ls_helper.settings import SETTINGS, ls_logger
+from ls_helper.my_labelstudio_client.models import (
+    UserModel,
+    ProjectViewModel,
+    TaskResultModel,
+)
+from ls_helper.settings import SETTINGS
 
 
-def test_update_other_coding_game(annotations: list[TaskResultModel],
-                                  project_id: int) -> tuple[dict[str, list[str]], list[str]]:
+def test_update_other_coding_game(
+    annotations: list[TaskResultModel], project_id: int
+) -> tuple[dict[str, list[str]], list[str]]:
     """
     TODO THIS FUNC NEEDS TO GO
     pass in the results
@@ -27,7 +32,7 @@ def test_update_other_coding_game(annotations: list[TaskResultModel],
     csv_file = Path(f"data/info/annotations_{project_id}.csv")
     coding_game_file = Path(f"data/info/coding_game_{project_id}.json")
 
-    header = ['Nature Element/Process', 'Human-Nature Action']
+    header = ["Nature Element/Process", "Human-Nature Action"]
 
     others = {h: [] for h in header}
 
@@ -59,19 +64,21 @@ def test_update_other_coding_game(annotations: list[TaskResultModel],
     max_len = max(len(ne_list), len(sa_list))
 
     # Write back to CSV using DictWriter
-    with open(csv_file, "w", newline='', encoding='utf-8') as f:
+    with open(csv_file, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=header)
         writer.writeheader()
 
         for i in range(max_len):
             row = {
-                header[0]: ne_list[i] if i < len(ne_list) else '',
-                header[1]: sa_list[i] if i < len(sa_list) else ''
+                header[0]: ne_list[i] if i < len(ne_list) else "",
+                header[1]: sa_list[i] if i < len(sa_list) else "",
             }
             writer.writerow(row)
 
     print(f"coding game: ->  {coding_game_file}")
-    json.dump(for_coding_game, open(coding_game_file, "w", newline='', encoding='utf-8'))
+    json.dump(
+        for_coding_game, open(coding_game_file, "w", newline="", encoding="utf-8")
+    )
 
     print(others)
     print(for_coding_game)
@@ -92,15 +99,17 @@ def pick_and_flatten(results):
     all_keys: dict[str, list] = {}
     task_results: list[dict[str, list]] = []
     for t_idx, task in enumerate(results):
-        task_res = {"p_id": task["data"]["platform_id"], "platform": task["data"]["source"
-                                                                                  ""]}
+        task_res = {
+            "p_id": task["data"]["platform_id"],
+            "platform": task["data"]["source"],
+        }
         task_results.append(task_res)
 
-        for an_idx, task_annot in enumerate(task['annotations']):
+        for an_idx, task_annot in enumerate(task["annotations"]):
             # f_annot = flatten(task_annot,reducer=make_reducer(delimiter='.'),enumerate_types=(list,))
             # print(f_annot)
-            for res in task_annot['result']:
-                values = jsonpath_ng.parse("$.*").find(res['value'])
+            for res in task_annot["result"]:
+                values = jsonpath_ng.parse("$.*").find(res["value"])
                 def_val = values[0].value
                 all_keys.setdefault(res["from_name"], []).append(def_val)
                 task_res.setdefault(res["from_name"], []).append(def_val)
@@ -112,11 +121,13 @@ def pick_and_flatten(results):
     pass
 
 
-def update_coding_game(client: LabelStudioBase,
-                       project_id: int,
-                       use_stored_data_if_available: bool,
-                       view_id: int,
-                       platform_ids: list[str] = ()):
+def update_coding_game(
+    client: LabelStudioBase,
+    project_id: int,
+    use_stored_data_if_available: bool,
+    view_id: int,
+    platform_ids: list[str] = (),
+):
     # TODO @deprecated, use func below
     viwes = client.get_project_views(project_id)
 
@@ -131,15 +142,22 @@ def update_coding_game(client: LabelStudioBase,
     view_data.data.filters = new_filters
     for p_id in platform_ids:
         # print(for_coding_game)
-        new_items.append({
-            "filter": "filter:tasks:data.platform_id",
-            "operator": "equal",
-            "type": "String",
-            "value": p_id
-        })
+        new_items.append(
+            {
+                "filter": "filter:tasks:data.platform_id",
+                "operator": "equal",
+                "type": "String",
+                "value": p_id,
+            }
+        )
 
     res = {
-        "data": {"title": "Coding game", "filters": new_filters, "hiddenColumns": view_data.data.hiddenColumns}}
+        "data": {
+            "title": "Coding game",
+            "filters": new_filters,
+            "hiddenColumns": view_data.data.hiddenColumns,
+        }
+    }
     print(res)
     resp = client.patch_view(view_id, res)
     # resp = httpx.patch(f"{SETTINGS.LS_HOSTNAME}/api/dm/views/{view_id}", headers={
@@ -150,7 +168,9 @@ def update_coding_game(client: LabelStudioBase,
         print(resp.json())
 
 
-def build_platform_id_filter(platform_ids: list[str|int], ls_main_field: Literal["platform_id","task_id"]):
+def build_platform_id_filter(
+    platform_ids: list[str | int], ls_main_field: Literal["platform_id", "task_id"]
+):
     """
     should be simpler. this is only that complicated, cuz of the bad conflict models.
     :param platform_ids:
@@ -159,27 +179,37 @@ def build_platform_id_filter(platform_ids: list[str|int], ls_main_field: Literal
     """
     new_items = []
     new_filters = {"conjunction": "or", "items": new_items}
-    filter_term = "filter:tasks:data.platform_id" if ls_main_field == "platform_id" else "filter:tasks:id"
+    filter_term = (
+        "filter:tasks:data.platform_id"
+        if ls_main_field == "platform_id"
+        else "filter:tasks:id"
+    )
     filter_type = "String" if ls_main_field == "platform_id" else "Number"
     for p_id in platform_ids:
         # print(for_coding_game)
-        new_items.append({
-            "filter": filter_term,
-            "operator": "equal",
-            "type": "String",
-            "value": p_id
-        })
+        new_items.append(
+            {
+                "filter": filter_term,
+                "operator": "equal",
+                "type": "String",
+                "value": p_id,
+            }
+        )
     return new_filters
 
 
 def build_view_with_filter_p_ids(
-        client: LabelStudioBase,
-        view: ProjectViewModel,
-        platform_ids: list[str]):
+    client: LabelStudioBase, view: ProjectViewModel, platform_ids: list[str]
+):
     new_filters = build_platform_id_filter(platform_ids)
 
     res = {
-        "data": {"title": view.data.title, "filters": new_filters, "hiddenColumns": view.data.hiddenColumns}}
+        "data": {
+            "title": view.data.title,
+            "filters": new_filters,
+            "hiddenColumns": view.data.hiddenColumns,
+        }
+    }
 
     # print(res)
     resp = client.patch_view(view.id, res)
@@ -197,11 +227,11 @@ def get_latest_annotation_file(project_id: int) -> Optional[Path]:
     return sorted(annotation_files)[-1]
 
 
-
 def download_project_views(project_id: int, store: bool = True):
-    views_resp = httpx.get(f"{SETTINGS.LS_HOSTNAME}/api/dm/views/?project={project_id}", headers={
-        "Authorization": f"Token {SETTINGS.LS_API_KEY}"
-    })
+    views_resp = httpx.get(
+        f"{SETTINGS.LS_HOSTNAME}/api/dm/views/?project={project_id}",
+        headers={"Authorization": f"Token {SETTINGS.LS_API_KEY}"},
+    )
     if views_resp.status_code == 200:
         data = views_resp.json()
 
@@ -212,22 +242,33 @@ def download_project_views(project_id: int, store: bool = True):
     return data
 
 
-
-
 def update_user_nicknames(refresh_users: bool = True):
     if refresh_users:
-        client = LabelStudioBase(base_url=SETTINGS.LS_HOSTNAME, api_key=SETTINGS.LS_API_KEY)
+        client = LabelStudioBase(
+            base_url=SETTINGS.LS_HOSTNAME, api_key=SETTINGS.LS_API_KEY
+        )
         users = client.get_users()
     else:
-        users = list(map(UserModel.model_validate, json.load(open("data/users.json", encoding="utf-8"))))
+        users = list(
+            map(
+                UserModel.model_validate,
+                json.load(open("data/users.json", encoding="utf-8")),
+            )
+        )
     nicknames_file = Path("data/user_nicknames.json")
     nicknames = json.load(nicknames_file.open(encoding="utf-8"))
     for idx, u in enumerate(users):
-        print(u.model_dump(include={"id", "first_name", "last_name", "username", "initials"}))
+        print(
+            u.model_dump(
+                include={"id", "first_name", "last_name", "username", "initials"}
+            )
+        )
         if str(u.id) not in nicknames:
             nicknames[u.id] = input("Nickname: ")
 
-    nicknames_file.write_text(json.dumps(nicknames, indent=2, ensure_ascii=False), encoding="utf-8")
+    nicknames_file.write_text(
+        json.dumps(nicknames, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
 
 
 if __name__ == "__main__":

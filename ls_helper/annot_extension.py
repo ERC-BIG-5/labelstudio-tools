@@ -14,7 +14,11 @@ class DataExtensionIndex(BaseModel):
 
     @property
     def intersection(self) -> dict[str, VariableExtensionIndex]:
-        return {v: e for v, e in self.variables.items() if len(e.projects) == len(self.projects)}
+        return {
+            v: e
+            for v, e in self.variables.items()
+            if len(e.projects) == len(self.projects)
+        }
 
 
 def build_extension_index(projects: list[ProjectData]) -> DataExtensionIndex:
@@ -36,11 +40,14 @@ def build_extension_index(projects: list[ProjectData]) -> DataExtensionIndex:
                 variables[k] = VariableExtensionIndex.model_validate(v.model_dump())
                 variables[k].projects.append(p.id)
             else:
-                if v.model_dump() == (i_v := variables[k]).model_dump(exclude={"projects"}):
+                if v.model_dump() == (i_v := variables[k]).model_dump(
+                    exclude={"projects"}
+                ):
                     i_v.projects.append(p.id)
                 else:
                     print(
                         f"WARNING: project '{p.id}:{p.alias}' has variable '{k}' differently configured as in the index\n"
                         f"({p.id:>5}): {v.model_dump()}\n"
-                        f"(index): {variables[k].model_dump(exclude={"projects"})}")
+                        f"(index): {variables[k].model_dump(exclude={'projects'})}"
+                    )
     return DataExtensionIndex(projects=[p.id for p in projects], variables=variables)

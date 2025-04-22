@@ -1,10 +1,8 @@
-from typing import Literal
 
 import numpy as np
 
 
-
-def fleiss_kappa(table, method='fleiss'):
+def fleiss_kappa(table, method="fleiss"):
     """Fleiss' and Randolph's kappa multi-rater agreement measure
 
     Parameters
@@ -56,33 +54,29 @@ def fleiss_kappa(table, method='fleiss'):
     https://doi.org/10.1007/s11634-010-0073-4.
     """
 
-    table = 1.0 * np.asarray(table)   #avoid integer division
-    n_sub, n_cat =  table.shape
+    table = 1.0 * np.asarray(table)  # avoid integer division
+    n_sub, n_cat = table.shape
     n_total = table.sum()
     n_rater = table.sum(1)
     n_rat = n_rater.max()
-    #assume fully ranked
+    # assume fully ranked
     assert n_total == n_sub * n_rat
 
-    #marginal frequency  of categories
+    # marginal frequency  of categories
     p_cat = table.sum(0) / n_total
 
     table2 = table * table
-    p_rat = (table2.sum(1) - n_rat) / (n_rat * (n_rat - 1.))
+    p_rat = (table2.sum(1) - n_rat) / (n_rat * (n_rat - 1.0))
     p_mean = p_rat.mean()
 
-    if method == 'fleiss':
-        p_mean_exp = (p_cat*p_cat).sum()
-    elif method.startswith('rand') or method.startswith('unif'):
+    if method == "fleiss":
+        p_mean_exp = (p_cat * p_cat).sum()
+    elif method.startswith("rand") or method.startswith("unif"):
         p_mean_exp = 1 / n_cat
-    else: # fleiss
+    else:  # fleiss
         p_mean_exp = (p_cat * p_cat).sum()
 
     if p_mean == 1:  # Perfect agreement
         return 1.0
     else:
         return (p_mean - p_mean_exp) / (1 - p_mean_exp)
-
-
-
-

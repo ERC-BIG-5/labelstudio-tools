@@ -33,14 +33,19 @@ class AgreementResult(BaseModel):
 
 
 class Agreements:
-
-    def __init__(self, po: ProjectData, accepted_ann_age: int = 6,
-                 agreement_types: Agreement_types = ('gwet', "ratio", "abs")) -> None:
+    def __init__(
+        self,
+        po: ProjectData,
+        accepted_ann_age: int = 6,
+        agreement_types: Agreement_types = ("gwet", "ratio", "abs"),
+    ) -> None:
         self.po = po
         self.accepted_ann_age = accepted_ann_age
         self.agreement_types = agreement_types
         # group-name: variable-name: index
-        self._groups: dict[str, dict[str, int]] = self.find_groups(list(po.variable_extensions.extensions.keys()))
+        self._groups: dict[str, dict[str, int]] = self.find_groups(
+            list(po.variable_extensions.extensions.keys())
+        )
         self._init_df: Optional[DataFrame] = self.create_init_df()
 
         self.results: dict[str, AgreementResult] = {}
@@ -48,7 +53,7 @@ class Agreements:
 
     @staticmethod
     def find_groups(variables):
-        pattern = re.compile(r'^(.+)_(\d+)$')
+        pattern = re.compile(r"^(.+)_(\d+)$")
 
         groups: dict[str, dict[str, int]] = {}
         for var in variables:
@@ -63,7 +68,7 @@ class Agreements:
 
     @deprecated
     def prepare_indexed_var(self, df, df_in) -> DataFrame:
-        return df.merge(df_in, on="variable", how='left')
+        return df.merge(df_in, on="variable", how="left")
 
     @staticmethod
     def base_df(df: DataFrame) -> DataFrame:
@@ -73,9 +78,9 @@ class Agreements:
         else:
             return df.set_index(["task_id", "user_id"])
 
-    def select_variables(self,
-                         variables: list[str],
-                         always_as_dict: bool = True) -> dict[str, DataFrame] | DataFrame:
+    def select_variables(
+        self, variables: list[str], always_as_dict: bool = True
+    ) -> dict[str, DataFrame] | DataFrame:
         df = self.get_init_df()
         group_names = list(self._groups.keys())
         selected_orig_vars = []
@@ -94,7 +99,10 @@ class Agreements:
                 selected_orig_vars.extend(idx_vars)
                 # add orig name with
                 assignments.update(
-                    {idx_v: {"group": var, "gr_variable": self._groups[var][idx_v]} for idx_v in idx_vars}
+                    {
+                        idx_v: {"group": var, "gr_variable": self._groups[var][idx_v]}
+                        for idx_v in idx_vars
+                    }
                 )
                 has_groups = True
                 # print(assignments)
@@ -102,7 +110,9 @@ class Agreements:
                 selected_orig_vars.append(var)
 
         # select all relevant variables
-        orig_vars_groups = df[df["variable"].isin(selected_orig_vars)].groupby("variable")
+        orig_vars_groups = df[df["variable"].isin(selected_orig_vars)].groupby(
+            "variable"
+        )
 
         # if there are no groups we can for convenience also just return the single variable df
         if not has_groups:
@@ -123,7 +133,9 @@ class Agreements:
                     # print(f"adding {gn=}")
                     result_groups[group_name] = group_df
                 else:
-                    result_groups[group_name] = pd.concat([result_groups[group_name], group_df])
+                    result_groups[group_name] = pd.concat(
+                        [result_groups[group_name], group_df]
+                    )
                 # todo: TEST THIS APPROACH, remove the outer else, so in case there is none its set...
                 # if existing_df := result_groups.get(group_name):
                 #     result_groups[group_name] = pd.concat(existing_df, group_df)
@@ -150,7 +162,9 @@ class Agreements:
         return pv_df
 
     @staticmethod
-    def _calc_agreements(df: DataFrame, agreement_types: Agreement_types) -> AgreementsCol:
+    def _calc_agreements(
+        df: DataFrame, agreement_types: Agreement_types
+    ) -> AgreementsCol:
         if len(df) == 0:
             return {_: nan for _ in agreement_types}
         pv_df = Agreements.create_coder_pivot_df(df)
@@ -164,19 +178,25 @@ class Agreements:
                     try:
                         if not _cac:
                             _cac = irrCAC.raw.CAC(pv_df)
-                        result[aggr_type] = round(_cac.fleiss()["est"]["coefficient_value"], 2)
+                        result[aggr_type] = round(
+                            _cac.fleiss()["est"]["coefficient_value"], 2
+                        )
                     except (ValueError, ZeroDivisionError):
                         result[aggr_type] = nan
                 case "gwet":
                     try:
                         if not _cac:
                             _cac = irrCAC.raw.CAC(pv_df)
-                        result[aggr_type] = round(_cac.gwet()["est"]["coefficient_value"], 2)
+                        result[aggr_type] = round(
+                            _cac.gwet()["est"]["coefficient_value"], 2
+                        )
                     except (ValueError, ZeroDivisionError):
                         result[aggr_type] = nan
                 case "ratio":
                     if not _conflict_count:
-                        _conflict_count = pv_df.apply(lambda row: len(row.dropna().unique()) > 1, axis=1).sum()
+                        _conflict_count = pv_df.apply(
+                            lambda row: len(row.dropna().unique()) > 1, axis=1
+                        ).sum()
                     result[aggr_type] = round(1 - _conflict_count / len(pv_df), 2)
                 case "abs":
                     result[aggr_type] = len(pv_df) - _conflict_count
@@ -185,11 +205,13 @@ class Agreements:
 
     # this annotated stuff is just experimental...
     def create_init_df(self) -> Annotated[DataFrame, DFAgreementsInitModel]:
-        df: DataFrame = self.po.get_annotations_results(self.accepted_ann_age).raw_annotation_df.copy()
+        df: DataFrame = self.po.get_annotations_results(
+            self.accepted_ann_age
+        ).raw_annotation_df.copy()
         # df.rename(columns={"category": "variable"},
         #          inplace=True)  # todo fix further up in logic. when reading ls studio response
         df.drop(["ann_id", "platform_id"], axis=1, inplace=True)
-        df['date'] = df['ts'].dt.date
+        df["date"] = df["ts"].dt.date
         df.set_index(["task_id", "user_id"], inplace=True)
         self._init_df = df
         return df
@@ -203,7 +225,8 @@ class Agreements:
     def drop_unfinished_tasks(df_: DataFrame) -> DataFrame:
         df__ = Agreements.base_df(df_)
         return df__.groupby("task_id").filter(
-            lambda x: len(x.index.get_level_values(1).unique()) > 1)
+            lambda x: len(x.index.get_level_values(1).unique()) > 1
+        )
 
     @staticmethod
     def time_move(df_: DataFrame) -> Generator[tuple[date, DataFrame], None, None]:
@@ -241,12 +264,14 @@ class Agreements:
 
         return base_df
 
-    def agreement_calc(self, variables: Optional[list[str]] = None,
-                       force_default: Optional[str] = "NONE",
-                       max_coders: int = 2,
-                       agreement_types: Optional[Agreement_types] = None,
-                       keep_tasks: bool = False) -> dict[str, AgreementResult]:
-
+    def agreement_calc(
+        self,
+        variables: Optional[list[str]] = None,
+        force_default: Optional[str] = "NONE",
+        max_coders: int = 2,
+        agreement_types: Optional[Agreement_types] = None,
+        keep_tasks: bool = False,
+    ) -> dict[str, AgreementResult]:
         if not variables:
             variables = list(self.po.choices.keys())
         variables_dfs = self.select_variables(variables)
@@ -273,25 +298,32 @@ class Agreements:
                     # Use vectorized operations when possible for performance
                     option_df = v_df.copy()
                     option_df = option_df.explode("value")
-                    option_df = option_df.groupby('task_id').filter(lambda group: (group['value'] == option).any())
-                    result.options_agreements[option] = self._calc_agreements(option_df, agreement_types)
+                    option_df = option_df.groupby("task_id").filter(
+                        lambda group: (group["value"] == option).any()
+                    )
+                    result.options_agreements[option] = self._calc_agreements(
+                        option_df, agreement_types
+                    )
             # multi-select
             else:
                 for option in options:
                     option_df = v_df.copy()
                     # Convert to 1/0 values based on option presence
-                    option_df['value'] = option_df['value'].apply(
+                    option_df["value"] = option_df["value"].apply(
                         lambda x: 1 if isinstance(x, list) and option in x else 0
                     )
 
-
                     # todo,this also for single selects
                     if keep_tasks:
-                        tasks_with_1 = option_df.groupby('task_id')['value'].apply(lambda x: (x == 1).any())
+                        tasks_with_1 = option_df.groupby("task_id")["value"].apply(
+                            lambda x: (x == 1).any()
+                        )
                         task_ids = tasks_with_1[tasks_with_1].index
                         self.collections.setdefault(var, {})[option] = task_ids
                     # Calculate agreement for this option
-                    result.options_agreements[option] = self._calc_agreements(option_df, agreement_types)
+                    result.options_agreements[option] = self._calc_agreements(
+                        option_df, agreement_types
+                    )
 
             # for day, accum_df in self.time_move(v_df):
             # pass
@@ -316,5 +348,8 @@ class Agreements:
 if __name__ == "__main__":
     po = get_project(43)
     ag = Agreements(po)
-    ag.agreement_calc(["nature_any", "nature_text", "nature_visual", "nep_material_visual"], keep_tasks=True)
+    ag.agreement_calc(
+        ["nature_any", "nature_text", "nature_visual", "nep_material_visual"],
+        keep_tasks=True,
+    )
     pass

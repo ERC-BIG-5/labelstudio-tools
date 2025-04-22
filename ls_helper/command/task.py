@@ -6,8 +6,12 @@ import typer
 from tqdm import tqdm
 
 from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.my_labelstudio_client.models import TaskCreate as LSTaskCreate, Task as LSTask, TaskList as LSTaskList, \
-    TaskCreateList as LSTaskCreateList, Task as LSTask
+from ls_helper.my_labelstudio_client.models import (
+    TaskCreate as LSTaskCreate,
+    TaskList as LSTaskList,
+    TaskCreateList as LSTaskCreateList,
+    Task as LSTask,
+)
 from ls_helper.new_models import get_project, ProjectData
 from tools.project_logging import get_logger
 
@@ -29,11 +33,11 @@ def task_platform_id_map(tasks: LSTaskList | LSTaskCreateList) -> dict[str, LSTa
 
 @task_app.command()
 def create_task(
-        src_path: Annotated[Path, typer.Argument()],
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None
+    src_path: Annotated[Path, typer.Argument()],
+    id: Annotated[int, typer.Option()] = None,
+    alias: Annotated[str, typer.Option("-a")] = None,
+    platform: Annotated[str, typer.Argument()] = None,
+    language: Annotated[str, typer.Argument()] = None,
 ):
     po = get_project(id, alias, platform, language)
     t = LSTaskCreate(project=po.id, data=json.loads(src_path.read_text())["data"])
@@ -42,11 +46,11 @@ def create_task(
 
 @task_app.command()
 def create_tasks(
-        src_path: Annotated[Path, typer.Argument()],
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None
+    src_path: Annotated[Path, typer.Argument()],
+    id: Annotated[int, typer.Option()] = None,
+    alias: Annotated[str, typer.Option("-a")] = None,
+    platform: Annotated[str, typer.Argument()] = None,
+    language: Annotated[str, typer.Argument()] = None,
 ):
     """
     can deal with json files (list of tasks) or a folder, where each task is in its own file.
@@ -68,9 +72,14 @@ def create_tasks(
     # load individual tasks
     if src_path.is_dir():
         for t_f in src_path.glob("*.json"):
-            batch.append(LSTaskCreate(project=po.id, data=json.loads(t_f.read_text())["data"]))
+            batch.append(
+                LSTaskCreate(project=po.id, data=json.loads(t_f.read_text())["data"])
+            )
     else:
-        batch = [LSTaskCreate(project=po.id, data=t["data"]) for t in json.loads(src_path.read_text())]
+        batch = [
+            LSTaskCreate(project=po.id, data=t["data"])
+            for t in json.loads(src_path.read_text())
+        ]
 
     resp_data = ls_client().import_tasks(po.id, batch)
     task_ids = resp_data["task_ids"]
@@ -78,26 +87,25 @@ def create_tasks(
     po.save_tasks(tasks)
 
 
-def patch_task(
-        task_id: int,
-        task: LSTask
-):
+def patch_task(task_id: int, task: LSTask):
     """very similar to creating. But actually uses the patch api endpoint"""
     # todo, we can try if the data validates as LSTask. Meaning they have an id already.
     # we can then skip the mapping part...
     res = ls_client().patch_task(task_id, task)
     return res
 
+
 def task_add_predictions(task_id: int, data):
     return ls_client().add_prediction(task_id, data)
 
+
 @task_app.command()
 def patch_tasks(
-        src_path: Annotated[Path, typer.Argument()],
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None
+    src_path: Annotated[Path, typer.Argument()],
+    id: Annotated[int, typer.Option()] = None,
+    alias: Annotated[str, typer.Option("-a")] = None,
+    platform: Annotated[str, typer.Argument()] = None,
+    language: Annotated[str, typer.Argument()] = None,
 ):
     """very similar to creating. But actually uses the patch api endpoint"""
     # todo, we can try if the data validates as LSTask. Meaning they have an id already.
@@ -108,10 +116,18 @@ def patch_tasks(
         # load individual tasks
         if src_path.is_dir():
             for t_f in src_path.glob("*.json"):
-                batch.root.append(LSTaskCreate(project=po.id, data=json.loads(t_f.read_text())["data"]))
+                batch.root.append(
+                    LSTaskCreate(
+                        project=po.id, data=json.loads(t_f.read_text())["data"]
+                    )
+                )
         else:
             batch = LSTaskCreateList(
-                root=[LSTaskCreate(project=po.id, data=t["data"]) for t in json.loads(src_path.read_text())])
+                root=[
+                    LSTaskCreate(project=po.id, data=t["data"])
+                    for t in json.loads(src_path.read_text())
+                ]
+            )
 
     update_map = task_platform_id_map(batch)
 
@@ -121,7 +137,9 @@ def patch_tasks(
     for p_id, update_task in tqdm(update_map.items()):
         ls_task = platform_id_map.get(p_id)
         if not ls_task:
-            print(f"Warning: platform_id: {p_id} not present in project tasks: {repr(tasks)}")
+            print(
+                f"Warning: platform_id: {p_id} not present in project tasks: {repr(tasks)}"
+            )
         task_id = ls_task.id
         # update_task.id = task_id
         res = ls_client().patch_task(task_id, update_task)
@@ -129,10 +147,12 @@ def patch_tasks(
 
 
 @task_app.command()
-def get_tasks(id: Annotated[int, typer.Option()] = None,
-              alias: Annotated[str, typer.Option("-a")] = None,
-              platform: Annotated[str, typer.Argument()] = None,
-              language: Annotated[str, typer.Argument()] = None) -> list[LSTask]:
+def get_tasks(
+    id: Annotated[int, typer.Option()] = None,
+    alias: Annotated[str, typer.Option("-a")] = None,
+    platform: Annotated[str, typer.Argument()] = None,
+    language: Annotated[str, typer.Argument()] = None,
+) -> list[LSTask]:
     po: ProjectData = get_project(id, alias, platform, language)
     tasks = ls_client().get_task_list(project=po.id)
     po.save_tasks(tasks)

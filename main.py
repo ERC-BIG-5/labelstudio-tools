@@ -8,7 +8,6 @@ import typer
 from deepdiff import DeepDiff
 from tqdm import tqdm
 
-from ls_helper.agreements import fix_users, AgreementReport, SingleChoiceAgreement
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
 from ls_helper.command.annotations import annotations_app
@@ -19,7 +18,7 @@ from ls_helper.command.setup import setup_app
 from ls_helper.command.task import task_app, task_add_predictions
 from ls_helper.config_helper import check_config_update, parse_label_config_xml
 from ls_helper.exp.build_configs import build_configs
-from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter
+from ls_helper.funcs import build_view_with_filter_p_ids
 from ls_helper.models.interface_models import IChoices
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectViewCreate, ProjectViewDataModel, \
@@ -208,8 +207,8 @@ def status(
     # just for checking...
     client = ls_client()
     users = client.get_users()
-    fix_users(res, {u.id: u.username for u in users})
-    print(res["user_id"].value_counts())
+    #fix_users(res, {u.id: u.username for u in users})
+    #print(res["user_id"].value_counts())
 
 
 @app.command(short_help="[plot] Plot the total completed tasks over day")
@@ -349,13 +348,13 @@ def agreements(
         max_num_coders: Annotated[int, typer.Option()] = 2,
         variables: Annotated[list[str], typer.Argument()] = None
 
-) -> tuple[Path, AgreementReport]:
+) -> Path:
     dest, agreement_report = (get_project(id, alias, platform, language)
                               .get_annotations_results(
         accepted_ann_age=accepted_ann_age)
                               .get_coder_agreements(max_num_coders, variables, True))
 
-    return dest, agreement_report
+    return dest
 
 
 @app.command()
@@ -411,6 +410,8 @@ def create_conflict_view(
         language: Annotated[str, typer.Option()] = None,
         variable_option: Annotated[str, typer.Option()] = None
 ):
+    # todo redo with fresh_agreement
+    """
     po = get_project(id, alias, platform, language)
     # po.validate_extensions()
     # mp = po.get_annotations_results()
@@ -419,6 +420,7 @@ def create_conflict_view(
     # if not po.interface.ordered_fields_map.get(variable):
     #    raise ValueError(f"Variable {variable} has not been defined")
     # agreement_data = json.loads((SETTINGS.agreements_dir / f"{po.id}.json").read_text())
+
     agg_metrics = po.get_agreement_data().agreement_metrics
     if variable.endswith("_visual"):
         variable = variable + "_0"
@@ -447,9 +449,8 @@ def create_conflict_view(
         "filters": build_platform_id_filter(task_ids, "task_id")}}))
     url = f"{SETTINGS.LS_HOSTNAME}/projects/{po.id}/data?tab={view.id}"
     print(url)
-
     return url
-
+    """
 
 @app.command()
 def build_extension_index(

@@ -27,7 +27,9 @@ def convert_strings_to_indices(df: DataFrame, string_list: list[str]):
     # Convert all columns to int32, with NaN represented as pd.NA
     for col in result_df.columns:
         # First convert to nullable integer type
-        result_df[col] = pd.to_numeric(result_df[col], errors='coerce')
-        result_df[col] = result_df[col].astype('Int32')  # Note: capital 'I' for nullable integer
+        result_df[col] = pd.to_numeric(result_df[col], errors="coerce")
+        result_df[col] = result_df[col].astype(
+            "Int32"
+        )  # Note: capital 'I' for nullable integer
 
     return result_df

@@ -22,8 +22,10 @@ SRC_COMPONENT = "src-component"
 
 
 class LabelingInterfaceBuildConfig(BaseModel):
-    template: SerializablePath = Field(...,
-                                       description="the fundamental template. relative to 'labelling_configs/templates'")
+    template: SerializablePath = Field(
+        ...,
+        description="the fundamental template. relative to 'labelling_configs/templates'",
+    )
     generic_config: Optional[dict] = Field(default_factory=dict)
     test_input_data: Optional[dict] = Field(default_factory=dict)
 
@@ -43,7 +45,9 @@ def create_choice_elem(option: str, alias: Optional[str] = None) -> str:
     return f'<Choice value="{option}"/>'
 
 
-def create_choice_elements(options: list[str], aliases: Optional[list[str]] = None) -> str:
+def create_choice_elements(
+    options: list[str], aliases: Optional[list[str]] = None
+) -> str:
     if aliases:
         res = []
         for o, a in zip(options, aliases):
@@ -63,7 +67,7 @@ def remove_hidden_parts(xml_file: Path):
 
     # Find all elements with the specified class
     # This will find elements where class attribute exactly matches the class_name
-    elements = root.xpath(f'//*[@className="hidden"]')
+    elements = root.xpath('//*[@className="hidden"]')
 
     # print(len(elements))
     # Remove all found elements from their parents
@@ -72,7 +76,7 @@ def remove_hidden_parts(xml_file: Path):
         if parent is not None:  # Check if element has a parent
             parent.remove(element)
 
-    tree.write(xml_file, pretty_print=True, encoding='utf-8', xml_declaration=False)
+    tree.write(xml_file, pretty_print=True, encoding="utf-8", xml_declaration=False)
 
 
 def twitter_visual_mod(xml_file: Path):
@@ -81,11 +85,11 @@ def twitter_visual_mod(xml_file: Path):
 
     # Find all elements with the specified class
     # This will find elements where class attribute exactly matches the class_name
-    elements = root.xpath(f'.//*[@idAttr="visual_part"]')
+    elements = root.xpath('.//*[@idAttr="visual_part"]')
     # print(len(elements))
     assert len(elements) == 1
     element = elements[0]
-    element.set('className', 'hidden')
+    element.set("className", "hidden")
 
     new_template = Template("""
     <View idAttr="visual_part" visibleWhen="choice-selected" whenTagName="nature_visual" whenChoiceValue="Yes">
@@ -95,10 +99,23 @@ def twitter_visual_mod(xml_file: Path):
     </View>
     """)
 
-    make_single_select = ["nep_group-0_visual", "nep_group-1_visual", "nep_group-2_visual",
-                          "nep_group-2x_visual", "inter_group-0_visual", "inter_group-1_visual", "inter_group-2_visual"]
-    fix_whenTagName = ['val-expr_visual', 'rel-value_visual', 'nep_group-2_visual', 'inter_group-0_visual',
-                       'inter_group-1_visual', 'inter_group-2_visual']
+    make_single_select = [
+        "nep_group-0_visual",
+        "nep_group-1_visual",
+        "nep_group-2_visual",
+        "nep_group-2x_visual",
+        "inter_group-0_visual",
+        "inter_group-1_visual",
+        "inter_group-2_visual",
+    ]
+    fix_whenTagName = [
+        "val-expr_visual",
+        "rel-value_visual",
+        "nep_group-2_visual",
+        "inter_group-0_visual",
+        "inter_group-1_visual",
+        "inter_group-2_visual",
+    ]
 
     panels = []
     for i in range(4):
@@ -107,27 +124,31 @@ def twitter_visual_mod(xml_file: Path):
         img_node.set("whenTagName", "media_relevant")
         img_node.set("whenChoiceValue", f"Image {i + 1}")
         del img_node.attrib["className"]
-        name_elements_dict = {el.get('name'): el for el in img_node.xpath('.//*[@name]')}
+        name_elements_dict = {
+            el.get("name"): el for el in img_node.xpath(".//*[@name]")
+        }
         # print(name_elements_dict.keys())
-        panel = etree.Element('Panel')
+        panel = etree.Element("Panel")
         panel.set("value", f"Image: {i + 1}")
         for name, elem in name_elements_dict.items():
             assert "_visual" in name
-            elem.set('name', name.replace("_visual", f"_visual-{i}"))
+            elem.set("name", name.replace("_visual", f"_visual-{i}"))
             if name in make_single_select:
-                assert elem.get("choice") == "multiple", f"{name} has {elem.get('choice')}"
+                assert elem.get("choice") == "multiple", (
+                    f"{name} has {elem.get('choice')}"
+                )
                 elem.set("choice", "single")
 
         #
-        fix_whenTagName_elems = img_node.xpath('.//*[@whenTagName]')
+        fix_whenTagName_elems = img_node.xpath(".//*[@whenTagName]")
         # print(len(fix_whenTagName_elems))
         for elem in fix_whenTagName_elems:
-            whenTagName = elem.get('whenTagName')
+            whenTagName = elem.get("whenTagName")
             assert "_visual" in whenTagName
             # print(name)
             if whenTagName not in fix_whenTagName:  # ignore: 'nature_visual'
                 continue
-            elem.set('whenTagName', whenTagName.replace("_visual", f"_visual-{i}"))
+            elem.set("whenTagName", whenTagName.replace("_visual", f"_visual-{i}"))
         #
 
         header = img_node.xpath('./*[@className="visual_part_header"]')
@@ -137,22 +158,26 @@ def twitter_visual_mod(xml_file: Path):
         panel.append(img_node)
         panels.append(panel)
 
-    new_visual = new_template.substitute(PANELS="".join([etree.tostring(p, encoding="unicode") for p in panels]))
+    new_visual = new_template.substitute(
+        PANELS="".join([etree.tostring(p, encoding="unicode") for p in panels])
+    )
     # print(new_visual)
     new_visual_elem = etree.fromstring(new_visual)
     # element.getparent().replace(element, new_visual_elem)
     element.addnext(new_visual_elem)
-    element.set('className', 'hidden2')
+    element.set("className", "hidden2")
     # for i, s_elem in enumerate(element.getparent().getchildren()):
     #     if element == s_elem:
     #         s_elem.getparent().replace(s_elem, new_visual_elem)
     #         break
 
-    tree.write(xml_file, pretty_print=True, encoding='utf-8', xml_declaration=False)
+    tree.write(xml_file, pretty_print=True, encoding="utf-8", xml_declaration=False)
 
 
 def build_configs() -> dict[str, Path]:
-    csv_results_data = Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/extra/results.json")
+    csv_results_data = Path(
+        "/home/rsoleyma/projects/MyLabelstudioHelper/data/extra/results.json"
+    )
     data = json.load(csv_results_data.open(encoding="utf-8"))
 
     # print("RV options")
@@ -217,7 +242,9 @@ def build_configs() -> dict[str, Path]:
         rv_aliases_ = rv_aliases[:]
         rv_aliases_.remove(rv_alias)
         rv_choices = create_choice_elements(rv_type_options_, rv_aliases_)
-        text_rv_confusion_views += template.substitute(rv_name=rv_name, rv_alias=rv_alias, choices=rv_choices)
+        text_rv_confusion_views += template.substitute(
+            rv_name=rv_name, rv_alias=rv_alias, choices=rv_choices
+        )
 
     # print(text_rv_confusion_views)
     # exit()
@@ -238,8 +265,9 @@ def build_configs() -> dict[str, Path]:
         rv_aliases_ = rv_aliases[:]
         rv_aliases_.remove(rv_alias)
         rv_choices = create_choice_elements(rv_type_options_, rv_aliases_)
-        visual_rv_confusion_views += template.substitute(rv_name=rv_name, rv_alias=rv_alias, choices=rv_choices).encode(
-            "utf-8")
+        visual_rv_confusion_views += template.substitute(
+            rv_name=rv_name, rv_alias=rv_alias, choices=rv_choices
+        ).encode("utf-8")
         # print(visual_rv_confusion_views)
     # print(text_rv_confusion_views)
     base_path = Path(f"{os.getcwd()}/data/configs/step1")
@@ -260,12 +288,16 @@ def build_configs() -> dict[str, Path]:
         else:
             plaform_user_elements = ""
 
-        gen_text = pystache.render(template_text, {
-            'TEXT_RV_CONFUSION': text_rv_confusion_views,
-            'VISUAL_RV_CONFUSION': visual_rv_confusion_views,
-            'PLATFORM_ELEMENTS': platform_elements,
-            'PLATFORM_USER_ELEMENTS': plaform_user_elements
-        }, encoding="utf-8")
+        gen_text = pystache.render(
+            template_text,
+            {
+                "TEXT_RV_CONFUSION": text_rv_confusion_views,
+                "VISUAL_RV_CONFUSION": visual_rv_confusion_views,
+                "PLATFORM_ELEMENTS": platform_elements,
+                "PLATFORM_USER_ELEMENTS": plaform_user_elements,
+            },
+            encoding="utf-8",
+        )
 
         pl_gen_file = base_path / f"output/gen_{platform_file.split('.')[0]}.xml"
         pl_gen_file.write_text(gen_text, encoding="utf-8")
@@ -301,7 +333,10 @@ def check_references(root) -> dict[str, list[str]]:
                         if p := cur_elem.getparent():
                             cur_elem = p
 
-            deps = [f'{d.tag}:{d.attrib.get("name", "")} [component:{component}]' for d in depending]
+            deps = [
+                f"{d.tag}:{d.attrib.get('name', '')} [component:{component}]"
+                for d in depending
+            ]
             broken_refs[ref_name] = deps
     if broken_refs:
         print("broken references:")
@@ -312,8 +347,9 @@ def check_references(root) -> dict[str, list[str]]:
     return broken_refs
 
 
-def validate_variables_against_mustache_template(template: ParsedTemplate, variables: dict[str, Any]) -> tuple[
-    set[str], list[str]]:
+def validate_variables_against_mustache_template(
+    template: ParsedTemplate, variables: dict[str, Any]
+) -> tuple[set[str], list[str]]:
     """
     check if all variables in a mustache template are covered by the given variables.
     :param tempalte:
@@ -322,7 +358,7 @@ def validate_variables_against_mustache_template(template: ParsedTemplate, varia
     """
     missing_variables: set[str] = set()
     literal_node_keys = []
-    redundant_variables:list[str] = []
+    redundant_variables: list[str] = []
     for e in template._parse_tree:
         if isinstance(e, _LiteralNode):
             literal_node_keys.append(e.key)
@@ -333,39 +369,70 @@ def validate_variables_against_mustache_template(template: ParsedTemplate, varia
             redundant_variables.append(var)
     return missing_variables, redundant_variables
 
+
 def build_from_template(config: LabelingInterfaceBuildConfig) -> etree.ElementTree:
-    def read_pystache2lxml_tree(fp: Path, attrib: dict[str, Any]) -> etree.ElementTree:  # tree
+    def read_pystache2lxml_tree(
+        fp: Path, attrib: dict[str, Any]
+    ) -> etree.ElementTree:  # tree
         raw_text = fp.read_text(encoding="utf-8")
         template: ParsedTemplate = pystache.parse(raw_text)
-        missing, redundant = validate_variables_against_mustache_template(template, attrib)
+        missing, redundant = validate_variables_against_mustache_template(
+            template, attrib
+        )
         if missing or redundant:
-            print(f"Missing variables: {missing} / redundant variables: {redundant} for template of file: '{fp.name}'")
+            print(
+                f"Missing variables: {missing} / redundant variables: {redundant} for template of file: '{fp.name}'"
+            )
         result = pystache.render(raw_text, context=attrib)
         return etree.ElementTree(etree.fromstring(result))
 
-    components_dir = SETTINGS.labeling_configs_dir / f"components"
+    components_dir = SETTINGS.labeling_configs_dir / "components"
 
-    def parse_tree(sub_tree: etree.ElementTree,
-                   parent_attrib: Optional[dict] = None,
-                   parent_slot_fillers: Optional[list[etree.Element]] = ()) -> etree.Element:
+    def parse_tree(
+        sub_tree: etree.ElementTree,
+        parent_attrib: Optional[dict] = None,
+        parent_slot_fillers: Optional[list[etree.Element]] = (),
+    ) -> etree.Element:
         if not parent_attrib:
             parent_attrib = {}
 
         nodes_to_process = list(sub_tree.getroot().iter())
         for node in nodes_to_process:
             # some LSElements and basic html elements to ignore
-            if node.tag in ['Style', "Collapse", "Panel", 'Choices', "Header", "Text", "Image", "TextArea", "Choice",
-                            "Video", "HyperText", "Label", "TimelineLabels", "a", "div", "script"]:
+            if node.tag in [
+                "Style",
+                "Collapse",
+                "Panel",
+                "Choices",
+                "Header",
+                "Text",
+                "Image",
+                "TextArea",
+                "Choice",
+                "Video",
+                "HyperText",
+                "Label",
+                "TimelineLabels",
+                "a",
+                "div",
+                "script",
+            ]:
                 continue
             # print(node.tag)
             if isinstance(node, _Comment):
                 continue
 
-            if node.tag == 'View':
-                if (_if := node.attrib.get('if')) and (_is := node.attrib.get("is")):
+            if node.tag == "View":
+                if (_if := node.attrib.get("if")) and (_is := node.attrib.get("is")):
                     del node.attrib["if"]
                     del node.attrib["is"]
-                    node.attrib.update({"visibleWhen": "choice-selected", "whenTagName": _if, "whenChoiceValue": _is})
+                    node.attrib.update(
+                        {
+                            "visibleWhen": "choice-selected",
+                            "whenTagName": _if,
+                            "whenChoiceValue": _is,
+                        }
+                    )
                 continue
 
             if node.tag == "slot":
@@ -382,23 +449,30 @@ def build_from_template(config: LabelingInterfaceBuildConfig) -> etree.ElementTr
 
             if not src_file.exists():
                 print(
-                    f"file for component: '{node.tag}' not found, maybe: {levenhstein_get_similar_filenames(str(node.tag), components_dir)}")
+                    f"file for component: '{node.tag}' not found, maybe: {levenhstein_get_similar_filenames(str(node.tag), components_dir)}"
+                )
                 continue
 
             # parse slot-filler elements and collect
             slot_filler_nodes = []
             for slot_elem in node.getchildren():
-                slot_filler_nodes.append(parse_tree(etree.ElementTree(slot_elem), parent_attrib))
+                slot_filler_nodes.append(
+                    parse_tree(etree.ElementTree(slot_elem), parent_attrib)
+                )
 
             # merge attributes
             updated_attrib = parent_attrib | dict(node.attrib)
             # read file and do mustache rendering
             component_tree = read_pystache2lxml_tree(src_file, updated_attrib)
             # recursive tree parsing
-            component_node = parse_tree(component_tree, updated_attrib, slot_filler_nodes)
+            component_node = parse_tree(
+                component_tree, updated_attrib, slot_filler_nodes
+            )
             # add metadata
-            comment = etree.Comment(f'component:{node.tag}')
-            component_node.insert(0, comment)  # 1 is the index where comment is inserted
+            comment = etree.Comment(f"component:{node.tag}")
+            component_node.insert(
+                0, comment
+            )  # 1 is the index where comment is inserted
             component_node.attrib[SRC_COMPONENT] = node.tag
 
             node.getparent().replace(node, component_node)

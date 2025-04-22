@@ -12,11 +12,11 @@ def get_default_df(df: DataFrame, question: str, default: str) -> DataFrame:
     # todo, this should use the reverse map , as we want to work with fixed names from here on
 
     # Get the valid task_id and ann_id combinations that exist in the original data
-    valid_combinations = df[['task_id', 'ann_id', 'user_id']].drop_duplicates()
+    valid_combinations = df[["task_id", "ann_id", "user_id"]].drop_duplicates()
 
     # Create a complete DataFrame with valid combinations for the specific question
     complete_df = valid_combinations.copy()
-    complete_df['question'] = question
+    complete_df["question"] = question
 
     # Filter the original DataFrame for the specific question
     question_df = df[df["question"] == question].copy()
@@ -24,38 +24,45 @@ def get_default_df(df: DataFrame, question: str, default: str) -> DataFrame:
     # Then merge with question-specific data
     result = pd.merge(
         complete_df,
-        question_df[['task_id', 'ann_id', "updated_at", 'question', 'value_idx', 'value']],
-        on=['task_id', 'ann_id', 'question'],
-        how='left'
+        question_df[
+            ["task_id", "ann_id", "updated_at", "question", "value_idx", "value"]
+        ],
+        on=["task_id", "ann_id", "question"],
+        how="left",
     )
 
     # Fill missing values with default
-    result['value'] = result['value'].fillna(default)
-    result['value_idx'] = result['value_idx'].fillna(0).astype('int32')
+    result["value"] = result["value"].fillna(default)
+    result["value_idx"] = result["value_idx"].fillna(0).astype("int32")
 
     # Add any other columns needed from the original DataFrame
-    if 'type' in df.columns:
+    if "type" in df.columns:
         if len(question_df) > 0:
-            result['type'] = question_df['type'].iloc[0]  # Use type from the question data
+            result["type"] = question_df["type"].iloc[
+                0
+            ]  # Use type from the question data
         else:
-            type_col = df[df['question'] == question]['type'].iloc[0] if len(
-                df[df['question'] == question]) > 0 else \
-                df['type'].iloc[
-                    0]
-            result['type'] = type_col
+            type_col = (
+                df[df["question"] == question]["type"].iloc[0]
+                if len(df[df["question"] == question]) > 0
+                else df["type"].iloc[0]
+            )
+            result["type"] = type_col
     # todo verify
-    if 'updated_at' in df.columns:
+    if "updated_at" in df.columns:
         if len(question_df) > 0:
-            result['updated_at'] = question_df['updated_at'].iloc[0]  # Use type from the question data
+            result["updated_at"] = question_df["updated_at"].iloc[
+                0
+            ]  # Use type from the question data
         else:
-            type_col = df[df['question'] == question]['updated_at'].iloc[0] if len(
-                df[df['question'] == question]) > 0 else \
-                df['updated_at'].iloc[
-                    0]
-            result['updated_at'] = type_col
+            type_col = (
+                df[df["question"] == question]["updated_at"].iloc[0]
+                if len(df[df["question"] == question]) > 0
+                else df["updated_at"].iloc[0]
+            )
+            result["updated_at"] = type_col
 
     return result
-
 
 
 def prep_single_select_agreement(df: DataFrame, question: str, indices: bool = True):
@@ -68,30 +75,37 @@ def prep_single_select_agreement(df: DataFrame, question: str, indices: bool = T
     """
     # aggfunc first?!?
 
-
     try:
         deff = get_default_df(df, question)
     except Exception as e:
         raise ValueError(f"err: {e}")
 
     pivot_df = deff.pivot_table(
-        index='task_id',
-        columns='user_id',
-        values='value',
-        aggfunc='first',  # Takes the first value if there are multiple,
-        observed=False
+        index="task_id",
+        columns="user_id",
+        values="value",
+        aggfunc="first",  # Takes the first value if there are multiple,
+        observed=False,
     )
     if not indices:
         return pivot_df
-    value_indices = [c.annot_val for c in mp.raw_interface_struct.orig_choices[question].options]
+    value_indices = [
+        c.annot_val for c in mp.raw_interface_struct.orig_choices[question].options
+    ]
 
     deff = pivot_df.apply(
-        lambda col: col.map(lambda x: value_indices.index(x) if (not pd.isna(x) and x in value_indices) else x))
+        lambda col: col.map(
+            lambda x: value_indices.index(x)
+            if (not pd.isna(x) and x in value_indices)
+            else x
+        )
+    )
     return deff
 
 
 def check_all_empty(df: DataFrame) -> bool:
     return df.isna().all().all()
+
 
 def calc_agreements(df: DataFrame):
     if check_all_empty(df):
@@ -109,8 +123,7 @@ def calc_agreements(df: DataFrame):
         return 1, 1
 
 
-def calc_agreements2(deff: DataFrame
-                     ):
+def calc_agreements2(deff: DataFrame):
     cac_4raters = CAC(deff)
     # print(cac_4raters)
     try:
@@ -140,8 +153,8 @@ def prep_multi_select_agreement(df, question, options) -> dict[str, DataFrame]:
     df = df.drop(["user", "updated_at"], axis=1)
 
     # Get unique task_ids and ann_ids
-    unique_task_ids = df['task_id'].unique()
-    unique_user_ids = df['user_id'].unique()
+    unique_task_ids = df["task_id"].unique()
+    unique_user_ids = df["user_id"].unique()
 
     # Create a result DataFrame with task_id and option as indices
     result_rows = {option: [] for option in options}
@@ -150,17 +163,19 @@ def prep_multi_select_agreement(df, question, options) -> dict[str, DataFrame]:
     for task_id in unique_task_ids:
         for option in options:
             # Create a base row with task_id and option
-            row = {'task_id': task_id, 'option': option}
+            row = {"task_id": task_id, "option": option}
 
             # Add a column for each ann_id with 0 or 1
             for user_id in unique_user_ids:
                 # Check if this option was selected for this task_id, ann_id
                 selected = np.NaN
-                annotations = df[(df['task_id'] == task_id) &
-                                 (df['user_id'] == user_id) &
-                                 (df['value_idx'] != -1)]
+                annotations = df[
+                    (df["task_id"] == task_id)
+                    & (df["user_id"] == user_id)
+                    & (df["value_idx"] != -1)
+                ]
 
-                if not annotations.empty and option in annotations['value'].values:
+                if not annotations.empty and option in annotations["value"].values:
                     selected = 1
                 # Add this ann_id as a column
                 row[user_id] = selected
@@ -169,7 +184,11 @@ def prep_multi_select_agreement(df, question, options) -> dict[str, DataFrame]:
 
     result_dfs = {}
     for option in options:
-        result_dfs[option] = pd.DataFrame(result_rows[option]).set_index(['task_id']).drop("option", axis=1)
+        result_dfs[option] = (
+            pd.DataFrame(result_rows[option])
+            .set_index(["task_id"])
+            .drop("option", axis=1)
+        )
 
     """ all rows together
     all_rows = []
@@ -188,30 +207,34 @@ def export_annotations2csv(mp: ProjectResult) -> Path:
     df = df.dropna(subset=["type"])
 
     tasks_with_users = {}
-    for task_id, group in df.groupby('task_id'):
-        tasks_with_users[task_id] = group['user_id'].unique().tolist()
+    for task_id, group in df.groupby("task_id"):
+        tasks_with_users[task_id] = group["user_id"].unique().tolist()
 
     # Now prepare the final dataframe
     result_rows = []
 
     # Process each task
     for task_id, users in tasks_with_users.items():
-        row = {'task_id': task_id, 'user_ids': users}
+        row = {"task_id": task_id, "user_ids": users}
 
         # Get all data for this task
-        task_data = df[df['task_id'] == task_id]
+        task_data = df[df["task_id"] == task_id]
 
         # Process each question that appears in this task
-        for question in task_data['question'].dropna().unique():
+        for question in task_data["question"].dropna().unique():
             # Initialize a list of empty lists, one per user
             values_by_user = [[] for _ in users]
 
             # Get all answers for this question
-            question_data = task_data[task_data['question'] == question]
+            question_data = task_data[task_data["question"] == question]
 
             # Fill in values for each user
             for i, user_id in enumerate(users):
-                user_values = question_data[question_data['user_id'] == user_id]['value'].dropna().tolist()
+                user_values = (
+                    question_data[question_data["user_id"] == user_id]["value"]
+                    .dropna()
+                    .tolist()
+                )
                 values_by_user[i] = user_values
 
             # Add to row
@@ -228,9 +251,11 @@ def export_annotations2csv(mp: ProjectResult) -> Path:
             return list_of_lists
 
         # Format each inner list as comma-separated values
-        formatted_inner_lists = [','.join(map(str, inner_list)) for inner_list in list_of_lists]
+        formatted_inner_lists = [
+            ",".join(map(str, inner_list)) for inner_list in list_of_lists
+        ]
 
         # Join the formatted inner lists with semicolons
-        return ';'.join(formatted_inner_lists)
+        return ";".join(formatted_inner_lists)
 
     final_result.to_csv("tt.csv")

@@ -1,12 +1,14 @@
-import json
-from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from ls_helper.models.interface_models import InterfaceData, ProjectVariableExtensions, FieldExtension
+from ls_helper.models.interface_models import (
+    InterfaceData,
+    ProjectVariableExtensions,
+    FieldExtension,
+)
 from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.new_models import ProjectAnnotationResultsModel, get_project
+from ls_helper.new_models import get_project
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from tools.files import read_data
@@ -17,18 +19,22 @@ logger = get_logger(__file__)
 setup_app = typer.Typer(name="Setup projects", pretty_exceptions_show_locals=True)
 
 
-@setup_app.command(short_help="[setup] Required for annotation result processing. needs project-data")
+@setup_app.command(
+    short_help="[setup] Required for annotation result processing. needs project-data"
+)
 def generate_variable_extensions_template(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
-        add_if_not_exists: Annotated[bool, typer.Option()] = True,
-        overwrite_if_exists: Annotated[bool, typer.Option()] = False,
+    id: Annotated[int, typer.Option()] = None,
+    alias: Annotated[str, typer.Option("-a")] = None,
+    platform: Annotated[str, typer.Argument()] = None,
+    language: Annotated[str, typer.Argument()] = None,
+    add_if_not_exists: Annotated[bool, typer.Option()] = True,
+    overwrite_if_exists: Annotated[bool, typer.Option()] = False,
 ):
     po = get_project(id, alias, platform, language)
 
-    def get_variable_extensions(annotation_struct: InterfaceData) -> ProjectVariableExtensions:
+    def get_variable_extensions(
+        annotation_struct: InterfaceData,
+    ) -> ProjectVariableExtensions:
         data: dict[str, FieldExtension] = {}
 
         for field in annotation_struct.inputs:
@@ -56,13 +62,16 @@ def generate_variable_extensions_template(
         po.save_extensions(res_template, "alt")
 
 
-@setup_app.command(short_help="[setup] Just needs to be run once, for each new LS project")
+@setup_app.command(
+    short_help="[setup] Just needs to be run once, for each new LS project"
+)
 def setup_project_settings(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
-        maximum_annotations: Annotated[int, typer.Option()] = 2):
+    id: Annotated[int, typer.Option()] = None,
+    alias: Annotated[str, typer.Option("-a")] = None,
+    platform: Annotated[str, typer.Argument()] = None,
+    language: Annotated[str, typer.Argument()] = None,
+    maximum_annotations: Annotated[int, typer.Option()] = 2,
+):
     po = get_project(id, alias, platform, language)
     values = ProjectMgmt.default_project_values()
     if maximum_annotations:

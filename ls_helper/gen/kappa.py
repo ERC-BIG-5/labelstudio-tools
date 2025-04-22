@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from itertools import combinations
 import matplotlib.pyplot as plt
 import seaborn as sns
 from collections import defaultdict
@@ -137,17 +136,21 @@ def paired_multilabel_kappa(item_data):
 
     # Create pandas DataFrame with coder names
     kappa_df = pd.DataFrame(
-        kappa_matrix,
-        index=sorted(unique_coders),
-        columns=sorted(unique_coders)
+        kappa_matrix, index=sorted(unique_coders), columns=sorted(unique_coders)
     )
 
     # Identify items with highest and lowest agreement
-    item_agreements = [(pair, i, jaccard) for i, (pair, jaccard) in enumerate(all_jaccard_scores)]
+    item_agreements = [
+        (pair, i, jaccard) for i, (pair, jaccard) in enumerate(all_jaccard_scores)
+    ]
     item_agreements.sort(key=lambda x: x[2])
 
-    worst_agreements = item_agreements[:5] if len(item_agreements) >= 5 else item_agreements
-    best_agreements = item_agreements[-5:] if len(item_agreements) >= 5 else reversed(item_agreements)
+    worst_agreements = (
+        item_agreements[:5] if len(item_agreements) >= 5 else item_agreements
+    )
+    best_agreements = (
+        item_agreements[-5:] if len(item_agreements) >= 5 else reversed(item_agreements)
+    )
 
     # Compile results
     results = {
@@ -156,7 +159,7 @@ def paired_multilabel_kappa(item_data):
         "kappa_matrix": kappa_df,
         "worst_agreements": worst_agreements,
         "best_agreements": list(reversed(best_agreements)),
-        "interpretation": interpret_kappa(lights_kappa)
+        "interpretation": interpret_kappa(lights_kappa),
     }
 
     return results
@@ -223,8 +226,8 @@ def plot_kappa_heatmap(kappa_matrix, title="Pairwise Cohen's Kappa Values"):
         vmax=1,
         center=0,
         square=True,
-        linewidths=.5,
-        cbar_kws={"shrink": .5}
+        linewidths=0.5,
+        cbar_kws={"shrink": 0.5},
     )
 
     plt.title(title)
@@ -278,8 +281,10 @@ def create_test_data(n_items=30, n_coders=5, n_categories=8, sparsity=0.7):
 
         for coder in selected_coders:
             # Add noise based on coder's experience level (using coder number as proxy)
-            coder_num = int(coder.split('_')[1])
-            experience = 1 - (coder_num / n_coders) * 0.8  # Higher number = less experienced
+            coder_num = int(coder.split("_")[1])
+            experience = (
+                1 - (coder_num / n_coders) * 0.8
+            )  # Higher number = less experienced
 
             # Create a similar set with controlled variation
             new_set = set()
@@ -297,7 +302,9 @@ def create_test_data(n_items=30, n_coders=5, n_categories=8, sparsity=0.7):
             coder_sets.append(new_set)
 
         # Add to the data
-        item_data.append((selected_coders[0], selected_coders[1], coder_sets[0], coder_sets[1]))
+        item_data.append(
+            (selected_coders[0], selected_coders[1], coder_sets[0], coder_sets[1])
+        )
 
     return item_data
 
@@ -324,19 +331,21 @@ if __name__ == "__main__":
     print(f"Interpretation: {results['interpretation']}")
 
     print("\nPairwise Cohen's Kappa between coders:")
-    for pair, kappa in sorted(results['pair_agreements'].items(), key=lambda x: x[1], reverse=True):
+    for pair, kappa in sorted(
+        results["pair_agreements"].items(), key=lambda x: x[1], reverse=True
+    ):
         print(f"  {pair[0]} - {pair[1]}: {kappa:.3f} - {interpret_kappa(kappa)}")
 
     # Plot heatmap of kappa values between coders
-    plot_kappa_heatmap(results['kappa_matrix'])
+    plot_kappa_heatmap(results["kappa_matrix"])
 
     # Show examples of high and low agreement items
     print("\nItems with lowest agreement:")
-    for pair, idx, jaccard in results['worst_agreements']:
+    for pair, idx, jaccard in results["worst_agreements"]:
         print(f"  Item {idx}: {pair[0]}-{pair[1]} agreement = {jaccard:.3f}")
 
     print("\nItems with highest agreement:")
-    for pair, idx, jaccard in results['best_agreements']:
+    for pair, idx, jaccard in results["best_agreements"]:
         print(f"  Item {idx}: {pair[0]}-{pair[1]} agreement = {jaccard:.3f}")
 
     plt.show()

@@ -12,10 +12,10 @@ NO_SINGLE_CHOICE_INDEX = 99
 
 
 class VariableType(Enum):
-    input= auto()
-    choice= auto()
-    text= auto()
-    range= auto()
+    input = auto()
+    choice = auto()
+    text = auto()
+    range = auto()
 
 
 class VariableModel(BaseModel):
@@ -25,12 +25,11 @@ class VariableModel(BaseModel):
     required: bool = False
 
 
-
 class ChoiceVariableModel(VariableModel):
     orig_options: list[str]
     _all_options: Optional[list[str]] = None
     default: Optional[str]
-    choice: str # single, multiple
+    choice: str  # single, multiple
 
     # todo, a way to hand in inputs.
     @model_validator(mode="after")
@@ -57,4 +56,3 @@ class ChoiceVariableModel(VariableModel):
         if val != NO_SINGLE_CHOICE:
             logger.warning(f"add value to options list!!! {val}")
         return self._all_options.index(val)
-

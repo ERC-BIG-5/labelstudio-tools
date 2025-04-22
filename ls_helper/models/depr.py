@@ -5,14 +5,23 @@ from pydantic import BaseModel, Field
 
 class TaskAnnotationItem(BaseModel):
     name: str
-    type_: Literal["single", "multiple", "text", "datetime", "list-single", "list-multiple", "list-text"] = Field(None,
-                                                                                                                  alias="type")
+    type_: Literal[
+        "single",
+        "multiple",
+        "text",
+        "datetime",
+        "list-single",
+        "list-multiple",
+        "list-text",
+    ] = Field(None, alias="type")
     num_coders: int
     values: list[list[str]] = Field(default_factory=list)
     value_indices: list[list[int]] = Field(default_factory=list)
     users: list[int | str] = Field(default_factory=list)
 
-    def add(self, value: str | list[str], value_index: int | list[int], user_id: int) -> None:
+    def add(
+        self, value: str | list[str], value_index: int | list[int], user_id: int
+    ) -> None:
         self.values.append(value)
         self.value_indices.append(value_index)
         self.users.append(user_id)
@@ -42,12 +51,28 @@ class TaskAnnotResults(BaseModel):
     relevant_input_data: dict[str, Any]
     users: list[int]
 
-    def add(self, item_name: str, value: list[str] | list[list[str]], value_index: list[int] | list[list[int]],
-            user_id: int,
-            type_: Literal[
-                "single", "multiple", "text", "datetime", "list-single", "list-multiple", "list-text"]) -> None:
-        annotation_item = self.items.setdefault(item_name, TaskAnnotationItem.model_validate(
-            {"name": item_name, "type": type_, "num_coders": self.num_coders}))
+    def add(
+        self,
+        item_name: str,
+        value: list[str] | list[list[str]],
+        value_index: list[int] | list[list[int]],
+        user_id: int,
+        type_: Literal[
+            "single",
+            "multiple",
+            "text",
+            "datetime",
+            "list-single",
+            "list-multiple",
+            "list-text",
+        ],
+    ) -> None:
+        annotation_item = self.items.setdefault(
+            item_name,
+            TaskAnnotationItem.model_validate(
+                {"name": item_name, "type": type_, "num_coders": self.num_coders}
+            ),
+        )
 
         annotation_item.add(value, value_index, user_id)
 

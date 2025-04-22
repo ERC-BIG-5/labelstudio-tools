@@ -11,16 +11,18 @@ logger = get_logger(__file__)
 
 annotations_app = typer.Typer(name="Annotations", pretty_exceptions_show_locals=True)
 
+
 @annotations_app.command(short_help="[stats] Annotation basic results")
 def annotations(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
-        accepted_ann_age: Annotated[
-            int, typer.Option(help="Download annotations if older than x hours")] = 6,
-        min_coders: Annotated[int, typer.Option()] = 2) -> tuple[
-    Path, str]:
+    id: Annotated[int, typer.Option()] = None,
+    alias: Annotated[str, typer.Option("-a")] = None,
+    platform: Annotated[str, typer.Argument()] = None,
+    language: Annotated[str, typer.Argument()] = None,
+    accepted_ann_age: Annotated[
+        int, typer.Option(help="Download annotations if older than x hours")
+    ] = 6,
+    min_coders: Annotated[int, typer.Option()] = 2,
+) -> tuple[Path, str]:
     po = get_project(id, alias, platform, language)
     po.validate_extensions()
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
@@ -31,6 +33,7 @@ def annotations(
     res.to_csv(dest, index=False)
     print(f"annotation results -> {dest}")
     return dest
+
 
 @annotations_app.command(short_help="[setup] ...")
 def e():

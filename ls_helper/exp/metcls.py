@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, Annotated, get_type_hints, get_origin, get_args, Any
+from typing import Optional, Annotated, get_origin, get_args, Any
 import json
 import os
 from pydantic import BaseModel, Field, ConfigDict
@@ -24,7 +24,7 @@ class Storage(BaseModel):
 
         # Generate filename if not provided
         if filename is None:
-            if hasattr(self.owner, 'name'):
+            if hasattr(self.owner, "name"):
                 filename = f"{self.owner.name}.json"
             else:
                 filename = "model.json"
@@ -36,7 +36,7 @@ class Storage(BaseModel):
 
         # Dump the model as JSON
         filepath = self.dir / filename
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             # Exclude any Storage fields to avoid circular references
             model_dict = self.owner.model_dump()
             # Find and remove storage fields to avoid circular references
@@ -54,7 +54,7 @@ class MyMetaclass(pydantic_metaclass):
     def __new__(mcs, name, bases, attrs):
         # Check for annotations in the class attributes
         print(attrs)
-        annotations = attrs.get('__annotations__', {})
+        annotations = attrs.get("__annotations__", {})
 
         # Process annotations to find Storage fields
         for attr_name, attr_type in annotations.items():
@@ -68,7 +68,7 @@ class MyMetaclass(pydantic_metaclass):
                 if issubclass(base_type, Storage):
                     if not metadata or isinstance(metadata[0], tuple):
                         raise ValueError(f"no metadata for {metadata}")
-                    dir_name =  metadata[0]
+                    dir_name = metadata[0]
         #
         if "model_post_init" in attrs:
             raise ValueError(f"{name} has already a model_post_init")
@@ -79,18 +79,20 @@ class MyMetaclass(pydantic_metaclass):
             if not storage:
                 self.storage = Storage(dir=dir_name, owner=self)
 
-        attrs['model_post_init'] = new_init
+        attrs["model_post_init"] = new_init
 
         # Call the parent metaclass's __new__ method
         return super().__new__(mcs, name, bases, attrs)
 
+
 ff = "my-c"
+
 
 # Now use Annotated in field annotations with "dep" as the directory name
 class MyClass(BaseModel, metaclass=MyMetaclass):
     name: str
     age: int = Field(exclude=True)
-    storage: Annotated[Storage, ff] = Field(None,exclude=True)
+    storage: Annotated[Storage, ff] = Field(None, exclude=True)
 
 
 mc = MyClass(name="3da", age=2)

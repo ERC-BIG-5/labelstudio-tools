@@ -32,9 +32,18 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_paths(self, info: ValidationInfo) -> "Settings":
         self.BASE_DATA_DIR.mkdir(parents=True, exist_ok=True)
-        sub_dirs = {"project", "variable_extensions", "annotations", "view",
-                    "agreements", "annotations_results", "labeling_configs",
-                    "plots", "tasks", "temp"}
+        sub_dirs = {
+            "project",
+            "variable_extensions",
+            "annotations",
+            "view",
+            "agreements",
+            "annotations_results",
+            "labeling_configs",
+            "plots",
+            "tasks",
+            "temp",
+        }
         for sd in sub_dirs:
             (self.BASE_DATA_DIR / sd).mkdir(parents=True, exist_ok=True)
 
@@ -43,8 +52,11 @@ class Settings(BaseSettings):
     @property
     def client(self) -> "LabelStudioBase":
         from ls_helper.my_labelstudio_client.client import LabelStudioBase
+
         if self.__client is None:
-            self.__client = LabelStudioBase(base_url=self.LS_HOSTNAME, api_key=self.LS_API_KEY)
+            self.__client = LabelStudioBase(
+                base_url=self.LS_HOSTNAME, api_key=self.LS_API_KEY
+            )
         return self.__client
 
     @property
@@ -136,5 +148,6 @@ class DFCols:
 @dataclass
 class AllCols(DFRawCols, DFCols):
     pass
+
 
 TIMESTAMP_FORMAT = "%Y%m%d_%H%M"

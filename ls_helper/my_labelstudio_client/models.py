@@ -142,7 +142,7 @@ class ProjectModel(BaseModel):
     Flag to detect is project ready for labeling
     """
     # todo
-    skip_queue: Optional[dict | str] = 'REQUEUE_FOR_OTHERS'  # ProjectSkipQueue
+    skip_queue: Optional[dict | str] = "REQUEUE_FOR_OTHERS"  # ProjectSkipQueue
     reveal_preannotations_interactively: Optional[bool] = Field(default=False)
     """
     Reveal pre-annotations interactively
@@ -173,9 +173,18 @@ class ProjectViewDataModel(BaseModel):
 
     semantic_search: Optional[list] = None
     columnsDisplay: Optional[dict] = None
-    filters: TypedDict("filters", {"conjunction": Literal["and", "or"], "items": list[TypedDict("items", {
-        "filter": str, "operator": str, "type": str, "value": str | int
-    })]}) = None
+    filters: TypedDict(
+        "filters",
+        {
+            "conjunction": Literal["and", "or"],
+            "items": list[
+                TypedDict(
+                    "items",
+                    {"filter": str, "operator": str, "type": str, "value": str | int},
+                )
+            ],
+        },
+    ) = None
     ordering: Optional[list[str]] = None
 
 
@@ -201,12 +210,14 @@ class Task(TaskCreate):
 
     model_config = ConfigDict(extra="allow")
 
+
 class TaskCreateList(RootModel):
     root: list[TaskCreate]
 
 
 class TaskList(RootModel):
     root: list[Task]
+
 
 # from LS
 class ProjectViewModel(ProjectViewCreate):
@@ -221,7 +232,10 @@ class UserModel(BaseModel):
     last_name: str
     username: str
     email: str
-    last_activity: Annotated[datetime, PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used='always')]
+    last_activity: Annotated[
+        datetime,
+        PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used="always"),
+    ]
     avatar: Optional[str] = None
     initials: str
     phone: Optional[str] = None
@@ -301,7 +315,10 @@ class TaskAnnotationModel(BaseModel):
     lead_time: float
     prediction: dict
     result_count: int
-    unique_id: Annotated[uuid.UUID, PlainSerializer(lambda v: str(v), return_type=str, when_used='always')]
+    unique_id: Annotated[
+        uuid.UUID,
+        PlainSerializer(lambda v: str(v), return_type=str, when_used="always"),
+    ]
     import_id: Optional[int] = None
     last_action: Optional[str] = None
     task: int

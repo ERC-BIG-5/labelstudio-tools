@@ -17,26 +17,27 @@ _app = pipeline_app
 
 @_app.command()
 def create_pipeline_flow(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
-        destination: Annotated[Path, typer.Argument()] = None,
-        label_filter: Annotated[str, typer.Option("-f")] = None,
-        add_label: Annotated[str, typer.Option("-l")] = None,
+    id: Annotated[int, typer.Option()] = None,
+    alias: Annotated[str, typer.Option("-a")] = None,
+    platform: Annotated[str, typer.Argument()] = None,
+    language: Annotated[str, typer.Argument()] = None,
+    destination: Annotated[Path, typer.Argument()] = None,
+    label_filter: Annotated[str, typer.Option("-f")] = None,
+    add_label: Annotated[str, typer.Option("-l")] = None,
 ):
     pass
 
 
 @_app.command()
 def reformat_for_datapipelines(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
-        destination: Annotated[Path, typer.Argument()] = None,
-        accepted_ann_age: Annotated[
-            int, typer.Option(help="Download annotations if older than x hours")] = 6,
+    id: Annotated[int, typer.Option()] = None,
+    alias: Annotated[str, typer.Option("-a")] = None,
+    platform: Annotated[str, typer.Argument()] = None,
+    language: Annotated[str, typer.Argument()] = None,
+    destination: Annotated[Path, typer.Argument()] = None,
+    accepted_ann_age: Annotated[
+        int, typer.Option(help="Download annotations if older than x hours")
+    ] = 6,
 ):
     """
     create a file with a dict platform_id: annotation, which can be ingested by the pipeline
@@ -49,16 +50,22 @@ def reformat_for_datapipelines(
     po = get_project(id, alias, platform, language)
     local, results = ProjectMgmt.get_recent_annotations(po.id, accepted_ann_age)
     # print(results)
-    am: ProjectAnnotationResultsModel = ProjectAnnotationResultsModel(task_results=results)
+    am: ProjectAnnotationResultsModel = ProjectAnnotationResultsModel(
+        task_results=results
+    )
     print(am.stats())
     am = am.drop_cancellations()
-    #print(am.stats())
+    # print(am.stats())
     res = {}
-    #print(am.completed())
+    # print(am.completed())
     for task_result in am.task_results:
-        res[task_result.data["platform_id"]] = {po.id: task_result.model_dump(exclude={"data"})}
+        res[task_result.data["platform_id"]] = {
+            po.id: task_result.model_dump(exclude={"data"})
+        }
 
     if not destination:
-        destination = SETTINGS.temp_file_path / f"annotations_for_datapipelines_{po.id}.json"
+        destination = (
+            SETTINGS.temp_file_path / f"annotations_for_datapipelines_{po.id}.json"
+        )
         destination.write_text(json.dumps(res))
         print(f"annotations reformatted -> {destination.as_posix()}")

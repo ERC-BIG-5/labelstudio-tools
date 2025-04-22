@@ -4,19 +4,23 @@ import typing
 from functools import lru_cache
 from typing import Optional
 import json
-from pathlib import Path
-from datetime import datetime
 import httpx
 from httpx import Response
 
-from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectModel, UserModel, ProjectViewCreate, \
-    TaskCreate, TaskResultModel
+from ls_helper.my_labelstudio_client.models import (
+    ProjectViewModel,
+    ProjectModel,
+    UserModel,
+    ProjectViewCreate,
+    TaskCreate,
+    TaskResultModel,
+)
 
 from ls_helper.my_labelstudio_client.models import Task
 from tools.project_logging import get_logger
 
 if typing.TYPE_CHECKING:
-    from ls_helper.models import ProjectAnnotations
+    pass
 
 
 class LabelStudioEnvironment(enum.Enum):
@@ -59,7 +63,12 @@ class BaseClientWrapper:
 
 class SyncClientWrapper(BaseClientWrapper):
     def __init__(
-            self, *, api_key: str, base_url: str, timeout: Optional[float] = None, httpx_client: httpx.Client
+        self,
+        *,
+        api_key: str,
+        base_url: str,
+        timeout: Optional[float] = None,
+        httpx_client: httpx.Client,
     ):
         super().__init__(api_key=api_key, base_url=base_url, timeout=timeout)
         self.httpx_client = httpx.Client(
@@ -107,16 +116,18 @@ class LabelStudioBase:
     """
 
     def __init__(
-            self,
-            *,
-            base_url: Optional[str] = None,
-            environment: LabelStudioEnvironment = LabelStudioEnvironment.DEFAULT,
-            api_key: Optional[str] = os.getenv("LABEL_STUDIO_API_KEY"),
-            timeout: Optional[float] = None,
-            follow_redirects: Optional[bool] = True,
-            httpx_client: Optional[httpx.Client] = None
+        self,
+        *,
+        base_url: Optional[str] = None,
+        environment: LabelStudioEnvironment = LabelStudioEnvironment.DEFAULT,
+        api_key: Optional[str] = os.getenv("LABEL_STUDIO_API_KEY"),
+        timeout: Optional[float] = None,
+        follow_redirects: Optional[bool] = True,
+        httpx_client: Optional[httpx.Client] = None,
     ):
-        _defaulted_timeout = timeout if timeout is not None else 60 if httpx_client is None else None
+        _defaulted_timeout = (
+            timeout if timeout is not None else 60 if httpx_client is None else None
+        )
         if api_key is None:
             raise ApiError(
                 body="The client must be instantiated be either passing in api_key or setting LABEL_STUDIO_API_KEY"
@@ -126,7 +137,9 @@ class LabelStudioBase:
             api_key=api_key,
             httpx_client=httpx_client
             if httpx_client is not None
-            else httpx.Client(timeout=_defaulted_timeout, follow_redirects=follow_redirects)
+            else httpx.Client(
+                timeout=_defaulted_timeout, follow_redirects=follow_redirects
+            )
             if follow_redirects is not None
             else httpx.Client(timeout=_defaulted_timeout),
             timeout=_defaulted_timeout,
@@ -159,45 +172,62 @@ class LabelStudioBase:
             return [ProjectModel.model_validate(p) for p in resp.json()["results"]]
 
     def get_project(self, project_id) -> ProjectModel:
-        resp = self._client_wrapper.httpx_client.get("/api/projects/{}".format(project_id))
+        resp = self._client_wrapper.httpx_client.get(
+            "/api/projects/{}".format(project_id)
+        )
         if resp.status_code == 200:
             return ProjectModel.model_validate(resp.json())
 
     def patch_project(self, project_id: int, data: dict) -> Optional[ProjectModel]:
-        resp = self._client_wrapper.httpx_client.patch(f"/api/projects/{project_id}", json=data)
+        resp = self._client_wrapper.httpx_client.patch(
+            f"/api/projects/{project_id}", json=data
+        )
         if resp.status_code == 200:
             return ProjectModel.model_validate(resp.json())
         else:
             print(resp.status_code, resp.json())
 
-    def get_project_annotations(self, project_id: int) -> Optional[list[TaskResultModel]]:
-        export_create = self._client_wrapper.httpx_client.post(f"/api/projects/{project_id}/exports", json={
-            "task_filter_options": {"only_with_annotations": True}
-        })
+    def get_project_annotations(
+        self, project_id: int
+    ) -> Optional[list[TaskResultModel]]:
+        export_create = self._client_wrapper.httpx_client.post(
+            f"/api/projects/{project_id}/exports",
+            json={"task_filter_options": {"only_with_annotations": True}},
+        )
         export_data = export_create.json()
         if export_create.status_code == 404:
-            self.logger.error(f"project not found: {project_id}\n{export_create.json()}")
+            self.logger.error(
+                f"project not found: {project_id}\n{export_create.json()}"
+            )
             return None
         if export_create.status_code != 201:
-                return None
+            return None
         export_id = export_data["id"]
 
-        dl = self._client_wrapper.httpx_client.get(f"api/projects/{project_id}/exports/{export_id}/download")
+        dl = self._client_wrapper.httpx_client.get(
+            f"api/projects/{project_id}/exports/{export_id}/download"
+        )
 
         result = dl.json()
 
         return [TaskResultModel.model_validate(t) for t in result]
 
     def get_project_views(self, project_id: int) -> list[ProjectViewModel]:
-        resp = self._client_wrapper.httpx_client.get(f"api/dm/views/?project={project_id}")
+        resp = self._client_wrapper.httpx_client.get(
+            f"api/dm/views/?project={project_id}"
+        )
         return [ProjectViewModel.model_validate(v) for v in resp.json()]
 
     def get_users(self, dump: bool = True):
         resp = self._client_wrapper.httpx_client.get("/api/users")
         users = list(map(UserModel.model_validate, resp.json()))
         if dump:
-            json.dump(list(map(UserModel.model_dump, users)), open("data/users.json", "w", encoding="utf-8"),
-                      ensure_ascii=False, indent=2)
+            json.dump(
+                list(map(UserModel.model_dump, users)),
+                open("data/users.json", "w", encoding="utf-8"),
+                ensure_ascii=False,
+                indent=2,
+            )
         return users
 
     def get_user(self, user_id: int) -> Optional[UserModel]:
@@ -206,34 +236,44 @@ class LabelStudioBase:
             return UserModel.model_validate(resp.json())
 
     def update_user(self, user: UserModel):
-        resp = self._client_wrapper.httpx_client.patch(f"/api/users/{user.id}", json=user.model_dump(exclude={"email"}))
+        resp = self._client_wrapper.httpx_client.patch(
+            f"/api/users/{user.id}", json=user.model_dump(exclude={"email"})
+        )
         print(resp.status_code, resp.text)
 
     def create_project(self, data: ProjectModel):
-        resp = self._client_wrapper.httpx_client.post(f"/api/projects/", json=data.model_dump(exclude_defaults=True))
+        resp = self._client_wrapper.httpx_client.post(
+            "/api/projects/", json=data.model_dump(exclude_defaults=True)
+        )
         if resp.status_code != 201:
-            raise ValueError(f"failed to create project: {resp.status_code}\n{resp.json()}")
+            raise ValueError(
+                f"failed to create project: {resp.status_code}\n{resp.json()}"
+            )
         return ProjectModel.model_validate(resp.json())
 
     def patch_view(self, view_id: int, data: dict):
-        resp = self._client_wrapper.httpx_client.patch(f"/api/dm/views/{view_id}", json=data)
+        resp = self._client_wrapper.httpx_client.patch(
+            f"/api/dm/views/{view_id}", json=data
+        )
         return resp
 
     def get_task(self, task_id: int):
         resp = self._client_wrapper.httpx_client.get(f"/api/tasks/{task_id}")
         return resp
 
-    def get_task_list(self,
-                      *,
-                      page: Optional[int] = None,
-                      page_size: Optional[int] = 3000,
-                      project: Optional[int] = None,
-                      view: Optional[int] = None,
-                      resolve_url: Optional[bool] = False,
-                      fields: Optional[typing.Literal["all", "task_only"]] = "all",
-                      review: Optional[bool] = None,
-                      include: Optional[str] = None,
-                      query: Optional[str] = None) -> list[Task]:
+    def get_task_list(
+        self,
+        *,
+        page: Optional[int] = None,
+        page_size: Optional[int] = 3000,
+        project: Optional[int] = None,
+        view: Optional[int] = None,
+        resolve_url: Optional[bool] = False,
+        fields: Optional[typing.Literal["all", "task_only"]] = "all",
+        review: Optional[bool] = None,
+        include: Optional[str] = None,
+        query: Optional[str] = None,
+    ) -> list[Task]:
         # https://api.labelstud.io/api-reference/api-reference/tasks/list
         params = {}
         if page is not None:
@@ -254,7 +294,9 @@ class LabelStudioBase:
             params["include"] = include
         if query is not None:
             params["query"] = query
-        resp = self._client_wrapper.httpx_client.get("/api/tasks", params=params, timeout=60)
+        resp = self._client_wrapper.httpx_client.get(
+            "/api/tasks", params=params, timeout=60
+        )
         if resp.status_code != 200:
             raise ValueError(f"failed to get tasks: {resp.status_code}\n{resp.json()}")
         tasks_data = resp.json()["tasks"]
@@ -264,25 +306,32 @@ class LabelStudioBase:
         pass
 
     def patch_task(self, task_id: int, task: Task):
-        resp = self._client_wrapper.httpx_client.patch(f"/api/tasks/{task_id}", json=task.model_dump())
+        resp = self._client_wrapper.httpx_client.patch(
+            f"/api/tasks/{task_id}", json=task.model_dump()
+        )
         return resp
 
     def add_prediction(self, task_id, data: dict):
         data["task"] = task_id
-        resp = self._client_wrapper.httpx_client.post(f"/api/predictions", json=data)
+        resp = self._client_wrapper.httpx_client.post("/api/predictions", json=data)
         return resp
 
     def list_import_storages(self, project: Optional[int] = None) -> Response:
-        resp = self._client_wrapper.httpx_client.get("api/storages/localfiles/", params={"project": project})
+        resp = self._client_wrapper.httpx_client.get(
+            "api/storages/localfiles/", params={"project": project}
+        )
         return resp
 
     def validate_project_labeling_config(self, p_id: int, label_config: str):
-        resp = self._client_wrapper.httpx_client.post(f"/api/projects/{p_id}/validate/",
-                                                      json={"label_config": label_config})
+        resp = self._client_wrapper.httpx_client.post(
+            f"/api/projects/{p_id}/validate/", json={"label_config": label_config}
+        )
         return resp
 
     def create_view(self, data: ProjectViewCreate) -> ProjectViewModel:
-        resp = self._client_wrapper.httpx_client.post(f"/api/dm/views/", json=data.model_dump(exclude_defaults=True))
+        resp = self._client_wrapper.httpx_client.post(
+            "/api/dm/views/", json=data.model_dump(exclude_defaults=True)
+        )
         if resp.status_code != 201:
             print(resp)
             raise ValueError(resp.json())
@@ -290,15 +339,19 @@ class LabelStudioBase:
         return view
 
     def create_task(self, data: TaskCreate):
-        resp = self._client_wrapper.httpx_client.post(f"/api/tasks/", json=data.model_dump())
+        resp = self._client_wrapper.httpx_client.post(
+            "/api/tasks/", json=data.model_dump()
+        )
         if resp.status_code != 201:
             print(resp)
             raise ValueError(resp.json())
         return resp
 
     def import_tasks(self, project_id: int, tasks: list[TaskCreate]):
-        resp = self._client_wrapper.httpx_client.post(f"/api/projects/{project_id}/import?return_task_ids=true",
-                                                      json=[t.model_dump()["data"] for t in tasks])
+        resp = self._client_wrapper.httpx_client.post(
+            f"/api/projects/{project_id}/import?return_task_ids=true",
+            json=[t.model_dump()["data"] for t in tasks],
+        )
         if resp.status_code != 201:
             print(resp)
             raise ValueError(resp.json())
@@ -313,11 +366,14 @@ _GLOBAL_CLIENT: Optional[LabelStudioBase] = None
 
 
 @lru_cache
-def ls_client(dev: Optional[bool] = None, ignore_global_client: bool = False) -> LabelStudioBase:
+def ls_client(
+    dev: Optional[bool] = None, ignore_global_client: bool = False
+) -> LabelStudioBase:
     global _GLOBAL_CLIENT
     if _GLOBAL_CLIENT and not ignore_global_client:
         return _GLOBAL_CLIENT
     from ls_helper.settings import SETTINGS, DEV_SETTINGS
+
     if dev is None:
         dev = False
     if not DEV_SETTINGS:

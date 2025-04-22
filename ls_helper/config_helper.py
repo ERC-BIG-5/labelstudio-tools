@@ -4,9 +4,17 @@ from pathlib import Path
 from deepdiff import DeepDiff
 from lxml.etree import Element
 
-from ls_helper.models.interface_models import InterfaceData, ProjectVariableExtensions, IField, IChoice, IChoices, \
-    ITextArea, IText
-#from ls_helper.new_models import ProjectData
+from ls_helper.models.interface_models import (
+    InterfaceData,
+    ProjectVariableExtensions,
+    IField,
+    IChoice,
+    IChoices,
+    ITextArea,
+    IText,
+)
+
+# from ls_helper.new_models import ProjectData
 from ls_helper.settings import SETTINGS
 
 
@@ -81,10 +89,7 @@ def find_duplicates(xml_file):
     # Start from root
     find_name(root, "")
 
-    return {
-        k: v for k, v in unique_names.items() if len(v) > 1
-    }
-
+    return {k: v for k, v in unique_names.items() if len(v) > 1}
 
 
 def parse_label_config_xml(xml_string) -> InterfaceData:
@@ -97,26 +102,35 @@ def parse_label_config_xml(xml_string) -> InterfaceData:
 
     for el in root.iter():
         if el.tag == "Choices":
-            name = el.get('name')
+            name = el.get("name")
             if not name:
                 raise ValueError("shouldnt happen in a valid interface")
             # print(choices_element.attrib)
-            choice_list = [IChoice.model_validate(choice.attrib) for choice in el.findall('./Choice')]
-            ordered_fields_map[name] = IChoices.model_validate(el.attrib | {"options": choice_list, "required":el.attrib.get("required", False)})
+            choice_list = [
+                IChoice.model_validate(choice.attrib)
+                for choice in el.findall("./Choice")
+            ]
+            ordered_fields_map[name] = IChoices.model_validate(
+                el.attrib
+                | {"options": choice_list, "required": el.attrib.get("required", False)}
+            )
         elif el.tag == "TextArea":
-            name = el.get('name')
-            ordered_fields_map[name] = ITextArea(name=name, required=el.attrib.get("required", False))
+            name = el.get("name")
+            ordered_fields_map[name] = ITextArea(
+                name=name, required=el.attrib.get("required", False)
+            )
         elif el.tag == "Text":
-            value = el.get('value')
-            if value and value.startswith('$'):
-                name = el.get('name')
+            value = el.get("value")
+            if value and value.startswith("$"):
+                name = el.get("name")
                 # keep the $ so we know its a ref to data. done,
                 input_text_fields[name] = value
                 ordered_fields_map[name] = IText()
 
     return InterfaceData(
-        ordered_fields_map=ordered_fields_map,
-        inputs=input_text_fields)
+        ordered_fields_map=ordered_fields_map, inputs=input_text_fields
+    )
+
 
 def check_config_update(platform_configs: dict[str, Path]):
     for platform, fp in platform_configs.items():
@@ -133,7 +147,9 @@ def check_config_update(platform_configs: dict[str, Path]):
         print(diff)
 
 
-def check_against_fixes(label_config: str | InterfaceData, fixes: ProjectVariableExtensions):
+def check_against_fixes(
+    label_config: str | InterfaceData, fixes: ProjectVariableExtensions
+):
     """
     Do
     :param label_config: xml config string

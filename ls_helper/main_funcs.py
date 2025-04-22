@@ -7,7 +7,6 @@ from main import open_image_simple
 
 
 def status(p_access, accepted_ann_age: Optional[int] = 6):
-
     po = platforms_overview.get_project(p_access)
     _, project_annotations = ProjectMgmt.get_recent_annotations(po.id, accepted_ann_age)
 
@@ -16,4 +15,3 @@ def status(p_access, accepted_ann_age: Optional[int] = 6):
 
     open_image_simple(temp_file.name)
     temp_file.close()
-
