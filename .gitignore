@@ -1,0 +1,6 @@
+/.idea/
+/data/ls_data/annotations/
+/data/logs/
+/uv.lock
+/.env
+/.python-version

@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "formatters": {
+    "raw": {
+      "format": "%(message)s"
+    },
+    "simple": {
+      "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    },
+    "detailed": {
+      "format": "%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(message)s"
+    }
+  },
+  "handlers": {
+    "console": {
+      "class": "logging.StreamHandler",
+      "level": "INFO",
+      "formatter": "simple",
+      "stream": "ext://sys.stdout"
+    },
+    "file_handler": {
+      "class": "logging.handlers.RotatingFileHandler",
+      "level": "DEBUG",
+      "formatter": "detailed",
+      "filename": "/home/rsoleyma/projects/big5/labelstudio-tools/data/logs/app.log",
+      "maxBytes": 10485760,
+      "backupCount": 5,
+      "encoding": "utf8"
+    },
+    "error_file_handler": {
+      "class": "logging.handlers.RotatingFileHandler",
+      "level": "ERROR",
+      "formatter": "detailed",
+      "filename": "/home/rsoleyma/projects/big5/labelstudio-tools/data/logs/error.log",
+      "maxBytes": 10485760,
+      "backupCount": 5,
+      "encoding": "utf8"
+    }
+  },
+  "loggers": {
+    "ls_helper.models.variable_models": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.agreements": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.models.interface_models": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.new_models": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.command.annotations": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.command.backup": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.command.labeling_conf": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.command.pipeline": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.command.setup": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.command.task": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "main": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.my_labelstudio_client.client": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    }
+  },
+  "root": {
+    "level": "DEBUG",
+    "handlers": [
+      "console",
+      "file_handler",
+      "error_file_handler"
+    ]
+  }
+}
