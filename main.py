@@ -203,10 +203,10 @@ def status(
     po.validate_extensions()
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
-    res = mp.basic_flatten_results(1)
+    _ = mp.basic_flatten_results(1)
     # just for checking...
-    client = ls_client()
-    users = client.get_users()
+    #client = ls_client()
+    #users = client.get_users()
     #fix_users(res, {u.id: u.username for u in users})
     #print(res["user_id"].value_counts())
 
@@ -288,7 +288,7 @@ def set_view_items(
     print("View successfully updated")
 
 
-@app.command(short_help=f"[ls func]")
+@app.command(short_help="[ls func]")
 def update_coding_game(
         id: Annotated[int, typer.Option()] = None,
         alias: Annotated[str, typer.Option("-a")] = None,
@@ -470,7 +470,7 @@ def build_extension_index(
     elif take_all_defaults:
         projects = list(platforms_overview.default_map.values())
     else:
-        raise ValueError(f"Unclear parameter for build_extension_index")
+        raise ValueError("Unclear parameter for build_extension_index")
     index = _build_extension_index(projects)
     dest = SETTINGS.temp_file_path / f"annot_ext_index_{'_'.join(str(p.id) for p in projects)}.json"
     dest.write_text(index.model_dump_json(indent=2))

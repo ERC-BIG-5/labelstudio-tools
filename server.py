@@ -1,13 +1,12 @@
 from pathlib import Path
-from typing import Optional, Annotated, Literal
+from typing import Optional, Annotated
 
 from fastapi import FastAPI, HTTPException, Query
-from starlette.requests import Request
+from pydantic import BaseModel
 from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
-from ls_helper.new_models import ProjectResult
-from main import update_coding_game, annotations, agreements, create_conflict_view, get_all_variable_names
+
+from main import update_coding_game,  agreements, create_conflict_view, get_all_variable_names
 
 # app = FastAPI()
 app = FastAPI(root_path="/DATA")
@@ -40,6 +39,16 @@ def _update_coding_game(platform: str, language: str):
 
 @app.get("/annotations-results")
 def _annotations_results(platform: str, language: str, annotation_age: int = 2):
+    # todo redo
+    """
+
+    :param platform:
+    :param language:
+    :param annotation_age:
+    :return:
+    """
+
+    """
     file_path, annot_orig = annotations(platform, language, annotation_age)
     fn = f"{file_path.stem}_{annot_orig}.csv"
     return FileResponse(
@@ -47,7 +56,7 @@ def _annotations_results(platform: str, language: str, annotation_age: int = 2):
         filename=fn,
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={fn}"}
-    )
+    )"""
 
 
 @app.get("/agreements")

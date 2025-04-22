@@ -27,3 +27,10 @@ dev = [
     "mypy>=1.15.0",
     "ruff>=0.11.6",
 ]
+server = [
+    "fastapi>=0.115.12",
+]
+
+[tool.ruff]
+# Set the maximum line length to 79.
+line-length = 79

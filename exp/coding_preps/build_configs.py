@@ -34,7 +34,7 @@ def remove_hidden_parts(xml_file: Path):
 
     # Find all elements with the specified class
     # This will find elements where class attribute exactly matches the class_name
-    elements = root.xpath(f'//*[@className="hidden"]')
+    elements = root.xpath('//*[@className="hidden"]')
 
     # print(len(elements))
     # Remove all found elements from their parents
@@ -52,7 +52,7 @@ def twitter_visual_mod(xml_file: Path):
 
     # Find all elements with the specified class
     # This will find elements where class attribute exactly matches the class_name
-    elements = root.xpath(f'.//*[@idAttr="visual_part"]')
+    elements = root.xpath('.//*[@idAttr="visual_part"]')
     # print(len(elements))
     assert len(elements) == 1
     element = elements[0]
