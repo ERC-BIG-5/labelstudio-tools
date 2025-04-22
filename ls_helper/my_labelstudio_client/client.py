@@ -11,7 +11,7 @@ from httpx import Response
 
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, ProjectModel, UserModel, ProjectViewCreate, \
     TaskCreate, TaskResultModel
-from ls_helper.settings import SETTINGS, DEV_SETTINGS
+
 from ls_helper.my_labelstudio_client.models import Task
 from tools.project_logging import get_logger
 
@@ -317,9 +317,11 @@ def ls_client(dev: Optional[bool] = None, ignore_global_client: bool = False) ->
     global _GLOBAL_CLIENT
     if _GLOBAL_CLIENT and not ignore_global_client:
         return _GLOBAL_CLIENT
-
+    from ls_helper.settings import SETTINGS, DEV_SETTINGS
     if dev is None:
         dev = False
+    if not DEV_SETTINGS:
+        print("no .dev.env found")
     settings = DEV_SETTINGS if dev else SETTINGS
 
     client = LabelStudioBase(base_url=settings.LS_HOSTNAME, api_key=settings.LS_API_KEY)

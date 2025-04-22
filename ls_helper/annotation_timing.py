@@ -1,10 +1,8 @@
 import collections
-import json
 import tempfile
 from datetime import date
-from pathlib import Path
 
-import matplotlib.pyplot as plt
+
 import pandas as pd
 from numpy.ma.extras import average
 
@@ -47,6 +45,10 @@ def annotation_total_over_time(annotations: list[TaskResultModel],  min_annotati
 def plot_date_distribution(df: pd.DataFrame, title: str = "Completed tasks per Day",
                            y_col: str = "count",
                            xlabel: str = "Date", ylabel: str = "Count"):
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("install matplotlib for plotting")
     """
     Plot the date distribution.
 
@@ -80,6 +82,11 @@ def plot_cumulative_annotations(cumulative_df: pd.DataFrame, title: str = "Cumul
         Title for the plot
     """
     # Create figure and axis
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("install matplotlib for plotting")
+
     fig, ax = plt.subplots(figsize=(10, 6))
 
     # Plot the cumulative total line

@@ -11,6 +11,8 @@ from pydantic import Field, model_validator
 from pydantic_core.core_schema import ValidationInfo
 from pydantic_settings import BaseSettings
 
+from tools.env_root import root
+
 
 class Settings(BaseSettings):
     class Config:
@@ -99,8 +101,10 @@ class Settings(BaseSettings):
 
 
 SETTINGS = Settings()
-DEV_SETTINGS = Settings(_env_file=".dev.env")
-
+if (root() / ".dev.env").exists():
+    DEV_SETTINGS = Settings(_env_file=".dev.env")
+else:
+    DEV_SETTINGS = None
 ls_logger = getLogger("ls-helper")
 ls_logger.setLevel(logging.DEBUG)
 ls_logger.addHandler(logging.StreamHandler(sys.stdout))
