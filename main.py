@@ -11,7 +11,7 @@ from tqdm import tqdm
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
 from ls_helper.command.annotations import annotations_app
-from ls_helper.command.backup import backup_app
+from ls_helper.command.backup import backup_app, backup
 from ls_helper.command.labeling_conf import labeling_conf_app
 from ls_helper.command.pipeline import pipeline_app
 from ls_helper.command.setup import setup_app
@@ -600,4 +600,5 @@ if __name__ == "__main__":
     #add_prediction_test()
     #status(43)
     #download_project_data(43)
-    agreements(id=43, variables=["nature_any", "nature_text", "nature_visual", "nep_material_visual", "extras"])
+    #agreements(id=43, variables=["nature_any", "nature_text", "nature_visual", "nep_material_visual", "extras"])
+    backup(dl_all_projects=True)
