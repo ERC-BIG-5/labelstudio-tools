@@ -1,0 +1,7 @@
+<View>
+    <Text name="rel_media_{{{index}}}"
+          value="Does this image contain the same natural element/processes as another image? Reference to a previous image. No need to annotate it twice"
+          selectionEnabled="false"/>
+    <Choices name="visual_same_{{{index}}}" toName="title" showInline="true" required="false"
+             value="$image_options"/>
+</View>

@@ -1,5 +1,4 @@
 <View>
-    <!-- nature_visual_index -->
     <!-- {index}  -->
     <Text name="nature_visual_{{{index}}}_t" value="Is there nature in the Image {{{index}} content?"/>
     <Choices name="nature_visual_{{{index}}}" toName="title" showInline="true" required="true">

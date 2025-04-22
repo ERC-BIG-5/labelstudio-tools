@@ -1,5 +1,4 @@
 <View className="V_{{{var}}}">
-    <!-- nature_elements -->
     <!-- variables: var, title -->
     <Header value="Nature Elements/Processes" size="4"/>
     <!--<Header value="What are the Nature Elements/Process in the {{{title}}}?" name="nep_{{{var}}}_t"/>-->

@@ -24,7 +24,7 @@
         <relational-value title="Text" var="text"/>
     </View>
 
-    <View if="nature_visual" is="Yes" className="visual_part">>
+    <View if="nature_visual" is="Yes" className="visual_part">
         <Header value="Visual Part"/>
         <Collapse>
             <panel_nep_val-expr_rel-value title="Frame 1" var="visual_0">
