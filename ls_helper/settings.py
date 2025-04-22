@@ -32,9 +32,9 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_paths(self, info: ValidationInfo) -> "Settings":
         self.BASE_DATA_DIR.mkdir(parents=True, exist_ok=True)
-        sub_dirs = {"project", "fixes", "annotations", "view",
+        sub_dirs = {"project", "variable_extensions", "annotations", "view",
                     "agreements", "annotations_results", "labeling_configs",
-                    "plots"}
+                    "plots", "tasks", "temp"}
         for sd in sub_dirs:
             (self.BASE_DATA_DIR / sd).mkdir(parents=True, exist_ok=True)
 
