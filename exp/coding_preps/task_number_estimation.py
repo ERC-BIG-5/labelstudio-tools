@@ -1,6 +1,6 @@
 from calendar import monthrange
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     total_days = 0
     years = [2022, 2023]
     platforms = ["twitter", "youtube", "tiktok"]

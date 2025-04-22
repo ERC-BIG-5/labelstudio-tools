@@ -62,7 +62,9 @@ class ProjectModel(BaseModel):
     Minimum number of completed tasks after which model training is started
     """
 
-    start_training_on_annotation_update: Optional[str | bool] = Field(default=False)
+    start_training_on_annotation_update: Optional[str | bool] = Field(
+        default=False
+    )
     """
     Start model training after any annotations are submitted or updated
     """
@@ -169,7 +171,9 @@ class ProjectViewDataModel(BaseModel):
     target: Optional[str] = None
     gridWidth: Optional[int] = None
     columnWidth: Optional[int] = None
-    hiddenColumns: Optional[HiddenColumns] = Field(default_factory=HiddenColumns)
+    hiddenColumns: Optional[HiddenColumns] = Field(
+        default_factory=HiddenColumns
+    )
 
     semantic_search: Optional[list] = None
     columnsDisplay: Optional[dict] = None
@@ -180,7 +184,12 @@ class ProjectViewDataModel(BaseModel):
             "items": list[
                 TypedDict(
                     "items",
-                    {"filter": str, "operator": str, "type": str, "value": str | int},
+                    {
+                        "filter": str,
+                        "operator": str,
+                        "type": str,
+                        "value": str | int,
+                    },
                 )
             ],
         },
@@ -190,7 +199,9 @@ class ProjectViewDataModel(BaseModel):
 
 class ProjectViewCreate(BaseModel):
     project: int
-    data: Optional[ProjectViewDataModel] = Field(default_factory=ProjectViewDataModel)
+    data: Optional[ProjectViewDataModel] = Field(
+        default_factory=ProjectViewDataModel
+    )
 
 
 class ViewType(str, Enum):
@@ -234,7 +245,9 @@ class UserModel(BaseModel):
     email: str
     last_activity: Annotated[
         datetime,
-        PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used="always"),
+        PlainSerializer(
+            lambda dt: dt.isoformat(), return_type=str, when_used="always"
+        ),
     ]
     avatar: Optional[str] = None
     initials: str

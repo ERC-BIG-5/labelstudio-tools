@@ -74,7 +74,8 @@ class ProjectMgmt:
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     dest.write_text(
                         orjson.dumps(
-                            ls_project_data.model_dump(), option=orjson.OPT_INDENT_2
+                            ls_project_data.model_dump(),
+                            option=orjson.OPT_INDENT_2,
                         ).decode("utf-8"),
                         encoding="utf-8",
                     )
@@ -82,7 +83,9 @@ class ProjectMgmt:
     @classmethod
     def create_view(cls, view: ProjectViewCreate) -> ProjectViewModel:
         if not view.data.hiddenColumns:
-            view.data.hiddenColumns = read_data(cls.DEFAULT_VIEW_HIDDEN_COLUMNS_FP)
+            view.data.hiddenColumns = read_data(
+                cls.DEFAULT_VIEW_HIDDEN_COLUMNS_FP
+            )
         return ls_client().create_view(view)
 
     @classmethod
@@ -103,7 +106,9 @@ class ProjectMgmt:
         coding_game_view: Optional[ProjectViewModel] = None
         if add_coding_game_view:
             coding_game_view = cls.create_view(
-                ProjectViewCreate.model_validate({"project": project.id, "data": {}})
+                ProjectViewCreate.model_validate(
+                    {"project": project.id, "data": {}}
+                )
             )
 
         return project, coding_game_view
@@ -112,7 +117,10 @@ class ProjectMgmt:
     def get_recent_annotations(
         project_id: int, accepted_age: int
     ) -> Optional[
-        tuple[Annotated[bool, "use_local"], Optional[ProjectAnnotationResultsModel]]
+        tuple[
+            Annotated[bool, "use_local"],
+            Optional[ProjectAnnotationResultsModel],
+        ]
     ]:
         """
 
@@ -158,6 +166,7 @@ class ProjectMgmt:
         print(f"dumping project annotations to {res_path}")
         pa = ProjectAnnotationResultsModel(task_results=result, timestamp=ts)
         json.dump(
-            [r.model_dump() for r in result], res_path.open("w", encoding="utf-8")
+            [r.model_dump() for r in result],
+            res_path.open("w", encoding="utf-8"),
         )
         return False, pa

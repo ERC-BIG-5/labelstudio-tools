@@ -16,6 +16,7 @@ from tools.env_root import root
 if TYPE_CHECKING:
     from ls_helper.my_labelstudio_client.client import LabelStudioBase
 
+
 class Settings(BaseSettings):
     class Config:
         env_file = ".env"

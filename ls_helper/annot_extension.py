@@ -37,7 +37,9 @@ def build_extension_index(projects: list[ProjectData]) -> DataExtensionIndex:
         ext = p.variable_extensions
         for k, v in ext.extensions.items():
             if k not in variables:
-                variables[k] = VariableExtensionIndex.model_validate(v.model_dump())
+                variables[k] = VariableExtensionIndex.model_validate(
+                    v.model_dump()
+                )
                 variables[k].projects.append(p.id)
             else:
                 if v.model_dump() == (i_v := variables[k]).model_dump(
@@ -50,4 +52,6 @@ def build_extension_index(projects: list[ProjectData]) -> DataExtensionIndex:
                         f"({p.id:>5}): {v.model_dump()}\n"
                         f"(index): {variables[k].model_dump(exclude={'projects'})}"
                     )
-    return DataExtensionIndex(projects=[p.id for p in projects], variables=variables)
+    return DataExtensionIndex(
+        projects=[p.id for p in projects], variables=variables
+    )

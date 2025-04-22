@@ -20,13 +20,18 @@ class TaskAnnotationItem(BaseModel):
     users: list[int | str] = Field(default_factory=list)
 
     def add(
-        self, value: str | list[str], value_index: int | list[int], user_id: int
+        self,
+        value: str | list[str],
+        value_index: int | list[int],
+        user_id: int,
     ) -> None:
         self.values.append(value)
         self.value_indices.append(value_index)
         self.users.append(user_id)
 
-    def value_str(self, with_defaults: bool = True, with_user: bool = False) -> str:
+    def value_str(
+        self, with_defaults: bool = True, with_user: bool = False
+    ) -> str:
         # if with_defaults:
         # if with_user:
         #     comb = [f"{v} ({u})" for v, u in zip(self.values, self.users)]
@@ -45,7 +50,9 @@ class TaskAnnotationItem(BaseModel):
 
 class TaskAnnotResults(BaseModel):
     task_id: int
-    items: Optional[dict[str, TaskAnnotationItem]] = Field(default_factory=dict)
+    items: Optional[dict[str, TaskAnnotationItem]] = Field(
+        default_factory=dict
+    )
     num_coders: int
     num_cancellations: int
     relevant_input_data: dict[str, Any]
@@ -70,7 +77,11 @@ class TaskAnnotResults(BaseModel):
         annotation_item = self.items.setdefault(
             item_name,
             TaskAnnotationItem.model_validate(
-                {"name": item_name, "type": type_, "num_coders": self.num_coders}
+                {
+                    "name": item_name,
+                    "type": type_,
+                    "num_coders": self.num_coders,
+                }
             ),
         )
 

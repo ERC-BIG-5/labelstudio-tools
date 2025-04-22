@@ -97,7 +97,9 @@ def parse_label_config_xml(xml_string) -> InterfaceData:
 
     ordered_fields_map: dict[str, IField] = {}
     # todo why this?
-    input_text_fields: dict[str, str] = {}  # New list for text fields with "$" values
+    input_text_fields: dict[
+        str, str
+    ] = {}  # New list for text fields with "$" values
     # text_areas = dict[str,ITextArea]
 
     for el in root.iter():
@@ -112,7 +114,10 @@ def parse_label_config_xml(xml_string) -> InterfaceData:
             ]
             ordered_fields_map[name] = IChoices.model_validate(
                 el.attrib
-                | {"options": choice_list, "required": el.attrib.get("required", False)}
+                | {
+                    "options": choice_list,
+                    "required": el.attrib.get("required", False),
+                }
             )
         elif el.tag == "TextArea":
             name = el.get("name")

@@ -9,7 +9,9 @@ from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 
-annotations_app = typer.Typer(name="Annotations", pretty_exceptions_show_locals=True)
+annotations_app = typer.Typer(
+    name="Annotations", pretty_exceptions_show_locals=True
+)
 
 
 @annotations_app.command(short_help="[stats] Annotation basic results")
@@ -27,7 +29,9 @@ def annotations(
     po.validate_extensions()
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
-    res = mp.flatten_annotation_results(min_coders, mp.interface.ordered_fields)
+    res = mp.flatten_annotation_results(
+        min_coders, mp.interface.ordered_fields
+    )
     res = mp.format_df_for_csv(res)
     dest = SETTINGS.annotations_results_dir / f"{mp.id}.csv"
     res.to_csv(dest, index=False)

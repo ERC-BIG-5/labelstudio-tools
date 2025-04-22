@@ -20,7 +20,9 @@ logger = get_logger(__file__)
 task_app = typer.Typer(name="Task related", pretty_exceptions_show_locals=True)
 
 
-def task_platform_id_map(tasks: LSTaskList | LSTaskCreateList) -> dict[str, LSTask]:
+def task_platform_id_map(
+    tasks: LSTaskList | LSTaskCreateList,
+) -> dict[str, LSTask]:
     platform_id_map: dict[str, LSTask] = {}
     for task in tasks.root:
         p_id = task.data.get("platform_id")
@@ -40,7 +42,9 @@ def create_task(
     language: Annotated[Optional[str], typer.Argument()] = None,
 ):
     po = get_project(id, alias, platform, language)
-    t = LSTaskCreate(project=po.id, data=json.loads(src_path.read_text())["data"])
+    t = LSTaskCreate(
+        project=po.id, data=json.loads(src_path.read_text())["data"]
+    )
     ls_client().create_task(t)
 
 
@@ -73,7 +77,9 @@ def create_tasks(
     if src_path.is_dir():
         for t_f in src_path.glob("*.json"):
             batch.append(
-                LSTaskCreate(project=po.id, data=json.loads(t_f.read_text())["data"])
+                LSTaskCreate(
+                    project=po.id, data=json.loads(t_f.read_text())["data"]
+                )
             )
     else:
         batch = [
@@ -83,7 +89,10 @@ def create_tasks(
 
     resp_data = ls_client().import_tasks(po.id, batch)
     task_ids = resp_data["task_ids"]
-    tasks = [LSTask(**t.model_dump(), id=task_ids[idx]) for idx, t in enumerate(batch)]
+    tasks = [
+        LSTask(**t.model_dump(), id=task_ids[idx])
+        for idx, t in enumerate(batch)
+    ]
     po.save_tasks(tasks)
 
 

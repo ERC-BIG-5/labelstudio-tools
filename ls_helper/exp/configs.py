@@ -43,7 +43,9 @@ def config_file_name_changes(
     all_names = find_names(root, "name")
     fixes_count = 0
     for name, elem in all_names.items():
-        if name in fixes.extensions and (n_r := fixes.extensions[name].name_fix):
+        if name in fixes.extensions and (
+            n_r := fixes.extensions[name].name_fix
+        ):
             elem.attrib["name"] = n_r
             title_elem = list(filter(lambda n: n == f"{name}_t", all_names))
             if title_elem:

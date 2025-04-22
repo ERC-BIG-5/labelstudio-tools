@@ -53,7 +53,9 @@ def update_labeling_config(
 
     project = client.patch_project(po.id, {"label_config": label_config})
     if not project:
-        print(f"Could not update labeling config for {platform}/{language}/{id}")
+        print(
+            f"Could not update labeling config for {platform}/{language}/{id}"
+        )
         return
     pass
     po.save_project_data(project)

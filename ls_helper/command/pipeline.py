@@ -11,7 +11,9 @@ from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 
-pipeline_app = typer.Typer(name="Pipeline config", pretty_exceptions_show_locals=True)
+pipeline_app = typer.Typer(
+    name="Pipeline config", pretty_exceptions_show_locals=True
+)
 _app = pipeline_app
 
 
@@ -48,7 +50,9 @@ def reformat_for_datapipelines(
     """
     # does extra calculation but ok.
     po = get_project(id, alias, platform, language)
-    local, results = ProjectMgmt.get_recent_annotations(po.id, accepted_ann_age)
+    local, results = ProjectMgmt.get_recent_annotations(
+        po.id, accepted_ann_age
+    )
     # print(results)
     am: ProjectAnnotationResultsModel = ProjectAnnotationResultsModel(
         task_results=results
@@ -65,7 +69,8 @@ def reformat_for_datapipelines(
 
     if not destination:
         destination = (
-            SETTINGS.temp_file_path / f"annotations_for_datapipelines_{po.id}.json"
+            SETTINGS.temp_file_path
+            / f"annotations_for_datapipelines_{po.id}.json"
         )
         destination.write_text(json.dumps(res))
         print(f"annotations reformatted -> {destination.as_posix()}")

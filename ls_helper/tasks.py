@@ -14,7 +14,9 @@ def strict_update_project_task_data(
             return
         task_data = task_resp.json()["data"]
         if existing_data["data"] != task_data:
-            print(f"Error, task with id: {task_id} does not match existing data")
+            print(
+                f"Error, task with id: {task_id} does not match existing data"
+            )
             return
         send_data = {"data": new_data["data"]}
     resp = client.patch_task(task_id, send_data)

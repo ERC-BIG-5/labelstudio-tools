@@ -3,23 +3,22 @@
 Required repository:
 `https://github.com/transfluxus/python-project-tools`
 
-
 ## main.py
 
-main uses typer, so we can run comands from the comandline
+main uses [Typer](https://typer.tiangolo.com/), so we can run commands from the commandline
 projects of labelstudio are identified through the first 4 options: id, alias, platform, language.
 
-All projects are stored in data/ls_data
+Crucial project overview is store in `data/ls_data/projects.json` 
 
 ## Commands
 
 Run commands like so:
 
-typer main.py run status -a twitter-es-4
+`typer main.py run status -a twitter-es-4`
 
 Commands sub folders:
 
-typer main.py run task get-tasks -a twitter-es-4
+`typer main.py run task get-tasks -a twitter-es-4`
 
 - setup: setting up projects
 - task: adding and patching LS tasks
@@ -32,11 +31,10 @@ typer main.py run task get-tasks -a twitter-es-4
 
 
 ## ls_data folder
-
-- annotations: annotations downloaded from the ls api. 
-
-
-
+The ls_data folder (`data/ls_data`) contains all relevant downloaded files.
+- project: project data as it is retrieved from the LS API
+- annotations: annotations downloaded from the ls api.
+- agreements:
 ### Keeping the configs right
 
 People decide on changing the configs while data is coming in.

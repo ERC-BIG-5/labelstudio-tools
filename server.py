@@ -6,12 +6,19 @@ from pydantic import BaseModel
 from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
 
-from main import update_coding_game,  agreements, create_conflict_view, get_all_variable_names
+from main import (
+    update_coding_game,
+    agreements,
+    create_conflict_view,
+    get_all_variable_names,
+)
 
 # app = FastAPI()
 app = FastAPI(root_path="/DATA")
 
-app.mount("/static", StaticFiles(directory="data/server_static"), name="static")
+app.mount(
+    "/static", StaticFiles(directory="data/server_static"), name="static"
+)
 app.mount("/data", StaticFiles(directory="data/ls_data"), name="data")
 
 
@@ -38,7 +45,9 @@ def _update_coding_game(platform: str, language: str):
 
 
 @app.get("/annotations-results")
-def _annotations_results(platform: str, language: str, annotation_age: int = 2):
+def _annotations_results(
+    platform: str, language: str, annotation_age: int = 2
+):
     # todo redo
     """
 
@@ -68,16 +77,23 @@ def _agreements(platform: str, language: str, annotation_age: int = 2):
 
 
 @app.get("/get-all-variable-names")
-def _get_all_variable_names(project_access: Annotated[ProjectAccessQuery, Query()]):
-    return get_all_variable_names(project_access.id,
-                                  project_access.aliat,
-                                  project_access.platform,
-                                  project_access.language)
+def _get_all_variable_names(
+    project_access: Annotated[ProjectAccessQuery, Query()],
+):
+    return get_all_variable_names(
+        project_access.id,
+        project_access.aliat,
+        project_access.platform,
+        project_access.language,
+    )
 
 
 @app.get("/create-conflict-view")
-def _create_conflict_view(variable: Annotated[str, Query(description="conflict 'choice' variable")],
-                          id: Optional[int] = None,
-                          alias: Optional[str] = None, platform: Optional[str] = None,
-                          language: Optional[str] = None) -> str:
+def _create_conflict_view(
+    variable: Annotated[str, Query(description="conflict 'choice' variable")],
+    id: Optional[int] = None,
+    alias: Optional[str] = None,
+    platform: Optional[str] = None,
+    language: Optional[str] = None,
+) -> str:
     return create_conflict_view(variable, id, alias, platform, language)

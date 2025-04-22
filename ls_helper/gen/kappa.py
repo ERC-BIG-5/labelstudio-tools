@@ -109,7 +109,9 @@ def paired_multilabel_kappa(item_data):
 
         # Calculate Cohen's Kappa
         if expected_agreement < 1.0:
-            kappa = (observed_agreement - expected_agreement) / (1 - expected_agreement)
+            kappa = (observed_agreement - expected_agreement) / (
+                1 - expected_agreement
+            )
         else:
             kappa = 1.0  # Perfect agreement when expected agreement is 1
 
@@ -128,7 +130,9 @@ def paired_multilabel_kappa(item_data):
     n_coders = len(unique_coders)
     coder_indices = {coder: i for i, coder in enumerate(sorted(unique_coders))}
 
-    kappa_matrix = np.eye(n_coders)  # Diagonal of 1s (perfect agreement with self)
+    kappa_matrix = np.eye(
+        n_coders
+    )  # Diagonal of 1s (perfect agreement with self)
     for (coder1, coder2), kappa in pair_agreements.items():
         i, j = coder_indices[coder1], coder_indices[coder2]
         kappa_matrix[i, j] = kappa
@@ -136,12 +140,15 @@ def paired_multilabel_kappa(item_data):
 
     # Create pandas DataFrame with coder names
     kappa_df = pd.DataFrame(
-        kappa_matrix, index=sorted(unique_coders), columns=sorted(unique_coders)
+        kappa_matrix,
+        index=sorted(unique_coders),
+        columns=sorted(unique_coders),
     )
 
     # Identify items with highest and lowest agreement
     item_agreements = [
-        (pair, i, jaccard) for i, (pair, jaccard) in enumerate(all_jaccard_scores)
+        (pair, i, jaccard)
+        for i, (pair, jaccard) in enumerate(all_jaccard_scores)
     ]
     item_agreements.sort(key=lambda x: x[2])
 
@@ -149,7 +156,9 @@ def paired_multilabel_kappa(item_data):
         item_agreements[:5] if len(item_agreements) >= 5 else item_agreements
     )
     best_agreements = (
-        item_agreements[-5:] if len(item_agreements) >= 5 else reversed(item_agreements)
+        item_agreements[-5:]
+        if len(item_agreements) >= 5
+        else reversed(item_agreements)
     )
 
     # Compile results
@@ -266,7 +275,9 @@ def create_test_data(n_items=30, n_coders=5, n_categories=8, sparsity=0.7):
         if n_cats == 0:
             base_sets.append(set())
         else:
-            base_sets.append(set(np.random.choice(categories, n_cats, replace=False)))
+            base_sets.append(
+                set(np.random.choice(categories, n_cats, replace=False))
+            )
 
     # Create coding pairs with varying agreement
     item_data = []
@@ -303,7 +314,12 @@ def create_test_data(n_items=30, n_coders=5, n_categories=8, sparsity=0.7):
 
         # Add to the data
         item_data.append(
-            (selected_coders[0], selected_coders[1], coder_sets[0], coder_sets[1])
+            (
+                selected_coders[0],
+                selected_coders[1],
+                coder_sets[0],
+                coder_sets[1],
+            )
         )
 
     return item_data
@@ -327,14 +343,18 @@ if __name__ == "__main__":
     results = paired_multilabel_kappa(item_data)
 
     # Print results
-    print(f"Light's Kappa for paired multi-label coding: {results['lights_kappa']:.3f}")
+    print(
+        f"Light's Kappa for paired multi-label coding: {results['lights_kappa']:.3f}"
+    )
     print(f"Interpretation: {results['interpretation']}")
 
     print("\nPairwise Cohen's Kappa between coders:")
     for pair, kappa in sorted(
         results["pair_agreements"].items(), key=lambda x: x[1], reverse=True
     ):
-        print(f"  {pair[0]} - {pair[1]}: {kappa:.3f} - {interpret_kappa(kappa)}")
+        print(
+            f"  {pair[0]} - {pair[1]}: {kappa:.3f} - {interpret_kappa(kappa)}"
+        )
 
     # Plot heatmap of kappa values between coders
     plot_kappa_heatmap(results["kappa_matrix"])

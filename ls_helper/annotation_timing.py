@@ -38,7 +38,9 @@ def get_annotation_lead_times(
         ]
         lead_times[dt] = [ann.lead_time for ann in completed_annotations]
     lead_times_avgs = {k: average(v) for k, v in lead_times.items()}
-    df = pd.DataFrame(list(lead_times_avgs.items()), columns=["date", "lead_time"])
+    df = pd.DataFrame(
+        list(lead_times_avgs.items()), columns=["date", "lead_time"]
+    )
     df = df.sort_values("date")
     return df
 
@@ -80,13 +82,16 @@ def plot_date_distribution(
     plt.xticks(rotation=45)
     plt.tight_layout()
     plt.grid(axis="y", linestyle="--", alpha=0.7)
-    temp = tempfile.NamedTemporaryFile(suffix=".png", prefix="img_", delete=False)
+    temp = tempfile.NamedTemporaryFile(
+        suffix=".png", prefix="img_", delete=False
+    )
     plt.savefig(temp)
     return temp
 
 
 def plot_cumulative_annotations(
-    cumulative_df: pd.DataFrame, title: str = "Cumulative Annotations Over Time"
+    cumulative_df: pd.DataFrame,
+    title: str = "Cumulative Annotations Over Time",
 ) -> tempfile.NamedTemporaryFile:
     """
     Creates a line plot showing the cumulative total of annotations over time.
@@ -124,14 +129,20 @@ def plot_cumulative_annotations(
     # Add data labels on each point
     for x, y in zip(cumulative_df["date"], cumulative_df["cumulative_total"]):
         ax.annotate(
-            f"{y}", (x, y), textcoords="offset points", xytext=(0, 10), ha="center"
+            f"{y}",
+            (x, y),
+            textcoords="offset points",
+            xytext=(0, 10),
+            ha="center",
         )
 
     # Format the plot
     plt.grid(True, linestyle="--", alpha=0.7)
     plt.tight_layout()
 
-    temp = tempfile.NamedTemporaryFile(suffix=".png", prefix="img_", delete=False)
+    temp = tempfile.NamedTemporaryFile(
+        suffix=".png", prefix="img_", delete=False
+    )
     plt.savefig(temp)
     return temp
     # Show plot

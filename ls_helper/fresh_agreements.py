@@ -29,7 +29,9 @@ type OptionOccurances = dict[str, list[int]]
 class AgreementResult(BaseModel):
     variable: str
     single_overall: Optional[AgreementsCol] = None
-    options_agreements: Optional[dict[str, AgreementsCol]] = Field(default_factory=dict)
+    options_agreements: Optional[dict[str, AgreementsCol]] = Field(
+        default_factory=dict
+    )
 
 
 class Agreements:
@@ -100,7 +102,10 @@ class Agreements:
                 # add orig name with
                 assignments.update(
                     {
-                        idx_v: {"group": var, "gr_variable": self._groups[var][idx_v]}
+                        idx_v: {
+                            "group": var,
+                            "gr_variable": self._groups[var][idx_v],
+                        }
                         for idx_v in idx_vars
                     }
                 )
@@ -197,7 +202,9 @@ class Agreements:
                         _conflict_count = pv_df.apply(
                             lambda row: len(row.dropna().unique()) > 1, axis=1
                         ).sum()
-                    result[aggr_type] = round(1 - _conflict_count / len(pv_df), 2)
+                    result[aggr_type] = round(
+                        1 - _conflict_count / len(pv_df), 2
+                    )
                 case "abs":
                     result[aggr_type] = len(pv_df) - _conflict_count
                     result["total"] = len(pv_df)
@@ -229,7 +236,9 @@ class Agreements:
         )
 
     @staticmethod
-    def time_move(df_: DataFrame) -> Generator[tuple[date, DataFrame], None, None]:
+    def time_move(
+        df_: DataFrame,
+    ) -> Generator[tuple[date, DataFrame], None, None]:
         for day in sorted(df_.date.unique()):
             yield day, df_[df_["date"] <= day]
 
@@ -294,7 +303,9 @@ class Agreements:
                 v_df_s = v_df.explode("value")
                 v_df_s.fillna(force_default, inplace=True)
                 # v_df = Agreements.prepare_var(v_df, force_default).reset_index()
-                result.single_overall = self._calc_agreements(v_df_s, agreement_types)
+                result.single_overall = self._calc_agreements(
+                    v_df_s, agreement_types
+                )
                 for option in options:
                     # Use vectorized operations when possible for performance
                     option_df = v_df.copy()
@@ -311,14 +322,16 @@ class Agreements:
                     option_df = v_df.copy()
                     # Convert to 1/0 values based on option presence
                     option_df["value"] = option_df["value"].apply(
-                        lambda x: 1 if isinstance(x, list) and option in x else 0
+                        lambda x: 1
+                        if isinstance(x, list) and option in x
+                        else 0
                     )
 
                     # todo,this also for single selects
                     if keep_tasks:
-                        tasks_with_1 = option_df.groupby("task_id")["value"].apply(
-                            lambda x: (x == 1).any()
-                        )
+                        tasks_with_1 = option_df.groupby("task_id")[
+                            "value"
+                        ].apply(lambda x: (x == 1).any())
                         task_ids = tasks_with_1[tasks_with_1].index
                         self.collections.setdefault(var, {})[option] = task_ids
                     # Calculate agreement for this option
@@ -342,9 +355,9 @@ class Agreements:
         return self.results
 
 
-
 if __name__ == "__main__":
     from ls_helper.new_models import get_project
+
     po = get_project(43)
     ag = Agreements(po)
     ag.agreement_calc(

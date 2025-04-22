@@ -24,7 +24,7 @@ for line in reader:
             end_idx = line.index("*", 1)
             diff = end_idx - start_idx
             print(start_idx, end_idx)
-            header = line[start_idx: end_idx]
+            header = line[start_idx:end_idx]
             print(header)
             values = {h: [[]] for h in header}
             print(values)
@@ -52,4 +52,6 @@ for h, v in values.items():
 print(json.dumps(values, indent=2))
 fp = extra_base / "results.json"
 print(fp.as_posix())
-json.dump(values, open(fp, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+json.dump(
+    values, open(fp, "w", encoding="utf-8"), indent=2, ensure_ascii=False
+)

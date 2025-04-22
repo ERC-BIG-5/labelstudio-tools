@@ -76,7 +76,9 @@ def remove_hidden_parts(xml_file: Path):
         if parent is not None:  # Check if element has a parent
             parent.remove(element)
 
-    tree.write(xml_file, pretty_print=True, encoding="utf-8", xml_declaration=False)
+    tree.write(
+        xml_file, pretty_print=True, encoding="utf-8", xml_declaration=False
+    )
 
 
 def twitter_visual_mod(xml_file: Path):
@@ -148,7 +150,9 @@ def twitter_visual_mod(xml_file: Path):
             # print(name)
             if whenTagName not in fix_whenTagName:  # ignore: 'nature_visual'
                 continue
-            elem.set("whenTagName", whenTagName.replace("_visual", f"_visual-{i}"))
+            elem.set(
+                "whenTagName", whenTagName.replace("_visual", f"_visual-{i}")
+            )
         #
 
         header = img_node.xpath('./*[@className="visual_part_header"]')
@@ -171,7 +175,9 @@ def twitter_visual_mod(xml_file: Path):
     #         s_elem.getparent().replace(s_elem, new_visual_elem)
     #         break
 
-    tree.write(xml_file, pretty_print=True, encoding="utf-8", xml_declaration=False)
+    tree.write(
+        xml_file, pretty_print=True, encoding="utf-8", xml_declaration=False
+    )
 
 
 def build_configs() -> dict[str, Path]:
@@ -182,7 +188,9 @@ def build_configs() -> dict[str, Path]:
 
     # print("RV options")
     rv_type_options = data["rv_type"][0]
-    rv_aliases = list(map(lambda _: _.lower().replace(" ", "-"), data["rv_type"][0]))
+    rv_aliases = list(
+        map(lambda _: _.lower().replace(" ", "-"), data["rv_type"][0])
+    )
 
     rv_choices = create_choice_elements(rv_type_options, rv_aliases)
     # XX
@@ -284,7 +292,9 @@ def build_configs() -> dict[str, Path]:
         platform_user_file = f"{Path(platform_file).stem}_user.xml"
         platform_user_fp = base_path / platform_user_file
         if platform_user_fp.exists():
-            plaform_user_elements = platform_user_fp.read_text(encoding="utf-8")
+            plaform_user_elements = platform_user_fp.read_text(
+                encoding="utf-8"
+            )
         else:
             plaform_user_elements = ""
 
@@ -299,7 +309,9 @@ def build_configs() -> dict[str, Path]:
             encoding="utf-8",
         )
 
-        pl_gen_file = base_path / f"output/gen_{platform_file.split('.')[0]}.xml"
+        pl_gen_file = (
+            base_path / f"output/gen_{platform_file.split('.')[0]}.xml"
+        )
         pl_gen_file.write_text(gen_text, encoding="utf-8")
         if platform_file != "youtube.xml":
             remove_hidden_parts(pl_gen_file)
@@ -370,7 +382,9 @@ def validate_variables_against_mustache_template(
     return missing_variables, redundant_variables
 
 
-def build_from_template(config: LabelingInterfaceBuildConfig) -> etree.ElementTree:
+def build_from_template(
+    config: LabelingInterfaceBuildConfig,
+) -> etree.ElementTree:
     def read_pystache2lxml_tree(
         fp: Path, attrib: dict[str, Any]
     ) -> etree.ElementTree:  # tree
@@ -423,7 +437,9 @@ def build_from_template(config: LabelingInterfaceBuildConfig) -> etree.ElementTr
                 continue
 
             if node.tag == "View":
-                if (_if := node.attrib.get("if")) and (_is := node.attrib.get("is")):
+                if (_if := node.attrib.get("if")) and (
+                    _is := node.attrib.get("is")
+                ):
                     del node.attrib["if"]
                     del node.attrib["is"]
                     node.attrib.update(

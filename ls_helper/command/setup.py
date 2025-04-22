@@ -16,7 +16,9 @@ from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 
-setup_app = typer.Typer(name="Setup projects", pretty_exceptions_show_locals=True)
+setup_app = typer.Typer(
+    name="Setup projects", pretty_exceptions_show_locals=True
+)
 
 
 @setup_app.command(

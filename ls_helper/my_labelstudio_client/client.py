@@ -31,7 +31,12 @@ class ApiError(Exception):
     status_code: Optional[int]
     body: typing.Any
 
-    def __init__(self, *, status_code: Optional[int] = None, body: Optional[typing.Any] = None):
+    def __init__(
+        self,
+        *,
+        status_code: Optional[int] = None,
+        body: Optional[typing.Any] = None,
+    ):
         self.status_code = status_code
         self.body = body
 
@@ -40,7 +45,9 @@ class ApiError(Exception):
 
 
 class BaseClientWrapper:
-    def __init__(self, *, api_key: str, base_url: str, timeout: Optional[float] = None):
+    def __init__(
+        self, *, api_key: str, base_url: str, timeout: Optional[float] = None
+    ):
         self.api_key = api_key
         self._base_url = base_url
         self._timeout = timeout
@@ -126,7 +133,11 @@ class LabelStudioBase:
         httpx_client: Optional[httpx.Client] = None,
     ):
         _defaulted_timeout = (
-            timeout if timeout is not None else 60 if httpx_client is None else None
+            timeout
+            if timeout is not None
+            else 60
+            if httpx_client is None
+            else None
         )
         if api_key is None:
             raise ApiError(
@@ -169,7 +180,9 @@ class LabelStudioBase:
     def projects_list(self) -> list[ProjectModel]:
         resp = self._client_wrapper.httpx_client.get("/api/projects")
         if resp.status_code == 200:
-            return [ProjectModel.model_validate(p) for p in resp.json()["results"]]
+            return [
+                ProjectModel.model_validate(p) for p in resp.json()["results"]
+            ]
 
     def get_project(self, project_id) -> ProjectModel:
         resp = self._client_wrapper.httpx_client.get(
@@ -178,7 +191,9 @@ class LabelStudioBase:
         if resp.status_code == 200:
             return ProjectModel.model_validate(resp.json())
 
-    def patch_project(self, project_id: int, data: dict) -> Optional[ProjectModel]:
+    def patch_project(
+        self, project_id: int, data: dict
+    ) -> Optional[ProjectModel]:
         resp = self._client_wrapper.httpx_client.patch(
             f"/api/projects/{project_id}", json=data
         )
@@ -298,7 +313,9 @@ class LabelStudioBase:
             "/api/tasks", params=params, timeout=60
         )
         if resp.status_code != 200:
-            raise ValueError(f"failed to get tasks: {resp.status_code}\n{resp.json()}")
+            raise ValueError(
+                f"failed to get tasks: {resp.status_code}\n{resp.json()}"
+            )
         tasks_data = resp.json()["tasks"]
         return [Task.model_validate(t) for t in tasks_data]
 
@@ -313,7 +330,9 @@ class LabelStudioBase:
 
     def add_prediction(self, task_id, data: dict):
         data["task"] = task_id
-        resp = self._client_wrapper.httpx_client.post("/api/predictions", json=data)
+        resp = self._client_wrapper.httpx_client.post(
+            "/api/predictions", json=data
+        )
         return resp
 
     def list_import_storages(self, project: Optional[int] = None) -> Response:
@@ -324,7 +343,8 @@ class LabelStudioBase:
 
     def validate_project_labeling_config(self, p_id: int, label_config: str):
         resp = self._client_wrapper.httpx_client.post(
-            f"/api/projects/{p_id}/validate/", json={"label_config": label_config}
+            f"/api/projects/{p_id}/validate/",
+            json={"label_config": label_config},
         )
         return resp
 
@@ -358,7 +378,9 @@ class LabelStudioBase:
         return resp.json()
 
     def delete_view(self, view_id: int):
-        resp = self._client_wrapper.httpx_client.delete(f"/api/dm/views/{view_id}")
+        resp = self._client_wrapper.httpx_client.delete(
+            f"/api/dm/views/{view_id}"
+        )
         print(resp)
 
 
@@ -380,7 +402,9 @@ def ls_client(
         print("no .dev.env found")
     settings = DEV_SETTINGS if dev else SETTINGS
 
-    client = LabelStudioBase(base_url=settings.LS_HOSTNAME, api_key=settings.LS_API_KEY)
+    client = LabelStudioBase(
+        base_url=settings.LS_HOSTNAME, api_key=settings.LS_API_KEY
+    )
     _GLOBAL_CLIENT = client
     print(f"global client set to [{dev=}]")
     return client

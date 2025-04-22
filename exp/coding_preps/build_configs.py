@@ -14,7 +14,9 @@ def create_choice_elem(option: str, alias: Optional[str] = None) -> str:
     return f'<Choice value="{option}"/>'
 
 
-def create_choice_elements(options: list[str], aliases: Optional[list[str]] = None) -> str:
+def create_choice_elements(
+    options: list[str], aliases: Optional[list[str]] = None
+) -> str:
     if aliases:
         res = []
         for o, a in zip(options, aliases):
@@ -43,7 +45,9 @@ def remove_hidden_parts(xml_file: Path):
         if parent is not None:  # Check if element has a parent
             parent.remove(element)
 
-    tree.write(xml_file, pretty_print=True, encoding='utf-8', xml_declaration=False)
+    tree.write(
+        xml_file, pretty_print=True, encoding="utf-8", xml_declaration=False
+    )
 
 
 def twitter_visual_mod(xml_file: Path):
@@ -56,7 +60,7 @@ def twitter_visual_mod(xml_file: Path):
     # print(len(elements))
     assert len(elements) == 1
     element = elements[0]
-    element.set('className', 'hidden')
+    element.set("className", "hidden")
 
     new_template = Template("""
     <View idAttr="visual_part" visibleWhen="choice-selected" whenTagName="nature_visual" whenChoiceValue="Yes">
@@ -66,10 +70,23 @@ def twitter_visual_mod(xml_file: Path):
     </View>
     """)
 
-    make_single_select = ["nep_group-0_visual", "nep_group-1_visual", "nep_group-2_visual",
-                          "nep_group-2x_visual", "inter_group-0_visual", "inter_group-1_visual", "inter_group-2_visual"]
-    fix_whenTagName = ['val-expr_visual', 'rel-value_visual', 'nep_group-2_visual', 'inter_group-0_visual',
-                       'inter_group-1_visual', 'inter_group-2_visual']
+    make_single_select = [
+        "nep_group-0_visual",
+        "nep_group-1_visual",
+        "nep_group-2_visual",
+        "nep_group-2x_visual",
+        "inter_group-0_visual",
+        "inter_group-1_visual",
+        "inter_group-2_visual",
+    ]
+    fix_whenTagName = [
+        "val-expr_visual",
+        "rel-value_visual",
+        "nep_group-2_visual",
+        "inter_group-0_visual",
+        "inter_group-1_visual",
+        "inter_group-2_visual",
+    ]
 
     panels = []
     for i in range(4):
@@ -78,27 +95,33 @@ def twitter_visual_mod(xml_file: Path):
         img_node.set("whenTagName", "media_relevant")
         img_node.set("whenChoiceValue", f"Image {i + 1}")
         del img_node.attrib["className"]
-        name_elements_dict = {el.get('name'): el for el in img_node.xpath('.//*[@name]')}
+        name_elements_dict = {
+            el.get("name"): el for el in img_node.xpath(".//*[@name]")
+        }
         # print(name_elements_dict.keys())
-        panel = etree.Element('Panel')
+        panel = etree.Element("Panel")
         panel.set("value", f"Image: {i + 1}")
         for name, elem in name_elements_dict.items():
             assert "_visual" in name
-            elem.set('name', name.replace("_visual", f"_visual-{i}"))
+            elem.set("name", name.replace("_visual", f"_visual-{i}"))
             if name in make_single_select:
-                assert elem.get("choice") == "multiple", f"{name} has {elem.get('choice')}"
+                assert elem.get("choice") == "multiple", (
+                    f"{name} has {elem.get('choice')}"
+                )
                 elem.set("choice", "single")
 
         #
-        fix_whenTagName_elems = img_node.xpath('.//*[@whenTagName]')
+        fix_whenTagName_elems = img_node.xpath(".//*[@whenTagName]")
         # print(len(fix_whenTagName_elems))
         for elem in fix_whenTagName_elems:
-            whenTagName = elem.get('whenTagName')
+            whenTagName = elem.get("whenTagName")
             assert "_visual" in whenTagName
             # print(name)
             if whenTagName not in fix_whenTagName:  # ignore: 'nature_visual'
                 continue
-            elem.set('whenTagName', whenTagName.replace("_visual", f"_visual-{i}"))
+            elem.set(
+                "whenTagName", whenTagName.replace("_visual", f"_visual-{i}")
+            )
         #
 
         header = img_node.xpath('./*[@className="visual_part_header"]')
@@ -108,27 +131,35 @@ def twitter_visual_mod(xml_file: Path):
         panel.append(img_node)
         panels.append(panel)
 
-    new_visual = new_template.substitute(PANELS="".join([etree.tostring(p, encoding="unicode") for p in panels]))
+    new_visual = new_template.substitute(
+        PANELS="".join([etree.tostring(p, encoding="unicode") for p in panels])
+    )
     # print(new_visual)
     new_visual_elem = etree.fromstring(new_visual)
     # element.getparent().replace(element, new_visual_elem)
     element.addnext(new_visual_elem)
-    element.set('className', 'hidden2')
+    element.set("className", "hidden2")
     # for i, s_elem in enumerate(element.getparent().getchildren()):
     #     if element == s_elem:
     #         s_elem.getparent().replace(s_elem, new_visual_elem)
     #         break
 
-    tree.write(xml_file, pretty_print=True, encoding='utf-8', xml_declaration=False)
+    tree.write(
+        xml_file, pretty_print=True, encoding="utf-8", xml_declaration=False
+    )
 
 
 def build_configs() -> dict[str, Path]:
-    csv_results_data = Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/extra/results.json")
+    csv_results_data = Path(
+        "/home/rsoleyma/projects/MyLabelstudioHelper/data/extra/results.json"
+    )
     data = json.load(csv_results_data.open(encoding="utf-8"))
 
     # print("RV options")
     rv_type_options = data["rv_type"][0]
-    rv_aliases = list(map(lambda _: _.lower().replace(" ", "-"), data["rv_type"][0]))
+    rv_aliases = list(
+        map(lambda _: _.lower().replace(" ", "-"), data["rv_type"][0])
+    )
 
     rv_choices = create_choice_elements(rv_type_options, rv_aliases)
     # XX
@@ -188,7 +219,9 @@ def build_configs() -> dict[str, Path]:
         rv_aliases_ = rv_aliases[:]
         rv_aliases_.remove(rv_alias)
         rv_choices = create_choice_elements(rv_type_options_, rv_aliases_)
-        text_rv_confusion_views += template.substitute(rv_name=rv_name, rv_alias=rv_alias, choices=rv_choices)
+        text_rv_confusion_views += template.substitute(
+            rv_name=rv_name, rv_alias=rv_alias, choices=rv_choices
+        )
 
     # print(text_rv_confusion_views)
     # exit()
@@ -209,8 +242,9 @@ def build_configs() -> dict[str, Path]:
         rv_aliases_ = rv_aliases[:]
         rv_aliases_.remove(rv_alias)
         rv_choices = create_choice_elements(rv_type_options_, rv_aliases_)
-        visual_rv_confusion_views += template.substitute(rv_name=rv_name, rv_alias=rv_alias, choices=rv_choices).encode(
-            "utf-8")
+        visual_rv_confusion_views += template.substitute(
+            rv_name=rv_name, rv_alias=rv_alias, choices=rv_choices
+        ).encode("utf-8")
         # print(visual_rv_confusion_views)
     # print(text_rv_confusion_views)
     base_path = Path(f"{os.getcwd()}/data/configs/step1")
@@ -227,18 +261,26 @@ def build_configs() -> dict[str, Path]:
         platform_user_file = f"{Path(platform_file).stem}_user.xml"
         platform_user_fp = base_path / platform_user_file
         if platform_user_fp.exists():
-            plaform_user_elements = platform_user_fp.read_text(encoding="utf-8")
+            plaform_user_elements = platform_user_fp.read_text(
+                encoding="utf-8"
+            )
         else:
             plaform_user_elements = ""
 
-        gen_text = pystache.render(template_text, {
-            'TEXT_RV_CONFUSION': text_rv_confusion_views,
-            'VISUAL_RV_CONFUSION': visual_rv_confusion_views,
-            'PLATFORM_ELEMENTS': platform_elements,
-            'PLATFORM_USER_ELEMENTS': plaform_user_elements
-        }, encoding="utf-8")
+        gen_text = pystache.render(
+            template_text,
+            {
+                "TEXT_RV_CONFUSION": text_rv_confusion_views,
+                "VISUAL_RV_CONFUSION": visual_rv_confusion_views,
+                "PLATFORM_ELEMENTS": platform_elements,
+                "PLATFORM_USER_ELEMENTS": plaform_user_elements,
+            },
+            encoding="utf-8",
+        )
 
-        pl_gen_file = base_path / f"output/gen_{platform_file.split('.')[0]}.xml"
+        pl_gen_file = (
+            base_path / f"output/gen_{platform_file.split('.')[0]}.xml"
+        )
         pl_gen_file.write_text(gen_text, encoding="utf-8")
         if platform_file != "youtube.xml":
             remove_hidden_parts(pl_gen_file)
@@ -250,6 +292,7 @@ def build_configs() -> dict[str, Path]:
         result_dict[Path(platform_file).stem] = pl_gen_file
 
     return result_dict
+
 
 if __name__ == "__main__":
     build_configs()

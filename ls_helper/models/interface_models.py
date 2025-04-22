@@ -11,12 +11,16 @@ from tools.project_logging import get_logger
 # todo bring and import tools,
 SerializableDatetime = Annotated[
     datetime,
-    PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used="json"),
+    PlainSerializer(
+        lambda dt: dt.isoformat(), return_type=str, when_used="json"
+    ),
 ]
 
 SerializableDatetimeAlways = Annotated[
     datetime,
-    PlainSerializer(lambda dt: dt.isoformat(), return_type=str, when_used="always"),
+    PlainSerializer(
+        lambda dt: dt.isoformat(), return_type=str, when_used="always"
+    ),
 ]
 
 PlLang = tuple[str, str]
@@ -99,7 +103,9 @@ class InterfaceData(BaseModel):
     @property
     def free_text(self) -> list[str]:
         oa = self.ordered_fields_map.items()
-        return list(map(lambda f: f[0], filter(lambda f: isinstance(f[1], IText), oa)))
+        return list(
+            map(lambda f: f[0], filter(lambda f: isinstance(f[1], IText), oa))
+        )
 
     def find_name_fixes(
         self,
@@ -124,7 +130,9 @@ class InterfaceData(BaseModel):
         if self._extension_applied:
             return
         name_fixes = data_extensions.name_fixes
-        ordered_name_fixes = self.find_name_fixes(self.ordered_fields, name_fixes)
+        ordered_name_fixes = self.find_name_fixes(
+            self.ordered_fields, name_fixes
+        )
         for old, new in ordered_name_fixes.items():
             self.ordered_fields[self.ordered_fields.index(old)] = new
         choices_name_fixes = self.find_name_fixes(
@@ -155,21 +163,30 @@ class InterfaceData(BaseModel):
                                 raise ValueError(
                                     f"Choice {k} has default value {ext.default}"
                                 )
-                            if any(d not in v.raw_options_list() for d in ext.default):
+                            if any(
+                                d not in v.raw_options_list()
+                                for d in ext.default
+                            ):
                                 raise ValueError(
                                     f"Choice {k} has default invalid value {ext.default}, options: {v.raw_options_list()}"
                                 )
                     # TODO pass actually add the default...
-                    v.insert_option(0, IChoice(value=ext.default, alias=ext.default))
+                    v.insert_option(
+                        0, IChoice(value=ext.default, alias=ext.default)
+                    )
             else:
-                field_extensions = list(data_extensions.extension_reverse_map.keys())
+                field_extensions = list(
+                    data_extensions.extension_reverse_map.keys()
+                )
                 logger.error(
                     f"Choice '{k}' has no extension:. Maybe...: >>> {(fast_levenhstein.levenhstein_get_closest_matches(k, field_extensions))}"
                     f"Download the latest project-data(or check it on the page). check it against your project-data."
                     f"Fix your extensions."
                 )
 
-        text_name_fixes = self.find_name_fixes(self.free_text, name_fixes, True)
+        text_name_fixes = self.find_name_fixes(
+            self.free_text, name_fixes, True
+        )
         for old, new in text_name_fixes.items():
             self.free_text[self.free_text.index(old)] = new
         self._extension_applied = True
@@ -229,7 +246,9 @@ class FieldExtension(BaseModel):
 class ProjectVariableExtensions(BaseModel):
     extensions: dict[str, FieldExtension]
     extension_reverse_map: dict[str, str] = Field(
-        description="fixes[k].name_fix = fixes[k]", default_factory=dict, exclude=True
+        description="fixes[k].name_fix = fixes[k]",
+        default_factory=dict,
+        exclude=True,
     )
 
     def model_post_init(self, __context: Any) -> None:

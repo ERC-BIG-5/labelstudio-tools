@@ -77,7 +77,8 @@ def test_update_other_coding_game(
 
     print(f"coding game: ->  {coding_game_file}")
     json.dump(
-        for_coding_game, open(coding_game_file, "w", newline="", encoding="utf-8")
+        for_coding_game,
+        open(coding_game_file, "w", newline="", encoding="utf-8"),
     )
 
     print(others)
@@ -169,7 +170,8 @@ def update_coding_game(
 
 
 def build_platform_id_filter(
-    platform_ids: list[str | int], ls_main_field: Literal["platform_id", "task_id"]
+    platform_ids: list[str | int],
+    ls_main_field: Literal["platform_id", "task_id"],
 ):
     """
     should be simpler. this is only that complicated, cuz of the bad conflict models.
@@ -238,7 +240,9 @@ def download_project_views(project_id: int, store: bool = True):
     if store:
         view_dir = SETTINGS.BASE_DATA_DIR / "views"
         view_dir.mkdir(parents=True, exist_ok=True)
-        json.dump(data, open(f"{view_dir}/{project_id}.json", "w", encoding="utf-8"))
+        json.dump(
+            data, open(f"{view_dir}/{project_id}.json", "w", encoding="utf-8")
+        )
     return data
 
 
@@ -260,7 +264,13 @@ def update_user_nicknames(refresh_users: bool = True):
     for idx, u in enumerate(users):
         print(
             u.model_dump(
-                include={"id", "first_name", "last_name", "username", "initials"}
+                include={
+                    "id",
+                    "first_name",
+                    "last_name",
+                    "username",
+                    "initials",
+                }
             )
         )
         if str(u.id) not in nicknames:
