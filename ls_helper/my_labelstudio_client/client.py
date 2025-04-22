@@ -31,7 +31,7 @@ class ApiError(Exception):
     status_code: Optional[int]
     body: typing.Any
 
-    def __init__(self, *, status_code: Optional[int] = None, body: typing.Any = None):
+    def __init__(self, *, status_code: Optional[int] = None, body: Optional[typing.Any] = None):
         self.status_code = status_code
         self.body = body
 

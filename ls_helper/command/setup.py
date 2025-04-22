@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Optional, Annotated
 
 import typer
 
@@ -23,10 +23,10 @@ setup_app = typer.Typer(name="Setup projects", pretty_exceptions_show_locals=Tru
     short_help="[setup] Required for annotation result processing. needs project-data"
 )
 def generate_variable_extensions_template(
-    id: Annotated[int, typer.Option()] = None,
-    alias: Annotated[str, typer.Option("-a")] = None,
-    platform: Annotated[str, typer.Argument()] = None,
-    language: Annotated[str, typer.Argument()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
     add_if_not_exists: Annotated[bool, typer.Option()] = True,
     overwrite_if_exists: Annotated[bool, typer.Option()] = False,
 ):
@@ -66,10 +66,10 @@ def generate_variable_extensions_template(
     short_help="[setup] Just needs to be run once, for each new LS project"
 )
 def setup_project_settings(
-    id: Annotated[int, typer.Option()] = None,
-    alias: Annotated[str, typer.Option("-a")] = None,
-    platform: Annotated[str, typer.Argument()] = None,
-    language: Annotated[str, typer.Argument()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
     maximum_annotations: Annotated[int, typer.Option()] = 2,
 ):
     po = get_project(id, alias, platform, language)

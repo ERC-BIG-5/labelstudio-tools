@@ -50,10 +50,10 @@ def open_image_simple(image_path):
 @app.command(
     short_help="[setup] run build_config function and copy it into 'labeling_configs_dir'. Run 'update_labeling_configs' afterward")
 def generate_labeling_configs(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
 ):
     config_files = build_configs()
     check_config_update(config_files)
@@ -160,7 +160,7 @@ def clean_project_task_files(project_id: Annotated[int, typer.Option()],
 
 @app.command(short_help="[maint]")
 def download_project_data(
-        id: Annotated[int, typer.Option()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
         alias: Annotated[Optional[str], typer.Argument()] = None,
         platform: Annotated[Optional[str], typer.Argument()] = None,
         language: Annotated[Optional[str], typer.Argument()] = None,
@@ -176,10 +176,10 @@ def download_project_data(
 
 @app.command(short_help="[maint]")
 def download_project_views(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None
 ) -> list[
     ProjectViewModel]:
     p_a = get_p_access(id, alias, platform, language)
@@ -191,13 +191,14 @@ def download_project_views(
 
 @app.command(short_help="[plot] Plot the completed tasks over time")
 def status(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
         accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 6):
     from ls_helper import main_funcs
-    main_funcs.status(get_p_access(id, alias, platform, language), accepted_ann_age)
+    po = get_project(id, alias, platform, language)
+    main_funcs.status(po, accepted_ann_age)
 
     """ experiment. redo nicer. getting count per user
     po = get_project(id, alias, platform, language)
@@ -214,10 +215,10 @@ def status(
 
 @app.command(short_help="[plot] Plot the total completed tasks over day")
 def total_over_time(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
         accepted_ann_age: Annotated[
             int, typer.Option(help="Download annotations if older than x hours")] = 6,
 ):
@@ -234,10 +235,10 @@ def total_over_time(
 
 
 @app.command(short_help="[plot] Plot the total completed tasks over day")
-def annotation_lead_times(id: Annotated[int, typer.Option()] = None,
-                          alias: Annotated[str, typer.Option("-a")] = None,
-                          platform: Annotated[str, typer.Argument()] = None,
-                          language: Annotated[str, typer.Argument()] = None,
+def annotation_lead_times(id: Annotated[Optional[int], typer.Option()] = None,
+                          alias: Annotated[Optional[str], typer.Option("-a")] = None,
+                          platform: Annotated[Optional[str], typer.Argument()] = None,
+                          language: Annotated[Optional[str], typer.Argument()] = None,
                           accepted_ann_age: Annotated[
                               int, typer.Option(help="Download annotations if older than x hours")] = 6):
     po = get_project(id, alias, platform, language)
@@ -254,10 +255,10 @@ def annotation_lead_times(id: Annotated[int, typer.Option()] = None,
 def set_view_items(
         view_title: Annotated[str, typer.Option(help="search for view with this name")],
         platform_ids_file: Annotated[Path, typer.Option()],
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
         create_view: Annotated[Optional[bool], typer.Option()] = True
 ):
     po = get_project(id, alias, platform, language)
@@ -291,10 +292,10 @@ def set_view_items(
 
 @app.command(short_help="[ls func]")
 def update_coding_game(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
         accepted_ann_age: Annotated[int, typer.Option("-age")] = 6,
         refresh_views: Annotated[bool, typer.Option("-r")] = False,
 ) -> Optional[tuple[int, int]]:
@@ -341,13 +342,13 @@ def update_coding_game(
 
 @app.command(short_help="[stats] calculate general agreements stats")
 def agreements(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
         accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 6,
         max_num_coders: Annotated[int, typer.Option()] = 2,
-        variables: Annotated[list[str], typer.Argument()] = None
+        variables: Annotated[Optional[list[str]], typer.Argument()] = None
 
 ) -> Path:
     dest, agreement_report = (get_project(id, alias, platform, language)
@@ -375,10 +376,10 @@ def create_project(
 
 
 def get_all_variable_names(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Option()] = None,
-        language: Annotated[str, typer.Option()] = None
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None
 ):
     po = get_project(id, alias, platform, language)
     # todo redo and test...
@@ -387,10 +388,10 @@ def get_all_variable_names(
 
 
 def get_variables_info(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Option()] = None,
-        language: Annotated[str, typer.Option()] = None
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None
 ):
     po = get_project(id, alias, platform, language)
     return [
@@ -405,11 +406,11 @@ def get_variables_info(
 @app.command()
 def create_conflict_view(
         variable: Annotated[str, typer.Option()],
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Option()] = None,
-        language: Annotated[str, typer.Option()] = None,
-        variable_option: Annotated[str, typer.Option()] = None
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
+        variable_option: Annotated[Optional[str], typer.Option()] = None
 ):
     # todo redo with fresh_agreement
     """
@@ -456,7 +457,7 @@ def create_conflict_view(
 @app.command()
 def build_extension_index(
         take_all_defaults: Annotated[bool, typer.Option(help="take default projects (pl/lang)")] = True,
-        project_ids: Annotated[list[int], typer.Option("-pid")] = None,
+        project_ids: Annotated[Optional[list[int]], typer.Option("-pid")] = None,
 ):
     """
     Checks
@@ -486,10 +487,10 @@ def delete_view(view_id: int):
 @app.command()
 def check_labelling_config(
         build_file_name: str,
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Option()] = None,
-        language: Annotated[str, typer.Option()] = None
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None
 ):
     po = get_project(id, alias, platform, language)
 
@@ -598,7 +599,7 @@ if __name__ == "__main__":
     # print(list(f["name"] for f in filter(lambda f: f["required"], get_variables_info(alias="twitter-es-4"))))
     # annotations.annotations(alias="twitter-es-4")
     #add_prediction_test()
-    #status(43)
-    #download_project_data(43)
+    download_project_data(50)
+    status(50)
     #agreements(id=43, variables=["nature_any", "nature_text", "nature_visual", "nep_material_visual", "extras"])
-    backup(dl_all_projects=True)
+    #backup(dl_all_projects=True)

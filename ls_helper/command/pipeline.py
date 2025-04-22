@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import Optional, Annotated
 
 import typer
 
@@ -17,24 +17,24 @@ _app = pipeline_app
 
 @_app.command()
 def create_pipeline_flow(
-    id: Annotated[int, typer.Option()] = None,
-    alias: Annotated[str, typer.Option("-a")] = None,
-    platform: Annotated[str, typer.Argument()] = None,
-    language: Annotated[str, typer.Argument()] = None,
-    destination: Annotated[Path, typer.Argument()] = None,
-    label_filter: Annotated[str, typer.Option("-f")] = None,
-    add_label: Annotated[str, typer.Option("-l")] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
+    destination: Annotated[Optional[Path], typer.Argument()] = None,
+    label_filter: Annotated[Optional[str], typer.Option("-f")] = None,
+    add_label: Annotated[Optional[str], typer.Option("-l")] = None,
 ):
     pass
 
 
 @_app.command()
 def reformat_for_datapipelines(
-    id: Annotated[int, typer.Option()] = None,
-    alias: Annotated[str, typer.Option("-a")] = None,
-    platform: Annotated[str, typer.Argument()] = None,
-    language: Annotated[str, typer.Argument()] = None,
-    destination: Annotated[Path, typer.Argument()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
+    destination: Annotated[Optional[Path], typer.Argument()] = None,
     accepted_ann_age: Annotated[
         int, typer.Option(help="Download annotations if older than x hours")
     ] = 6,

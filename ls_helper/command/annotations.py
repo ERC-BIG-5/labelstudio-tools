@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated
+from typing import Optional, Annotated
 
 import typer
 
@@ -14,10 +14,10 @@ annotations_app = typer.Typer(name="Annotations", pretty_exceptions_show_locals=
 
 @annotations_app.command(short_help="[stats] Annotation basic results")
 def annotations(
-    id: Annotated[int, typer.Option()] = None,
-    alias: Annotated[str, typer.Option("-a")] = None,
-    platform: Annotated[str, typer.Argument()] = None,
-    language: Annotated[str, typer.Argument()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
     accepted_ann_age: Annotated[
         int, typer.Option(help="Download annotations if older than x hours")
     ] = 6,

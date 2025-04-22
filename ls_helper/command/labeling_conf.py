@@ -18,11 +18,11 @@ labeling_conf_app = typer.Typer(
 
 @labeling_conf_app.command()
 def build_ls_labeling_interface(
-    id: Annotated[int, typer.Option()] = None,
-    alias: Annotated[str, typer.Option("-a")] = None,
-    platform: Annotated[str, typer.Option()] = None,
-    language: Annotated[str, typer.Option()] = None,
-    alternative_template: Annotated[str, typer.Argument()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Option()] = None,
+    language: Annotated[Optional[str], typer.Option()] = None,
+    alternative_template: Annotated[Optional[str], typer.Argument()] = None,
 ) -> Optional[Path]:
     po = get_project(id, alias, platform, language)
     path, tree = po.build_ls_labeling_config(alternative_template)
@@ -31,11 +31,11 @@ def build_ls_labeling_interface(
 
 @labeling_conf_app.command(help="[ls maint] Upload labeling config")
 def update_labeling_config(
-    id: Annotated[int, typer.Option()] = None,
-    alias: Annotated[str, typer.Option("-a")] = None,
-    platform: Annotated[str, typer.Argument()] = None,
-    language: Annotated[str, typer.Argument()] = None,
-    alternative_built: Annotated[str, typer.Argument()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
+    alternative_built: Annotated[Optional[str], typer.Argument()] = None,
 ):
     # todo, if we do that. save it
     # download_project_data(platform, language)

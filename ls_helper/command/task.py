@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import Optional, Annotated
 
 import typer
 from tqdm import tqdm
@@ -34,10 +34,10 @@ def task_platform_id_map(tasks: LSTaskList | LSTaskCreateList) -> dict[str, LSTa
 @task_app.command()
 def create_task(
     src_path: Annotated[Path, typer.Argument()],
-    id: Annotated[int, typer.Option()] = None,
-    alias: Annotated[str, typer.Option("-a")] = None,
-    platform: Annotated[str, typer.Argument()] = None,
-    language: Annotated[str, typer.Argument()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
 ):
     po = get_project(id, alias, platform, language)
     t = LSTaskCreate(project=po.id, data=json.loads(src_path.read_text())["data"])
@@ -47,10 +47,10 @@ def create_task(
 @task_app.command()
 def create_tasks(
     src_path: Annotated[Path, typer.Argument()],
-    id: Annotated[int, typer.Option()] = None,
-    alias: Annotated[str, typer.Option("-a")] = None,
-    platform: Annotated[str, typer.Argument()] = None,
-    language: Annotated[str, typer.Argument()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
 ):
     """
     can deal with json files (list of tasks) or a folder, where each task is in its own file.
@@ -102,10 +102,10 @@ def task_add_predictions(task_id: int, data):
 @task_app.command()
 def patch_tasks(
     src_path: Annotated[Path, typer.Argument()],
-    id: Annotated[int, typer.Option()] = None,
-    alias: Annotated[str, typer.Option("-a")] = None,
-    platform: Annotated[str, typer.Argument()] = None,
-    language: Annotated[str, typer.Argument()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
 ):
     """very similar to creating. But actually uses the patch api endpoint"""
     # todo, we can try if the data validates as LSTask. Meaning they have an id already.
@@ -148,10 +148,10 @@ def patch_tasks(
 
 @task_app.command()
 def get_tasks(
-    id: Annotated[int, typer.Option()] = None,
-    alias: Annotated[str, typer.Option("-a")] = None,
-    platform: Annotated[str, typer.Argument()] = None,
-    language: Annotated[str, typer.Argument()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
 ) -> list[LSTask]:
     po: ProjectData = get_project(id, alias, platform, language)
     tasks = ls_client().get_task_list(project=po.id)
