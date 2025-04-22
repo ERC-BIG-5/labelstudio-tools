@@ -199,6 +199,7 @@ def status(
     from ls_helper import main_funcs
     main_funcs.status(get_p_access(id, alias, platform, language), accepted_ann_age)
 
+    """ experiment. redo nicer. getting count per user
     po = get_project(id, alias, platform, language)
     po.validate_extensions()
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
@@ -209,7 +210,7 @@ def status(
     #users = client.get_users()
     #fix_users(res, {u.id: u.username for u in users})
     #print(res["user_id"].value_counts())
-
+    """
 
 @app.command(short_help="[plot] Plot the total completed tasks over day")
 def total_over_time(
@@ -597,4 +598,6 @@ if __name__ == "__main__":
     # print(list(f["name"] for f in filter(lambda f: f["required"], get_variables_info(alias="twitter-es-4"))))
     # annotations.annotations(alias="twitter-es-4")
     #add_prediction_test()
+    #status(43)
+    #download_project_data(43)
     agreements(id=43, variables=["nature_any", "nature_text", "nature_visual", "nep_material_visual", "extras"])

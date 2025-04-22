@@ -138,7 +138,7 @@ class ProjectData(ProjectCreate):
             fin = p_i
         if not fin:
             raise FileNotFoundError(
-                f"project data file for {self.id}: platform-language does not exist. Call "
+                f"project data file for {self.id}: does not exist. Call 'download-project-data'"
             )
         self._project_data = LSProjectModel.model_validate_json(fin.read_text())
         return self._project_data
@@ -173,7 +173,6 @@ class ProjectData(ProjectCreate):
             SETTINGS.built_labeling_configs, alternative_build, ".xml"
         ).read_text(encoding="utf-8")
 
-    @property
     def variables(self) -> dict[str, VariableModel]:
         variables = {}
 
@@ -199,12 +198,12 @@ class ProjectData(ProjectCreate):
 
     @property
     def variables_names(self) -> list[str]:
-        return list(self.variables.keys())
+        return list(self.variables().keys())
 
     @property
     def choices(self) -> dict[str, FieldModelChoice]:
         return {
-            k: v for k, v in self.variables.items() if isinstance(v, FieldModelChoice)
+            k: v for k, v in self.variables().items() if isinstance(v, FieldModelChoice)
         }
 
     @property
@@ -349,6 +348,8 @@ class ProjectData(ProjectCreate):
             self, agreement_report: "Agreements", gen_csv_tables: bool = True
     ) -> Path:
         dest = self.path_for(SETTINGS.agreements_dir, ext=".csv")
+
+        variables = self.variables()
         writer = DictWriter(
             dest.open("w", encoding="utf-8"),
             fieldnames=[
@@ -366,7 +367,7 @@ class ProjectData(ProjectCreate):
 
         for var_agreement in agreement_report.results.values():
             var = var_agreement.variable
-            _choice_type = cast(ChoiceVariableModel, self.variables[var]).choice
+            _choice_type = cast(ChoiceVariableModel, variables[var]).choice
             var_data = {"variable": var, "type": _choice_type}
             if _choice_type == "single":
                 row_data = var_data | {"option": "VARIABLE_LEVEL"}
@@ -551,7 +552,7 @@ class ProjectResult(BaseModel):
     def get_annotation_df(
             self, debug_task_limit: Optional[int] = None, drop_cancels: bool = True
     ) -> tuple[DataFrame, DataFrame]:
-        logger.info("Building raw annotaions dataframe")
+        logger.info("Building raw annotations dataframe")
         assignment_df_rows = []
         rows = []
 
@@ -563,6 +564,7 @@ class ProjectResult(BaseModel):
             return k
 
         extension_keys = set(self.project_data.variable_extensions.extensions)
+        variables = self.project_data.variables()
 
         q_extens = {
             k: var_method(k, v)
@@ -571,7 +573,7 @@ class ProjectResult(BaseModel):
 
         debug_mode = debug_task_limit is not None
 
-        for task in tqdm(self.raw_annotation_result.task_results):
+        for task in self.raw_annotation_result.task_results:
             # print(task.id)
             for ann in task.annotations:
                 # print(f"{task.id=} {ann.id=}")
@@ -579,14 +581,6 @@ class ProjectResult(BaseModel):
                     # print(f"{task.id=} {ann.id=} C")
                     continue
                 # print(f"{task.id=} {ann.id=} {len(ann.result)=}")
-                """
-                assignment_df_rows.append(
-                    PrincipleRow.model_construct(task_id=task.id,
-                                                 ann_id=ann.id,
-                                                 user_id=ann.completed_by,
-                                                 ts=ann.updated_at,
-                                                 platform_id=task.data[DFCols.P_ID]).model_dump(by_alias=True)
-                )"""
 
                 for q_id, question in enumerate(ann.result):
                     orig_name = question.from_name
@@ -599,24 +593,23 @@ class ProjectResult(BaseModel):
                         continue
                     # print(question)
                     if question.type == "choices":
-                        type_ = self.project_data.variables[new_name].choice
+                        type_ = cast(ChoiceVariableModel, variables[new_name]).choice
                     elif question.type == "textarea":
                         type_ = "text"
                     else:
                         print("unknown question type")
                         type_ = "x"
                     rows.append(
-                        PrincipleRow.model_construct(
-                            task_id=task.id,
-                            ann_id=ann.id,
-                            platform_id=task.data[DFCols.P_ID],
-                            user_id=ann.completed_by,
-                            ts=ann.updated_at,
-                            variable=new_name,
-                            type=type_,
-                            value=question.value.direct_value,
-                        ).model_dump(by_alias=True)
-                    )
+                        {
+                            "task_id": task.id,
+                            "ann_id": ann.id,
+                            "platform_id": task.data[DFCols.P_ID],
+                            "user_id": ann.completed_by,
+                            "ts": ann.updated_at,
+                            "variable": new_name,
+                            "type": type_,
+                            "value": question.value.direct_value,
+                        })
 
             if debug_mode:
                 debug_task_limit -= 1

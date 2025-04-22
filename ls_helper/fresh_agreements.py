@@ -1,6 +1,6 @@
 import re
 from datetime import date
-from typing import Optional, Annotated, Any, Literal, Generator
+from typing import Optional, Annotated, Any, Literal, Generator, TYPE_CHECKING
 
 import irrCAC.raw
 import pandas as pd
@@ -9,7 +9,8 @@ from numpy import nan
 from pandas import DataFrame
 from pydantic import BaseModel, Field
 
-from ls_helper.new_models import ProjectData, get_project
+if TYPE_CHECKING:
+    from ls_helper.new_models import ProjectData
 
 
 # experimental...
@@ -34,7 +35,7 @@ class AgreementResult(BaseModel):
 class Agreements:
     def __init__(
         self,
-        po: ProjectData,
+        po: "ProjectData",
         accepted_ann_age: int = 6,
         agreement_types: Agreement_types = ("gwet", "ratio", "abs"),
     ) -> None:
@@ -278,6 +279,7 @@ class Agreements:
         if not agreement_types:
             agreement_types = self.agreement_types
 
+        variables = self.po.variables()
         for var, v_df in variables_dfs.items():
             print(var, len(v_df))
             result = AgreementResult(variable=var)
@@ -286,7 +288,7 @@ class Agreements:
                 v_df = v_df.drop("variable", axis=1)
             v_df = Agreements.drop_unfinished_tasks(v_df)
 
-            options = self.po.variables[var].options
+            options = variables[var].options
 
             if v_df.iloc[0]["type"] == "single":
                 v_df_s = v_df.explode("value")
@@ -342,6 +344,7 @@ class Agreements:
 
 
 if __name__ == "__main__":
+    from ls_helper.new_models import get_project
     po = get_project(43)
     ag = Agreements(po)
     ag.agreement_calc(

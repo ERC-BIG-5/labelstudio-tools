@@ -7,13 +7,14 @@ import pandas as pd
 from numpy.ma.extras import average
 
 from ls_helper.my_labelstudio_client.models import TaskResultModel
+from ls_helper.new_models import ProjectAnnotationResultsModel
 
 
 def annotation_timing(
-    annotations: list[TaskResultModel], min_annotations: int = 2
+    annotations: ProjectAnnotationResultsModel, min_annotations: int = 2
 ) -> pd.DataFrame:
     counter = collections.Counter[date]()
-    for ann in annotations:
+    for ann in annotations.task_results:
         if ann.total_annotations < min_annotations:
             continue
         dt = ann.annotations[-1].created_at.date()
