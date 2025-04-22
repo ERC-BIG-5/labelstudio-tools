@@ -5,6 +5,7 @@ from typing import Annotated
 import typer
 
 from ls_helper.models.interface_models import InterfaceData, ProjectVariableExtensions, FieldExtension
+from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.new_models import ProjectAnnotationResultsModel, get_project
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
@@ -55,3 +56,20 @@ def generate_variable_extensions_template(
         po.save_extensions(res_template, "alt")
 
 
+@setup_app.command(short_help="[setup] Just needs to be run once, for each new LS project")
+def setup_project_settings(
+        id: Annotated[int, typer.Option()] = None,
+        alias: Annotated[str, typer.Option("-a")] = None,
+        platform: Annotated[str, typer.Argument()] = None,
+        language: Annotated[str, typer.Argument()] = None,
+        maximum_annotations: Annotated[int, typer.Option()] = 2):
+    po = get_project(id, alias, platform, language)
+    values = ProjectMgmt.default_project_values()
+    if maximum_annotations:
+        values["maximum_annotations"] = maximum_annotations
+    # del values["color"]
+    print(values)
+    res = ls_client().patch_project(po.id, values)
+    po.save_project_data(res)
+    if not res:
+        print("error updating project settings")

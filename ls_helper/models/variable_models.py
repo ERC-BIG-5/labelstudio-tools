@@ -17,6 +17,7 @@ class VariableType(Enum):
     text= auto()
     range= auto()
 
+
 class VariableModel(BaseModel):
     orig_name: str
     name: str

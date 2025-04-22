@@ -11,9 +11,12 @@ from tqdm import tqdm
 from ls_helper.agreements import fix_users, AgreementReport, SingleChoiceAgreement
 from ls_helper.annotation_timing import plot_date_distribution, annotation_total_over_time, \
     plot_cumulative_annotations, get_annotation_lead_times
-from ls_helper.command import task, labeling_conf, setup, annotations
+from ls_helper.command.annotations import annotations_app
+from ls_helper.command.backup import backup_app
 from ls_helper.command.labeling_conf import labeling_conf_app
 from ls_helper.command.pipeline import pipeline_app
+from ls_helper.command.setup import setup_app
+from ls_helper.command.task import task_app, task_add_predictions
 from ls_helper.config_helper import check_config_update, parse_label_config_xml
 from ls_helper.exp.build_configs import build_configs
 from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter
@@ -31,38 +34,18 @@ logger = get_logger(__file__)
 
 app = typer.Typer(name="Labelstudio helper", pretty_exceptions_show_locals=True)
 
+app.add_typer(setup_app, name="setup")
 app.add_typer(labeling_conf_app, name="label_conf")
 app.add_typer(pipeline_app, name="pipeline")
-"""
-id_ = typer.Option(None, "--id"),
-platform_ = typer.Option(None, "--platform", "-p"),
-language_ = typer.Option(None, "--language", "-l"),
-alias_ = typer.Option(None, "--alias", "-a"),
-"""
+app.add_typer(annotations_app, name="annotations")
+app.add_typer(backup_app, name="backup")
+app.add_typer(task_app, name="task")
 
 
 def open_image_simple(image_path):
     # Convert to absolute path and URI format
     file_path = Path(image_path).absolute().as_uri()
     webbrowser.open(file_path)
-
-
-@app.command(short_help="[setup] Just needs to be run once, for each new LS project")
-def setup_project_settings(
-        id: Annotated[int, typer.Option()] = None,
-        alias: Annotated[str, typer.Option("-a")] = None,
-        platform: Annotated[str, typer.Argument()] = None,
-        language: Annotated[str, typer.Argument()] = None,
-        maximum_annotations: Annotated[int, typer.Option()] = 2):
-    po = get_project(id, alias, platform, language)
-    values = ProjectMgmt.default_project_values()
-    if maximum_annotations:
-        values["maximum_annotations"] = maximum_annotations
-    # del values["color"]
-    res = ls_client().patch_project(po.id, values)
-    po.save_project_data(res)
-    if not res:
-        print("error updating project settings")
 
 
 @app.command(
@@ -363,14 +346,15 @@ def agreements(
         platform: Annotated[str, typer.Argument()] = None,
         language: Annotated[str, typer.Argument()] = None,
         accepted_ann_age: Annotated[int, typer.Option(help="Download annotations if older than x hours")] = 6,
-        min_num_coders: Annotated[int, typer.Option()] = 2,
+        max_num_coders: Annotated[int, typer.Option()] = 2,
         variables: Annotated[list[str], typer.Argument()] = None
 
 ) -> tuple[Path, AgreementReport]:
     dest, agreement_report = (get_project(id, alias, platform, language)
                               .get_annotations_results(
         accepted_ann_age=accepted_ann_age)
-                              .get_coder_agreements(min_num_coders, variables, True))
+                              .get_coder_agreements(max_num_coders, variables, True))
+
     return dest, agreement_report
 
 
@@ -401,6 +385,7 @@ def get_all_variable_names(
     struct = po.raw_interface_struct
     return list(struct.ordered_fields_map.keys())
 
+
 def get_variables_info(
         id: Annotated[int, typer.Option()] = None,
         alias: Annotated[str, typer.Option("-a")] = None,
@@ -410,11 +395,12 @@ def get_variables_info(
     po = get_project(id, alias, platform, language)
     return [
         {
-            "name":k,
-            "required":v.required,
+            "name": k,
+            "required": v.required,
             "choice_type": v.choice if isinstance(v, IChoices) else None,
-        } for k,v in po.raw_interface_struct.ordered_fields_map.items()
+        } for k, v in po.raw_interface_struct.ordered_fields_map.items()
     ]
+
 
 @app.command()
 def create_conflict_view(
@@ -518,6 +504,37 @@ def check_labelling_config(
     pass
 
 
+def add_prediction_test():
+    resp = task_add_predictions(33030, {
+        "model_version": "one",
+        "score": 0.5,
+        # "type": "choices",
+        "result": [{
+            # "id": "result1",
+            "type": "choices",
+            "to_name": "title",
+            "from_name": "nature_any",
+            "value": {
+                "choices": [
+                    "Yes"
+                ]
+            }
+        },{
+            # "id": "result1",
+            "type": "choices",
+            "to_name": "title",
+            "from_name": "nature_visual",
+            "value": {
+                "choices": [
+                    "Yes"
+                ]
+            }
+        }]
+    })
+    print(json.dumps(resp.json(), indent=2))
+
+
+
 if __name__ == "__main__":
     twitter = "twitter"
     youtube = "youtube"
@@ -543,10 +560,6 @@ if __name__ == "__main__":
 
     # alternative builts possible
     # sub apps:
-    setup
-    # labeling_conf
-    # pipeline
-    task
     # annotations
     # generate_variable_extensions_template(50)
     # build_extension_index(project_ids=[50,43,33,39])
@@ -578,7 +591,9 @@ if __name__ == "__main__":
     # setup_project_settings(alias="twitter-es-4")
     # task.patch_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/p1_twitter-es-4"), alias="twitter-es-4")
     # setup.generate_variable_extensions_template(alias="twitter-es-4")
-    setup_project_settings(id=50,maximum_annotations=1)
-    print(download_project_data(id=50).maximum_annotations)
+    #setup_project_settings(id=51, maximum_annotations=2)
+    #print(download_project_data(id=50))
     # print(list(f["name"] for f in filter(lambda f: f["required"], get_variables_info(alias="twitter-es-4"))))
     # annotations.annotations(alias="twitter-es-4")
+    #add_prediction_test()
+    agreements(id=43, variables=["nature_any", "nature_text", "nature_visual", "nep_material_visual", "extras"])

@@ -1,11 +1,35 @@
 # Readme
 
+Required repository:
+`https://github.com/transfluxus/python-project-tools`
+
+
 ## main.py
 
 main uses typer, so we can run comands from the comandline
 projects of labelstudio are identified through the first 4 options: id, alias, platform, language.
 
 All projects are stored in data/ls_data
+
+## Commands
+
+Run commands like so:
+
+typer main.py run status -a twitter-es-4
+
+Commands sub folders:
+
+typer main.py run task get-tasks -a twitter-es-4
+
+- setup: setting up projects
+- task: adding and patching LS tasks
+- labeling_conf: creating project labeling configs (xml)
+- annotations:  downloading annotations
+- view: creating, managing views
+- pipeline: interacting with the pipeline package
+- backup: backing up project data and annotations
+    
+
 
 ## ls_data folder
 

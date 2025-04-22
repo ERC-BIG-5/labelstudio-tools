@@ -13,8 +13,7 @@ from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 
-pipeline_app = typer.Typer(name="Pipeline config", pretty_exceptions_show_locals=True)
-_app = pipeline_app
+task_app = typer.Typer(name="Task related", pretty_exceptions_show_locals=True)
 
 
 def task_platform_id_map(tasks: LSTaskList | LSTaskCreateList) -> dict[str, LSTask]:
@@ -28,7 +27,7 @@ def task_platform_id_map(tasks: LSTaskList | LSTaskCreateList) -> dict[str, LSTa
     return platform_id_map
 
 
-@pipeline_app.command()
+@task_app.command()
 def create_task(
         src_path: Annotated[Path, typer.Argument()],
         id: Annotated[int, typer.Option()] = None,
@@ -41,7 +40,7 @@ def create_task(
     ls_client().create_task(t)
 
 
-@pipeline_app.command()
+@task_app.command()
 def create_tasks(
         src_path: Annotated[Path, typer.Argument()],
         id: Annotated[int, typer.Option()] = None,
@@ -75,11 +74,24 @@ def create_tasks(
 
     resp_data = ls_client().import_tasks(po.id, batch)
     task_ids = resp_data["task_ids"]
-    tasks = [LSTask(**t.model_dump(), id=task_ids[idx]) for idx,t in enumerate(batch)]
+    tasks = [LSTask(**t.model_dump(), id=task_ids[idx]) for idx, t in enumerate(batch)]
     po.save_tasks(tasks)
 
 
-@pipeline_app.command()
+def patch_task(
+        task_id: int,
+        task: LSTask
+):
+    """very similar to creating. But actually uses the patch api endpoint"""
+    # todo, we can try if the data validates as LSTask. Meaning they have an id already.
+    # we can then skip the mapping part...
+    res = ls_client().patch_task(task_id, task)
+    return res
+
+def task_add_predictions(task_id: int, data):
+    return ls_client().add_prediction(task_id, data)
+
+@task_app.command()
 def patch_tasks(
         src_path: Annotated[Path, typer.Argument()],
         id: Annotated[int, typer.Option()] = None,
@@ -91,7 +103,7 @@ def patch_tasks(
     # todo, we can try if the data validates as LSTask. Meaning they have an id already.
     # we can then skip the mapping part...
     po = get_project(id, alias, platform, language)
-    batch: LSTaskCreateList|LSTaskList = LSTaskCreateList(root=[])
+    batch: LSTaskCreateList | LSTaskList = LSTaskCreateList(root=[])
     if src_path.exists():
         # load individual tasks
         if src_path.is_dir():
@@ -111,11 +123,12 @@ def patch_tasks(
         if not ls_task:
             print(f"Warning: platform_id: {p_id} not present in project tasks: {repr(tasks)}")
         task_id = ls_task.id
-        #update_task.id = task_id
+        # update_task.id = task_id
         res = ls_client().patch_task(task_id, update_task)
         # TODO store them
 
-@pipeline_app.command()
+
+@task_app.command()
 def get_tasks(id: Annotated[int, typer.Option()] = None,
               alias: Annotated[str, typer.Option("-a")] = None,
               platform: Annotated[str, typer.Argument()] = None,

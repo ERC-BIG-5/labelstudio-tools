@@ -30,7 +30,8 @@ class ProjectMgmt:
         return {
             "color": "#617ada",
             "maximum_annotations": 2,
-            "sampling": "Uniform sampling"
+            "sampling": "Uniform sampling",
+            "show_collab_predictions": True,
         }
 
     @staticmethod

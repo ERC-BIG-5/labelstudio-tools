@@ -267,6 +267,11 @@ class LabelStudioBase:
         resp = self._client_wrapper.httpx_client.patch(f"/api/tasks/{task_id}", json=task.model_dump())
         return resp
 
+    def add_prediction(self, task_id, data: dict):
+        data["task"] = task_id
+        resp = self._client_wrapper.httpx_client.post(f"/api/predictions", json=data)
+        return resp
+
     def list_import_storages(self, project: Optional[int] = None) -> Response:
         resp = self._client_wrapper.httpx_client.get("api/storages/localfiles/", params={"project": project})
         return resp

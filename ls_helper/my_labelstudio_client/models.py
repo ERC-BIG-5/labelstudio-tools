@@ -186,7 +186,8 @@ class ViewType(str, Enum):
 
 class TaskCreate(BaseModel):
     project: int
-    data: dict[str, Any]
+    data: Optional[dict[str, Any]] = None
+    predictions: Optional[list] = None
 
 
 class Task(TaskCreate):

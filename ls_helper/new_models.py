@@ -1,7 +1,8 @@
 import json
+from csv import DictWriter
 from enum import Enum, auto
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, cast
 
 import pandas as pd
 from lxml.etree import ElementTree
@@ -9,12 +10,13 @@ from pandas import DataFrame
 from pydantic import BaseModel, Field, model_validator, ConfigDict
 from tqdm import tqdm
 
-from ls_helper.agreements import AgreementReport, export_agreement_metrics_to_csv, analyze_coder_agreement
+from ls_helper.agreements import AgreementReport
 from ls_helper.config_helper import parse_label_config_xml
 from ls_helper.exp.build_configs import LabelingInterfaceBuildConfig, build_from_template
+
 from ls_helper.models.interface_models import InterfaceData, ProjectVariableExtensions, IChoices, PrincipleRow
 from ls_helper.models.variable_models import ChoiceVariableModel as FieldModelChoice, \
-    VariableModel
+    VariableModel, ChoiceVariableModel
 from ls_helper.my_labelstudio_client.models import ProjectModel as LSProjectModel, ProjectViewModel, TaskResultModel, \
     Task as LSTask, TaskList as LSTaskList
 from ls_helper.settings import SETTINGS, DFCols, DFFormat
@@ -276,7 +278,31 @@ class ProjectData(ProjectCreate):
         else:
             return UserInfo.model_validate(json.load(pp.open()))
 
-    def store_agreement_report(self, agreement_report: AgreementReport, gen_csv_tables: bool = True):
+    def store_agreement_report(self, agreement_report: "Agreements", gen_csv_tables: bool = True) -> Path:
+
+        dest = self.path_for(SETTINGS.agreements_dir, ext= ".csv")
+        writer = DictWriter(dest.open("w", encoding="utf-8"),
+                            fieldnames=["variable", "type", "option", "fleiss", "gwet", "ratio", "abs", "total"])
+        writer.writeheader()
+
+        for var_agreement in agreement_report.results.values():
+            var = var_agreement.variable
+            _choice_type = cast(ChoiceVariableModel, self.variables[var]).choice
+            var_data = {
+                "variable": var,
+                "type": _choice_type
+            }
+            if _choice_type == "single":
+                row_data = var_data | {"option": "VARIABLE_LEVEL"}
+                for agreement_type, agreement_value in var_agreement.single_overall.items():
+                    row_data[agreement_type] = agreement_value
+                writer.writerow(row_data)
+            for option, option_agreements in var_agreement.options_agreements.items():
+                row_data = var_data | {"option": option}
+                for agreement_type, agreement_value in option_agreements.items():
+                    row_data[agreement_type] = agreement_value
+                writer.writerow(row_data)
+        """
         (p := self.path_for(ItemType.agreement_report)).write_text(
             agreement_report.model_dump_json(exclude_none=True, indent=2))
         print(f"agreement_report -> {p.as_posix()}")
@@ -289,8 +315,8 @@ class ProjectData(ProjectCreate):
             p_csv = self.path_for(ItemType.agreement_report, "_vars.csv")
             df.to_csv(p_csv)
             print(f"agreement_report -> {p_csv.as_posix()}")
-
-        return p
+        """
+        return dest
 
     def get_agreement_data(self) -> AgreementReport:
         return AgreementReport.model_validate_json(self.path_for(ItemType.agreement_report).read_text())
@@ -299,9 +325,11 @@ class ProjectData(ProjectCreate):
         return LSTaskList.model_validate_json(self.path_for(SETTINGS.tasks_dir).read_text())
 
     def save_tasks(self, tasks: list[LSTask]):
-        self.path_for(SETTINGS.tasks_dir).write_text(
+        dest = self.path_for(SETTINGS.tasks_dir)
+        dest.write_text(
             json.dumps([t.model_dump(include={"data", "id", "project"}) for t in tasks], indent=2)
         )
+        logger.info(f"Save tasks to: {dest.as_posix()}")
 
 
 class ProjectOverView(BaseModel):
@@ -456,13 +484,14 @@ class ProjectResult(BaseModel):
                     # print(f"{task.id=} {ann.id=} C")
                     continue
                 # print(f"{task.id=} {ann.id=} {len(ann.result)=}")
+                """
                 assignment_df_rows.append(
                     PrincipleRow.model_construct(task_id=task.id,
                                                  ann_id=ann.id,
                                                  user_id=ann.completed_by,
                                                  ts=ann.updated_at,
                                                  platform_id=task.data[DFCols.P_ID]).model_dump(by_alias=True)
-                )
+                )"""
 
                 for q_id, question in enumerate(ann.result):
                     orig_name = question.from_name
@@ -641,13 +670,16 @@ class ProjectResult(BaseModel):
         result.attrs["format"] = DFFormat.flat
         return result
 
-    def get_coder_agreements(self, min_num_coders: int = 2, variables: Optional[list[str]] = None,
+    def get_coder_agreements(self, max_num_coders: int = 2, variables: Optional[list[str]] = None,
                              gen_csv_tables: bool = True) -> tuple[
-        Path, AgreementReport]:
-        agreement_report = analyze_coder_agreement(self.raw_annotation_df, self.assignment_df,
-                                                   self.project_data.choices, min_num_coders, variables)
-        dest = self.project_data.store_agreement_report(agreement_report, gen_csv_tables)
-        return dest, agreement_report
+        Path, dict[str, "AgreementResult"]]:
+        from ls_helper.fresh_agreements import Agreements, AgreementResult
+        ag = Agreements(self.project_data)
+        ag.agreement_calc(variables, max_coders=max_num_coders)
+        # agreement_report = analyze_coder_agreement(self.raw_annotation_df, self.assignment_df,
+        #                                           self.project_data.choices, min_num_coders, variables)
+        dest = self.project_data.store_agreement_report(ag, gen_csv_tables)
+        return dest, ag.results
 
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
 

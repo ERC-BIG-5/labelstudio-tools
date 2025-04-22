@@ -1,4 +1,5 @@
 import re
+from csv import DictWriter
 from datetime import date
 from typing import Optional, Annotated, Any, Literal, Generator
 
@@ -149,7 +150,7 @@ class Agreements:
         return pv_df
 
     @staticmethod
-    def calc_agreements(df: DataFrame, agreement_types: Agreement_types) -> AgreementsCol:
+    def _calc_agreements(df: DataFrame, agreement_types: Agreement_types) -> AgreementsCol:
         if len(df) == 0:
             return {_: nan for _ in agreement_types}
         pv_df = Agreements.create_coder_pivot_df(df)
@@ -261,44 +262,36 @@ class Agreements:
                 v_df = v_df.drop("variable", axis=1)
             v_df = Agreements.drop_unfinished_tasks(v_df)
 
+            options = self.po.variables[var].options
+
             if v_df.iloc[0]["type"] == "single":
                 v_df_s = v_df.explode("value")
                 v_df_s.fillna(force_default, inplace=True)
                 # v_df = Agreements.prepare_var(v_df, force_default).reset_index()
-                result.single_overall = self.calc_agreements(v_df_s, agreement_types)
+                result.single_overall = self._calc_agreements(v_df_s, agreement_types)
+                for option in options:
+                    # Use vectorized operations when possible for performance
+                    option_df = v_df.copy()
+                    option_df = option_df.explode("value")
+                    option_df = option_df.groupby('task_id').filter(lambda group: (group['value'] == option).any())
+                    result.options_agreements[option] = self._calc_agreements(option_df, agreement_types)
             # multi-select
-            options = self.po.variables[var].options
-            option_dfs = {}
-            for option in options:
-                # Use vectorized operations when possible for performance
-                option_df = v_df.copy()
-                # Convert to 1/0 values based on option presence
-                option_df['value'] = option_df['value'].apply(
-                    lambda x: 1 if isinstance(x, list) and option in x else 0
-                )
-                option_dfs[option] = option_df
-            for option in options:
-                # Important: Create a fresh pivot table for EACH option
-                # This ensures we only include coders who actually coded each task
-                option_values = {}
+            else:
+                for option in options:
+                    option_df = v_df.copy()
+                    # Convert to 1/0 values based on option presence
+                    option_df['value'] = option_df['value'].apply(
+                        lambda x: 1 if isinstance(x, list) and option in x else 0
+                    )
 
-                # Process each task and coder combination
-                for (task_id, user_id), row in v_df.iterrows():
-                    user_value = row['value']
-                    # 1 if option selected, 0 if not selected but coder did code this task
-                    option_values[(task_id, user_id)] = 1 if isinstance(user_value,
-                                                                        list) and option in user_value else 0
 
-                # Create dataframe with proper MultiIndex
-                index = pd.MultiIndex.from_tuples(option_values.keys(), names=['task_id', 'user_id'])
-                opt_df = pd.DataFrame({'value': list(option_values.values())}, index=index)
-
-                if keep_tasks:
-                    tasks_with_1 = opt_df.groupby('task_id')['value'].apply(lambda x: (x == 1).any())
-                    task_ids = tasks_with_1[tasks_with_1].index
-                    self.collections.setdefault(var, {})[option] = task_ids
-                # Calculate agreement for this option
-                result.options_agreements[option] = self.calc_agreements(opt_df, agreement_types)
+                    # todo,this also for single selects
+                    if keep_tasks:
+                        tasks_with_1 = option_df.groupby('task_id')['value'].apply(lambda x: (x == 1).any())
+                        task_ids = tasks_with_1[tasks_with_1].index
+                        self.collections.setdefault(var, {})[option] = task_ids
+                    # Calculate agreement for this option
+                    result.options_agreements[option] = self._calc_agreements(option_df, agreement_types)
 
             # for day, accum_df in self.time_move(v_df):
             # pass
@@ -314,6 +307,10 @@ class Agreements:
             """
 
         return self.results
+
+    def results2csv(self):
+        self.po
+        writer = DictWriter()
 
 
 if __name__ == "__main__":
