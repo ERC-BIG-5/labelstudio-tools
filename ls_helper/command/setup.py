@@ -1,18 +1,18 @@
-from typing import Optional, Annotated
+from typing import Annotated, Optional
 
 import typer
+from tools.files import read_data
+from tools.project_logging import get_logger
 
 from ls_helper.models.interface_models import (
+    FieldExtension,
     InterfaceData,
     ProjectVariableExtensions,
-    FieldExtension,
 )
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.new_models import get_project
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
-from tools.files import read_data
-from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 

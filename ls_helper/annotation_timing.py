@@ -2,7 +2,6 @@ import collections
 import tempfile
 from datetime import date
 
-
 import pandas as pd
 from numpy.ma.extras import average
 

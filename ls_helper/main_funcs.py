@@ -5,7 +5,6 @@ from ls_helper.annotation_timing import (
     plot_date_distribution,
 )
 from ls_helper.new_models import (
-    platforms_overview,
     ProjectAnnotationResultsModel,
     ProjectData,
 )

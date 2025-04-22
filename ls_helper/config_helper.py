@@ -5,13 +5,13 @@ from deepdiff import DeepDiff
 from lxml.etree import Element
 
 from ls_helper.models.interface_models import (
-    InterfaceData,
-    ProjectVariableExtensions,
-    IField,
     IChoice,
     IChoices,
-    ITextArea,
+    IField,
+    InterfaceData,
     IText,
+    ITextArea,
+    ProjectVariableExtensions,
 )
 
 # from ls_helper.new_models import ProjectData

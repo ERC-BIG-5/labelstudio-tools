@@ -2,10 +2,10 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
+from tools.project_logging import get_logger
 
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.new_models import get_project
-from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 

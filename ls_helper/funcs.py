@@ -1,16 +1,16 @@
 import csv
 import json
 from pathlib import Path
-from typing import Optional, Literal
+from typing import Literal, Optional
 
 import httpx
 import jsonpath_ng
 
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
 from ls_helper.my_labelstudio_client.models import (
-    UserModel,
     ProjectViewModel,
     TaskResultModel,
+    UserModel,
 )
 from ls_helper.settings import SETTINGS
 

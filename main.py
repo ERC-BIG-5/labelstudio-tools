@@ -6,41 +6,41 @@ from typing import Annotated, Optional
 
 import typer
 from deepdiff import DeepDiff
+from tools.project_logging import get_logger
 from tqdm import tqdm
 
 from ls_helper.annotation_timing import (
-    plot_date_distribution,
     annotation_total_over_time,
-    plot_cumulative_annotations,
     get_annotation_lead_times,
+    plot_cumulative_annotations,
+    plot_date_distribution,
 )
 from ls_helper.command.annotations import annotations_app
-from ls_helper.command.backup import backup_app, backup
+from ls_helper.command.backup import backup_app
 from ls_helper.command.labeling_conf import labeling_conf_app
 from ls_helper.command.pipeline import pipeline_app
 from ls_helper.command.setup import setup_app
-from ls_helper.command.task import task_app, task_add_predictions
+from ls_helper.command.task import task_add_predictions, task_app
 from ls_helper.config_helper import check_config_update, parse_label_config_xml
 from ls_helper.exp.build_configs import build_configs
 from ls_helper.funcs import build_view_with_filter_p_ids
 from ls_helper.models.interface_models import IChoices
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import (
-    ProjectViewModel,
+    ProjectModel,
     ProjectViewCreate,
     ProjectViewDataModel,
-    ProjectModel,
+    ProjectViewModel,
 )
 from ls_helper.new_models import (
-    platforms_overview,
-    get_p_access,
     ProjectCreate,
+    get_p_access,
     get_project,
+    platforms_overview,
 )
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
-from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 

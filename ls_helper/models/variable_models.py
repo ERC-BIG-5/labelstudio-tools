@@ -1,8 +1,7 @@
-from enum import auto, Enum
+from enum import Enum, auto
 from typing import Optional
 
 from pydantic import BaseModel, model_validator
-
 from tools.project_logging import get_logger
 
 logger = get_logger(__file__)

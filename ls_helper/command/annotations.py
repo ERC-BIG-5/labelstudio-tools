@@ -1,11 +1,11 @@
 from pathlib import Path
-from typing import Optional, Annotated
+from typing import Annotated, Optional
 
 import typer
+from tools.project_logging import get_logger
 
 from ls_helper.new_models import get_project
 from ls_helper.settings import SETTINGS
-from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 

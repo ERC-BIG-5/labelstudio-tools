@@ -1,10 +1,9 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Any, TypedDict, Literal, Annotated
+from typing import Annotated, Any, Literal, Optional, TypedDict
 
-from pydantic import BaseModel, Field, PlainSerializer, ConfigDict, RootModel
-
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, RootModel
 from tools.pydantic_annotated_types import SerializableDatetimeAlways
 
 

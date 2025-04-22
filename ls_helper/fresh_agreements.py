@@ -1,6 +1,6 @@
 import re
 from datetime import date
-from typing import Optional, Annotated, Any, Literal, Generator, TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any, Generator, Literal, Optional
 
 import irrCAC.raw
 import pandas as pd

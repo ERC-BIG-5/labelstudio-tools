@@ -2,27 +2,27 @@ import json
 from datetime import datetime, timedelta
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Optional, Annotated
+from typing import Annotated, Any, Optional
 
 import orjson
+from tools.env_root import root
+from tools.files import read_data
 
 from ls_helper.funcs import get_latest_annotation_file
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import (
     ProjectModel,
-    ProjectViewModel,
     ProjectViewCreate,
+    ProjectViewModel,
     TaskResultModel,
 )
 from ls_helper.new_models import (
-    ProjectCreate,
-    platforms_overview,
-    ProjectData,
     ProjectAnnotationResultsModel,
+    ProjectCreate,
+    ProjectData,
+    platforms_overview,
 )
-from ls_helper.settings import SETTINGS, ls_logger, TIMESTAMP_FORMAT
-from tools.env_root import root
-from tools.files import read_data
+from ls_helper.settings import SETTINGS, TIMESTAMP_FORMAT, ls_logger
 
 
 class FileType(Enum):

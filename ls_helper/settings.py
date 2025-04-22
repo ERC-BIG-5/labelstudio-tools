@@ -1,16 +1,14 @@
 import logging
+import sys
 from dataclasses import dataclass
 from enum import Enum, auto
-
-import sys
 from logging import getLogger
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from pydantic import Field, model_validator
 from pydantic_core.core_schema import ValidationInfo
 from pydantic_settings import BaseSettings
-
 from tools.env_root import root
 
 if TYPE_CHECKING:

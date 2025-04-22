@@ -2,10 +2,11 @@ import copy
 import json
 import os
 from pathlib import Path
-from typing import Optional
-from lxml import etree
 from string import Template
+from typing import Optional
+
 import pystache
+from lxml import etree
 
 
 def create_choice_elem(option: str, alias: Optional[str] = None) -> str:

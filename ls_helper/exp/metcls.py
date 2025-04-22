@@ -1,8 +1,9 @@
-from pathlib import Path
-from typing import Optional, Annotated, get_origin, get_args, Any
 import json
 import os
-from pydantic import BaseModel, Field, ConfigDict
+from pathlib import Path
+from typing import Annotated, Any, Optional, get_args, get_origin
+
+from pydantic import BaseModel, ConfigDict, Field
 
 # First, find out what metaclass BaseModel uses
 pydantic_metaclass = type(BaseModel)

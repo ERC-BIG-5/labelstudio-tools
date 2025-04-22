@@ -1,4 +1,4 @@
-from pydantic import Field, BaseModel
+from pydantic import BaseModel, Field
 
 from ls_helper.models.interface_models import FieldExtension
 from ls_helper.new_models import ProjectData

@@ -2,12 +2,14 @@ import json
 from csv import DictWriter
 from enum import Enum, auto
 from pathlib import Path
-from typing import Optional, Any, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 import pandas as pd
 from lxml.etree import ElementTree
 from pandas import DataFrame
-from pydantic import BaseModel, Field, model_validator, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from tools.project_logging import get_logger
+from tools.pydantic_annotated_types import SerializableDatetime
 
 from ls_helper.config_helper import parse_label_config_xml
 from ls_helper.exp.build_configs import (
@@ -16,25 +18,31 @@ from ls_helper.exp.build_configs import (
 )
 from ls_helper.fresh_agreements import AgreementResult
 from ls_helper.models.interface_models import (
+    IChoices,
     InterfaceData,
     ProjectVariableExtensions,
-    IChoices,
+)
+from ls_helper.models.variable_models import (
+    ChoiceVariableModel,
+    VariableModel,
 )
 from ls_helper.models.variable_models import (
     ChoiceVariableModel as FieldModelChoice,
-    VariableModel,
-    ChoiceVariableModel,
 )
 from ls_helper.my_labelstudio_client.models import (
     ProjectModel as LSProjectModel,
+)
+from ls_helper.my_labelstudio_client.models import (
     ProjectViewModel,
     TaskResultModel,
+)
+from ls_helper.my_labelstudio_client.models import (
     Task as LSTask,
+)
+from ls_helper.my_labelstudio_client.models import (
     TaskList as LSTaskList,
 )
 from ls_helper.settings import SETTINGS, DFCols, DFFormat
-from tools.project_logging import get_logger
-from tools.pydantic_annotated_types import SerializableDatetime
 
 if TYPE_CHECKING:
     from fresh_agreements import Agreements

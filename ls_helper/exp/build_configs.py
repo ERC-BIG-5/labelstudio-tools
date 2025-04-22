@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 from string import Template
-from typing import Optional, Any
+from typing import Any, Optional
 
 import pystache
 from lxml import etree
@@ -11,12 +11,12 @@ from lxml.etree import _Comment
 from pydantic import BaseModel, Field
 from pystache.parsed import ParsedTemplate
 from pystache.parser import _LiteralNode
-
-from ls_helper.config_helper import find_tag_name_refs, find_all_names
-from ls_helper.exp.configs import find_duplicate_names
-from ls_helper.settings import SETTINGS
 from tools.files import levenhstein_get_similar_filenames
 from tools.pydantic_annotated_types import SerializablePath
+
+from ls_helper.config_helper import find_all_names, find_tag_name_refs
+from ls_helper.exp.configs import find_duplicate_names
+from ls_helper.settings import SETTINGS
 
 SRC_COMPONENT = "src-component"
 

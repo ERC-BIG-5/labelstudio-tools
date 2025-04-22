@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, Annotated
+from typing import Annotated, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
@@ -7,10 +7,10 @@ from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
 
 from main import (
-    update_coding_game,
     agreements,
     create_conflict_view,
     get_all_variable_names,
+    update_coding_game,
 )
 
 # app = FastAPI()

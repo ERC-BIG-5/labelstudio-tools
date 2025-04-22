@@ -1,23 +1,23 @@
 import enum
+import json
 import os
 import typing
 from functools import lru_cache
 from typing import Optional
-import json
+
 import httpx
 from httpx import Response
+from tools.project_logging import get_logger
 
 from ls_helper.my_labelstudio_client.models import (
-    ProjectViewModel,
     ProjectModel,
-    UserModel,
     ProjectViewCreate,
+    ProjectViewModel,
+    Task,
     TaskCreate,
     TaskResultModel,
+    UserModel,
 )
-
-from ls_helper.my_labelstudio_client.models import Task
-from tools.project_logging import get_logger
 
 if typing.TYPE_CHECKING:
     pass
@@ -394,7 +394,7 @@ def ls_client(
     global _GLOBAL_CLIENT
     if _GLOBAL_CLIENT and not ignore_global_client:
         return _GLOBAL_CLIENT
-    from ls_helper.settings import SETTINGS, DEV_SETTINGS
+    from ls_helper.settings import DEV_SETTINGS, SETTINGS
 
     if dev is None:
         dev = False

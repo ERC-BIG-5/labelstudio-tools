@@ -1,19 +1,25 @@
 import json
 from pathlib import Path
-from typing import Optional, Annotated
+from typing import Annotated, Optional
 
 import typer
+from tools.project_logging import get_logger
 from tqdm import tqdm
 
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import (
-    TaskCreate as LSTaskCreate,
-    TaskList as LSTaskList,
-    TaskCreateList as LSTaskCreateList,
     Task as LSTask,
 )
-from ls_helper.new_models import get_project, ProjectData
-from tools.project_logging import get_logger
+from ls_helper.my_labelstudio_client.models import (
+    TaskCreate as LSTaskCreate,
+)
+from ls_helper.my_labelstudio_client.models import (
+    TaskCreateList as LSTaskCreateList,
+)
+from ls_helper.my_labelstudio_client.models import (
+    TaskList as LSTaskList,
+)
+from ls_helper.new_models import ProjectData, get_project
 
 logger = get_logger(__file__)
 

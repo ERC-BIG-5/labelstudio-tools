@@ -1,11 +1,11 @@
 from typing import Annotated, Optional
 
 import typer
+from tools.project_logging import get_logger
 from tqdm import tqdm
 
 from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.new_models import platforms_overview, ProjectData
-from tools.project_logging import get_logger
+from ls_helper.new_models import ProjectData, platforms_overview
 
 logger = get_logger(__file__)
 
