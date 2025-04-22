@@ -7,7 +7,7 @@ import pandas as pd
 from deprecated.classic import deprecated
 from numpy import nan
 from pandas import DataFrame
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from ls_helper.new_models import ProjectData, get_project
 
@@ -15,10 +15,20 @@ from ls_helper.new_models import ProjectData, get_project
 # experimental...
 class DFAgreementsInitModel(BaseModel):
     task_id: int
-#     variable: Annotated[int, {"dtype": "category"}]
 
 
-Agreement_types= list[Literal["gwet", "kappa", "ratio","abs"]]
+Agreement_types = list[Literal["gwet", "fleiss", "ratio", "abs"]]
+
+# calculation-method: value
+type AgreementsCol = dict[str, float]
+# option: task_id[]
+type OptionOccurances = dict[str, list[int]]
+
+
+class AgreementResult(BaseModel):
+    variable: str
+    single_overall: Optional[AgreementsCol] = None
+    options_agreements: Optional[dict[str, AgreementsCol]] = Field(default_factory=dict)
 
 
 class Agreements:
@@ -31,6 +41,9 @@ class Agreements:
         # group-name: variable-name: index
         self._groups: dict[str, dict[str, int]] = self.find_groups(list(po.variable_extensions.extensions.keys()))
         self._init_df: Optional[DataFrame] = self.create_init_df()
+
+        self.results: dict[str, AgreementResult] = {}
+        self.collections: dict[str, OptionOccurances] = {}
 
     @staticmethod
     def find_groups(variables):
@@ -136,8 +149,7 @@ class Agreements:
         return pv_df
 
     @staticmethod
-    def calc_agreements(df: DataFrame, agreement_types: Agreement_types) -> dict[
-        str, float]:
+    def calc_agreements(df: DataFrame, agreement_types: Agreement_types) -> AgreementsCol:
         if len(df) == 0:
             return {_: nan for _ in agreement_types}
         pv_df = Agreements.create_coder_pivot_df(df)
@@ -147,17 +159,24 @@ class Agreements:
         _conflict_count: Optional[int] = None
         for aggr_type in agreement_types:
             match aggr_type:
+                case "kappa":
+                    try:
+                        if not _cac:
+                            _cac = irrCAC.raw.CAC(pv_df)
+                        result[aggr_type] = round(_cac.fleiss()["est"]["coefficient_value"], 2)
+                    except (ValueError, ZeroDivisionError):
+                        result[aggr_type] = nan
                 case "gwet":
                     try:
                         if not _cac:
                             _cac = irrCAC.raw.CAC(pv_df)
-                        result[aggr_type] = round(_cac.gwet()["est"]["coefficient_value"],2)
+                        result[aggr_type] = round(_cac.gwet()["est"]["coefficient_value"], 2)
                     except (ValueError, ZeroDivisionError):
                         result[aggr_type] = nan
                 case "ratio":
                     if not _conflict_count:
-                        _conflict_count = pv_df.apply(lambda row: len(row.dropna().unique() )> 1, axis=1).sum()
-                    result[aggr_type] = round(1 - _conflict_count / len(pv_df),2)
+                        _conflict_count = pv_df.apply(lambda row: len(row.dropna().unique()) > 1, axis=1).sum()
+                    result[aggr_type] = round(1 - _conflict_count / len(pv_df), 2)
                 case "abs":
                     result[aggr_type] = len(pv_df) - _conflict_count
                     result["total"] = len(pv_df)
@@ -221,27 +240,69 @@ class Agreements:
 
         return base_df
 
-
-
-    def agreement_calc(self, variables: list[str],
+    def agreement_calc(self, variables: Optional[list[str]] = None,
                        force_default: Optional[str] = "NONE",
                        max_coders: int = 2,
-                       agreement_types: Optional[Agreement_types] = None) -> dict[str, dict[str,float]]:
-        variables_dfs = self.select_variables(variables)
-        # for n, df in variables_dfs.items():
-        #     print(n, len(df))
+                       agreement_types: Optional[Agreement_types] = None,
+                       keep_tasks: bool = False) -> dict[str, AgreementResult]:
 
-        agreements: dict[str,dict[str, float]] = {}
+        if not variables:
+            variables = list(self.po.choices.keys())
+        variables_dfs = self.select_variables(variables)
+
         if not agreement_types:
             agreement_types = self.agreement_types
+
         for var, v_df in variables_dfs.items():
             print(var, len(v_df))
-            v_df = Agreements.prepare_var(v_df, force_default).reset_index()
-            agreements[var] = self.calc_agreements(v_df, agreement_types)
+            result = AgreementResult(variable=var)
+            self.results[var] = result
+            if "variable" in v_df.columns:
+                v_df = v_df.drop("variable", axis=1)
+            v_df = Agreements.drop_unfinished_tasks(v_df)
 
-            for day, accum_df in self.time_move(v_df):
-                pass
-                # print(day, len(accum_df), self.calc_agreements(accum_df))
+            if v_df.iloc[0]["type"] == "single":
+                v_df = v_df.explode("value")
+                v_df.fillna(force_default, inplace=True)
+                # v_df = Agreements.prepare_var(v_df, force_default).reset_index()
+                result.single_overall = self.calc_agreements(v_df, agreement_types)
+            # multi-select
+            options = self.po.variables[var].options
+            option_dfs = {}
+            for option in options:
+                # Use vectorized operations when possible for performance
+                option_df = v_df.copy()
+                # Convert to 1/0 values based on option presence
+                option_df['value'] = option_df['value'].apply(
+                    lambda x: 1 if isinstance(x, list) and option in x else 0
+                )
+                option_dfs[option] = option_df
+            for option in options:
+                # Important: Create a fresh pivot table for EACH option
+                # This ensures we only include coders who actually coded each task
+                option_values = {}
+
+                # Process each task and coder combination
+                for (task_id, user_id), row in v_df.iterrows():
+                    user_value = row['value']
+                    # 1 if option selected, 0 if not selected but coder did code this task
+                    option_values[(task_id, user_id)] = 1 if isinstance(user_value,
+                                                                        list) and option in user_value else 0
+
+                # Create dataframe with proper MultiIndex
+                index = pd.MultiIndex.from_tuples(option_values.keys(), names=['task_id', 'user_id'])
+                opt_df = pd.DataFrame({'value': list(option_values.values())}, index=index)
+
+                if keep_tasks:
+                    tasks_with_1 = opt_df.groupby('task_id')['value'].apply(lambda x: (x == 1).any())
+                    task_ids = tasks_with_1[tasks_with_1].index
+                    self.collections.setdefault(var, {})[option] = task_ids
+                # Calculate agreement for this option
+                result.options_agreements[option] = self.calc_agreements(opt_df, agreement_types)
+
+            # for day, accum_df in self.time_move(v_df):
+            # pass
+            # print(day, len(accum_df), self.calc_agreements(accum_df))
             # minimal...
 
             """
@@ -252,9 +313,11 @@ class Agreements:
             df_min = df_min.droplevel('user_id', axis=0)
             """
 
-        return agreements
+        return self.results
 
 
 if __name__ == "__main__":
     po = get_project(43)
-    Agreements(po).agreement_calc(["nature_any", "nature_text", "nature_visual", "nep_material_visual"])
+    ag = Agreements(po)
+    ag.agreement_calc(["nature_any", "nature_text", "nature_visual", "nep_material_visual"])
+    pass
