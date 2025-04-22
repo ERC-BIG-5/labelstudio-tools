@@ -262,10 +262,10 @@ class Agreements:
             v_df = Agreements.drop_unfinished_tasks(v_df)
 
             if v_df.iloc[0]["type"] == "single":
-                v_df = v_df.explode("value")
-                v_df.fillna(force_default, inplace=True)
+                v_df_s = v_df.explode("value")
+                v_df_s.fillna(force_default, inplace=True)
                 # v_df = Agreements.prepare_var(v_df, force_default).reset_index()
-                result.single_overall = self.calc_agreements(v_df, agreement_types)
+                result.single_overall = self.calc_agreements(v_df_s, agreement_types)
             # multi-select
             options = self.po.variables[var].options
             option_dfs = {}
@@ -319,5 +319,5 @@ class Agreements:
 if __name__ == "__main__":
     po = get_project(43)
     ag = Agreements(po)
-    ag.agreement_calc(["nature_any", "nature_text", "nature_visual", "nep_material_visual"])
+    ag.agreement_calc(["nature_any", "nature_text", "nature_visual", "nep_material_visual"], keep_tasks=True)
     pass
