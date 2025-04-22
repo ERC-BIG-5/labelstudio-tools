@@ -8,7 +8,6 @@ import pandas as pd
 from lxml.etree import ElementTree
 from pandas import DataFrame
 from pydantic import BaseModel, Field, model_validator, ConfigDict
-from tqdm import tqdm
 
 from ls_helper.config_helper import parse_label_config_xml
 from ls_helper.exp.build_configs import (
@@ -20,7 +19,6 @@ from ls_helper.models.interface_models import (
     InterfaceData,
     ProjectVariableExtensions,
     IChoices,
-    PrincipleRow,
 )
 from ls_helper.models.variable_models import (
     ChoiceVariableModel as FieldModelChoice,
