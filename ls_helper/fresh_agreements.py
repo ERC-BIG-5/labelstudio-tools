@@ -1,5 +1,4 @@
 import re
-from csv import DictWriter
 from datetime import date
 from typing import Optional, Annotated, Any, Literal, Generator
 
@@ -340,9 +339,6 @@ class Agreements:
 
         return self.results
 
-    def results2csv(self):
-        self.po
-        writer = DictWriter()
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ from enum import Enum, auto
 import sys
 from logging import getLogger
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from pydantic import Field, model_validator
 from pydantic_core.core_schema import ValidationInfo
@@ -13,6 +13,8 @@ from pydantic_settings import BaseSettings
 
 from tools.env_root import root
 
+if TYPE_CHECKING:
+    from ls_helper.my_labelstudio_client.client import LabelStudioBase
 
 class Settings(BaseSettings):
     class Config:

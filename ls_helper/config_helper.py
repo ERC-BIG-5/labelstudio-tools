@@ -135,7 +135,7 @@ def parse_label_config_xml(xml_string) -> InterfaceData:
 def check_config_update(platform_configs: dict[str, Path]):
     for platform, fp in platform_configs.items():
         # todo, maybe diff the languages...
-        next_file = SETTINGS.labeling_configs_dir / f"{platform}-next.xml"
+        _ = SETTINGS.labeling_configs_dir / f"{platform}-next.xml"
         next_conf = parse_label_config_xml(fp.read_text())
 
         # shutil.copy(fp, next_file)

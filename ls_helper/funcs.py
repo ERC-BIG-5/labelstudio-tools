@@ -191,7 +191,7 @@ def build_platform_id_filter(
             {
                 "filter": filter_term,
                 "operator": "equal",
-                "type": "String",
+                "type": filter_type,
                 "value": p_id,
             }
         )

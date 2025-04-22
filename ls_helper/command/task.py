@@ -142,7 +142,7 @@ def patch_tasks(
             )
         task_id = ls_task.id
         # update_task.id = task_id
-        res = ls_client().patch_task(task_id, update_task)
+        _ = ls_client().patch_task(task_id, update_task)
         # TODO store them
 
 

@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any
 
 from lxml import etree
 from lxml.etree import Element
@@ -15,16 +14,7 @@ def find_duplicate_names(root) -> dict[str, int]:
         name = element.attrib["name"]
         name_elems.setdefault(name, []).append(element)
 
-    return {n: len(l) for n, l in name_elems.items() if len(l) > 1}
-
-
-def find_duplicate_names2(root) -> dict[str, list[Any]]:
-    names = list(find_names(root).keys())
-    name_elems = {}
-    for name in names:
-        name_elems.setdefault(name, []).append(name)
-
-    return {n: l for n, l in name_elems.items() if len(l) > 1}
+    return {n: len(elems) for n, elems in name_elems.items() if len(elems) > 1}
 
 
 def find_elem_with_attribute(root, attribute_name: str) -> dict[str, Element]:

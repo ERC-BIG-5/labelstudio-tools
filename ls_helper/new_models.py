@@ -2,7 +2,7 @@ import json
 from csv import DictWriter
 from enum import Enum, auto
 from pathlib import Path
-from typing import Optional, Any, cast
+from typing import Optional, Any, cast, TYPE_CHECKING
 
 import pandas as pd
 from lxml.etree import ElementTree
@@ -37,6 +37,9 @@ from ls_helper.my_labelstudio_client.models import (
 from ls_helper.settings import SETTINGS, DFCols, DFFormat
 from tools.project_logging import get_logger
 from tools.pydantic_annotated_types import SerializableDatetime
+
+if TYPE_CHECKING:
+    from fresh_agreements import Agreements
 
 PlLang = tuple[str, str]
 ProjectAccess = (
@@ -415,13 +418,13 @@ class ProjectData(ProjectCreate):
         logger.info(f"Save tasks to: {dest.as_posix()}")
 
 
-class ProjectOverView(BaseModel):
+class ProjectOverview(BaseModel):
     projects: dict[ProjectAccess, ProjectData]
     alias_map: dict[str, ProjectData] = Field(default_factory=dict, exclude=True)
     default_map: dict[PlLang, ProjectData] = Field(default_factory=dict, exclude=True)
 
     @model_validator(mode="after")
-    def create_map(cls, overview: "ProjectOverView") -> "ProjectOverView":
+    def create_map(cls, overview: "ProjectOverview") -> "ProjectOverview":
         """
         create alias_map and default_map
         """
@@ -449,13 +452,13 @@ class ProjectOverView(BaseModel):
         return overview
 
     @staticmethod
-    def load() -> "ProjectOverview2":
+    def load() -> "ProjectOverview":
         pp = Path(SETTINGS.BASE_DATA_DIR / "projects.json")
         if not pp.exists():
             print("projects file missing")
         # print(pp.read_text())
         # print(ProjectOverView2.model_validate_json(pp.read_text()))
-        return ProjectOverView.model_validate({"projects": json.loads(pp.read_text())})
+        return ProjectOverview.model_validate({"projects": json.loads(pp.read_text())})
 
     def get_project(self, p_access: ProjectAccess) -> ProjectData:
         # int | str | platf_lang_default | platform_lang_name
@@ -463,9 +466,9 @@ class ProjectOverView(BaseModel):
             return self.projects[str(p_access)]
         elif isinstance(p_access, str):
             return self.alias_map[p_access]
-        elif (is_t := isinstance(p_access, tuple)) and (l := len(p_access)) == 2:
+        elif (is_t := isinstance(p_access, tuple)) and (length := len(p_access)) == 2:
             return self.default_map[p_access]
-        elif is_t and l == 4:
+        elif is_t and length == 4:
             id, alias, platform, language = p_access
             if alias:
                 return self.alias_map[alias]
@@ -512,7 +515,7 @@ class ProjectOverView(BaseModel):
         pp.write_text(json.dumps({id: p.model_dump() for id, p in projects.items()}))
 
 
-platforms_overview: ProjectOverView = ProjectOverView.load()
+platforms_overview: ProjectOverview = ProjectOverview.load()
 
 
 def get_project(
@@ -666,7 +669,7 @@ class ProjectResult(BaseModel):
                             formatted.append("")
                         else:
                             formatted.append(str(item))
-                    except:
+                    except Exception:
                         formatted.append("")
                 else:
                     # Handle lists - join with commas
@@ -676,7 +679,7 @@ class ProjectResult(BaseModel):
                             if subitem != subitem:  # Check for NaN
                                 continue
                             item_str.append(str(subitem))
-                        except:
+                        except Exception:
                             continue
                     formatted.append(",".join(item_str))
 
