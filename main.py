@@ -7,6 +7,8 @@ from typing import Annotated, Optional
 import typer
 from deepdiff import DeepDiff
 from deprecated.classic import deprecated
+
+from ls_helper.fresh_agreements import Agreements
 from ls_helper.models.main_models import (
     ProjectCreate,
     get_p_access,
@@ -400,14 +402,25 @@ def agreements(
     ] = 6,
     max_num_coders: Annotated[int, typer.Option()] = 2,
     variables: Annotated[Optional[list[str]], typer.Argument()] = None,
-) -> Path:
-    dest, agreement_report = (
+) -> tuple[Path, Agreements]:
+    """
+
+    :param id:
+    :param alias:
+    :param platform:
+    :param language:
+    :param accepted_ann_age:
+    :param max_num_coders:
+    :param variables:
+    :return:
+    """
+    dest, agreement = (
         get_project(id, alias, platform, language)
         .get_annotations_results(accepted_ann_age=accepted_ann_age)
         .get_coder_agreements(max_num_coders, variables, True)
     )
 
-    return dest
+    return dest, agreement
 
 
 @app.command()
@@ -601,10 +614,14 @@ if __name__ == "__main__":
     twitter = "twitter"
     youtube = "youtube"
     en = "en"
-    tw_en = {"platform": twitter, "language": en}
+    es = "es"
+    tw_es = {"platform": twitter, "language": es}
     yt_en4 = {"id": 50}
-    _default = tw_en
+    _default = tw_es
 
     # setup
-    from ls_helper.command import setup
-    setup.add_projects()
+    #from ls_helper.command import setup
+    #setup.add_projects()
+    from ls_helper.command import annotations
+    # this will work, since there is just one spanish twitter (so its set to default)
+    agreements(**tw_es, variables=["nature_any"])

@@ -26,6 +26,7 @@ plot = [
 dev = [
     "mypy>=1.15.0",
     "ruff>=0.11.6",
+    "notebook>=7.4.1",
 ]
 server = [
     "fastapi>=0.115.12",

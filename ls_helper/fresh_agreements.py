@@ -9,6 +9,8 @@ from numpy import nan
 from pandas import DataFrame
 from pydantic import BaseModel, Field
 
+from tools.project_logging import get_logger
+
 if TYPE_CHECKING:
     from ls_helper.models.main_models import ProjectData
 
@@ -28,7 +30,7 @@ type OptionOccurances = dict[str, list[int]]
 
 class AgreementResult(BaseModel):
     variable: str
-    single_overall: Optional[AgreementsCol] = None
+    single_overall: Optional[AgreementsCol] = Field(default_factory=dict)
     options_agreements: dict[str, AgreementsCol] = Field(default_factory=dict)
 
 
@@ -50,6 +52,7 @@ class Agreements:
 
         self.results: dict[str, AgreementResult] = {}
         self.collections: dict[str, OptionOccurances] = {}
+        self.logger = get_logger(__file__)
 
     @staticmethod
     def find_groups(variables):
@@ -204,8 +207,8 @@ class Agreements:
                         1 - _conflict_count / len(pv_df), 2
                     )
                 case "abs":
-                    result[aggr_type] = len(pv_df) - _conflict_count
-                    result["total"] = len(pv_df)
+                    result[aggr_type] = int(len(pv_df) - _conflict_count)
+                    result["total"] = int(len(pv_df))
         return result
 
     # this annotated stuff is just experimental...
@@ -223,9 +226,6 @@ class Agreements:
 
     def get_init_df(self) -> DataFrame:
         return self._init_df.copy()
-
-    def get_variables_groups(self, variables: list[str]) -> Any:
-        pass
 
     @staticmethod
     def drop_unfinished_tasks(df_: DataFrame) -> DataFrame:
@@ -294,14 +294,15 @@ class Agreements:
             self.results[var] = result
             if "variable" in v_df.columns:
                 v_df = v_df.drop("variable", axis=1)
-            v_df = Agreements.drop_unfinished_tasks(v_df)
-
+            self.logger.warning(f"df before dropping unfinished tasks: {len(v_df)}")
+            #v_df = Agreements.drop_unfinished_tasks(v_df)
+            self.logger.warning(f"df before dropping unfinished tasks: {len(v_df)}")
             options = po_variables[var].options
-
+            if v_df.empty:
+                continue
             if v_df.iloc[0]["type"] == "single":
                 v_df_s = v_df.explode("value")
                 v_df_s.fillna(force_default, inplace=True)
-                # v_df = Agreements.prepare_var(v_df, force_default).reset_index()
                 result.single_overall = self._calc_agreements(
                     v_df_s, agreement_types
                 )
