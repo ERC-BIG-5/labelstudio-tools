@@ -1,4 +1,5 @@
 import json
+import re
 from csv import DictWriter
 from enum import Enum, auto
 from pathlib import Path
@@ -25,9 +26,7 @@ from ls_helper.models.interface_models import (
 from ls_helper.models.variable_models import (
     ChoiceVariableModel,
     VariableModel,
-)
-from ls_helper.models.variable_models import (
-    ChoiceVariableModel as FieldModelChoice,
+ChoiceVariableModel
 )
 from ls_helper.my_labelstudio_client.models import (
     ProjectModel as LSProjectModel,
@@ -187,7 +186,9 @@ class ProjectData(ProjectCreate):
 
     def variables(self) -> dict[str, VariableModel]:
         variables = {}
+        pattern = re.compile(r"^(.+)_(\d+)(?:_(.*))?$")
 
+        # initial basics
         for (
                 orig_name,
                 field,
@@ -200,14 +201,34 @@ class ProjectData(ProjectCreate):
                 "type": self.raw_interface_struct.field_type(orig_name),
             }
 
-            if isinstance(field, IChoices):
-                field: IChoices
+            model_class = ChoiceVariableModel if isinstance(field, IChoices) else VariableModel
+
+            # choices!
+            if model_class == ChoiceVariableModel:
                 data["choice"] = field.choice
                 data["orig_options"] = field.raw_options_list()
                 data["default"] = field_extension.default
-                variables[name] = FieldModelChoice.model_validate(data)
+
+            # check if it belongs to a group
+            match = re.match(pattern, name)
+            if not match:
+                variables[name] = model_class.model_validate(data)
+                continue
+            # MATCH! kick out None
+            match_groups = list(filter(lambda g: g, match.groups()))
+            var_strings = list(filter(lambda g: not g.isnumeric(), match_groups))
+            base_name = "_".join(var_strings)
+
+            if base_name not in variables:
+                # print(var, base_name,idx)
+                # create group variable
+                group_data = data
+                group_data["name"] = base_name
+                group_data["group_variables"] = [orig_name]
+                variables[base_name] = model_class.model_validate(group_data)
             else:
-                variables[name] = VariableModel.model_validate(data)
+                assert len(variables[base_name].group_variables) > 0, f"group name is already taken by regular variable"
+                variables[base_name].group_variables.append(orig_name)
 
         return variables
 
@@ -216,11 +237,11 @@ class ProjectData(ProjectCreate):
         return list(self.variables().keys())
 
     @property
-    def choices(self) -> dict[str, FieldModelChoice]:
+    def choices(self) -> dict[str, ChoiceVariableModel]:
         return {
             k: v
             for k, v in self.variables().items()
-            if isinstance(v, FieldModelChoice)
+            if isinstance(v, ChoiceVariableModel)
         }
 
     @property

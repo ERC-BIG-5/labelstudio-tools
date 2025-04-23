@@ -22,6 +22,7 @@ class VariableModel(BaseModel):
     name: str
     type: VariableType
     required: bool = False
+    group_variables: Optional[list[str]] = None
 
 
 class ChoiceVariableModel(VariableModel):
