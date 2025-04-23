@@ -10,7 +10,7 @@ from pandas import DataFrame
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
-    from ls_helper.new_models import ProjectData
+    from ls_helper.models.main_models import ProjectData
 
 
 # experimental...
@@ -29,9 +29,7 @@ type OptionOccurances = dict[str, list[int]]
 class AgreementResult(BaseModel):
     variable: str
     single_overall: Optional[AgreementsCol] = None
-    options_agreements: dict[str, AgreementsCol] = Field(
-        default_factory=dict
-    )
+    options_agreements: dict[str, AgreementsCol] = Field(default_factory=dict)
 
 
 class Agreements:
@@ -357,7 +355,7 @@ class Agreements:
 
 
 if __name__ == "__main__":
-    from ls_helper.new_models import get_project
+    from ls_helper.models.main_models import get_project
 
     po = get_project(43)
     ag = Agreements(po)

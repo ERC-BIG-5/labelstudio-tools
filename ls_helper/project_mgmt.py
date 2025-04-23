@@ -16,7 +16,7 @@ from ls_helper.my_labelstudio_client.models import (
     ProjectViewModel,
     TaskResultModel,
 )
-from ls_helper.new_models import (
+from ls_helper.models.main_models import (
     ProjectAnnotationResultsModel,
     ProjectCreate,
     ProjectData,

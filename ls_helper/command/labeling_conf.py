@@ -5,7 +5,7 @@ import typer
 from tools.project_logging import get_logger
 
 from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.new_models import get_project
+from ls_helper.models.main_models import get_project
 
 logger = get_logger(__file__)
 

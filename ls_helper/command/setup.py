@@ -12,7 +12,7 @@ from ls_helper.models.interface_models import (
     ProjectVariableExtensions,
 )
 from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.new_models import get_project, ProjectData, ProjectOverview
+from ls_helper.models.main_models import get_project, ProjectData, ProjectOverview
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 

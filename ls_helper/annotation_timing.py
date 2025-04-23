@@ -6,7 +6,7 @@ import pandas as pd
 from numpy.ma.extras import average
 
 from ls_helper.my_labelstudio_client.models import TaskResultModel
-from ls_helper.new_models import ProjectAnnotationResultsModel
+from ls_helper.models.main_models import ProjectAnnotationResultsModel
 
 
 def annotation_timing(

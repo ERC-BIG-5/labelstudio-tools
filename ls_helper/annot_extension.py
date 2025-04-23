@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 from ls_helper.models.interface_models import FieldExtension
-from ls_helper.new_models import ProjectData
+from ls_helper.models.main_models import ProjectData
 
 
 class VariableExtensionIndex(FieldExtension):

@@ -7,8 +7,12 @@ from typing import Annotated, Optional
 import typer
 from deepdiff import DeepDiff
 from deprecated.classic import deprecated
-
-from tools.project_logging import get_logger
+from ls_helper.models.main_models import (
+    ProjectCreate,
+    get_p_access,
+    get_project,
+    platforms_overview,
+)
 from tqdm import tqdm
 
 from ls_helper.annotation_timing import (
@@ -21,7 +25,9 @@ from ls_helper.command.annotations import annotations_app
 from ls_helper.command.backup import backup_app
 from ls_helper.command.labeling_conf import labeling_conf_app
 from ls_helper.command.pipeline import pipeline_app
-from ls_helper.command.setup import setup_app, generate_variable_extensions_template
+from ls_helper.command.setup import (
+    setup_app,
+)
 from ls_helper.command.task import task_add_predictions, task_app
 from ls_helper.config_helper import check_config_update, parse_label_config_xml
 from ls_helper.exp.build_configs import build_configs
@@ -34,15 +40,10 @@ from ls_helper.my_labelstudio_client.models import (
     ProjectViewDataModel,
     ProjectViewModel,
 )
-from ls_helper.new_models import (
-    ProjectCreate,
-    get_p_access,
-    get_project,
-    platforms_overview,
-)
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
+from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 
@@ -109,6 +110,7 @@ def strict_update_project_tasks(
         client.patch_task(t["id"], t["data"])
 
     print(f"{len(new_data_list)} tasks updated")
+
 
 @deprecated
 @app.command(

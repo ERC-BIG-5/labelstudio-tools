@@ -5,7 +5,7 @@ from typing import Annotated, Optional
 import typer
 from tools.project_logging import get_logger
 
-from ls_helper.new_models import ProjectAnnotationResultsModel, get_project
+from ls_helper.models.main_models import ProjectAnnotationResultsModel, get_project
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 

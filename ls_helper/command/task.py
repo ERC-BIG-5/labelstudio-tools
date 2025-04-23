@@ -19,7 +19,7 @@ from ls_helper.my_labelstudio_client.models import (
 from ls_helper.my_labelstudio_client.models import (
     TaskList as LSTaskList,
 )
-from ls_helper.new_models import ProjectData, get_project
+from ls_helper.models.main_models import ProjectData, get_project
 
 logger = get_logger(__file__)
 
