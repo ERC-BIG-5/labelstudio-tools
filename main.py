@@ -6,6 +6,8 @@ from typing import Annotated, Optional
 
 import typer
 from deepdiff import DeepDiff
+from deprecated.classic import deprecated
+
 from tools.project_logging import get_logger
 from tqdm import tqdm
 
@@ -19,7 +21,7 @@ from ls_helper.command.annotations import annotations_app
 from ls_helper.command.backup import backup_app
 from ls_helper.command.labeling_conf import labeling_conf_app
 from ls_helper.command.pipeline import pipeline_app
-from ls_helper.command.setup import setup_app
+from ls_helper.command.setup import setup_app, generate_variable_extensions_template
 from ls_helper.command.task import task_add_predictions, task_app
 from ls_helper.config_helper import check_config_update, parse_label_config_xml
 from ls_helper.exp.build_configs import build_configs
@@ -108,7 +110,7 @@ def strict_update_project_tasks(
 
     print(f"{len(new_data_list)} tasks updated")
 
-
+@deprecated
 @app.command(
     short_help="[ls fixes] delete the json files from the local storage folder, from tasks that habe been deleted (not crucial)"
 )
@@ -654,7 +656,8 @@ if __name__ == "__main__":
     # print(list(f["name"] for f in filter(lambda f: f["required"], get_variables_info(alias="twitter-es-4"))))
     # annotations.annotations(alias="twitter-es-4")
     # add_prediction_test()
-    download_project_data(50)
+    download_project_data(51)
     status(50)
-    # agreements(id=43, variables=["nature_any", "nature_text", "nature_visual", "nep_material_visual", "extras"])
+    generate_variable_extensions_template(51)
+    agreements(id=51, variables=["nature_any", "nature_text", "nature_visual", "nep_material_visual", "extras"])
     # backup(dl_all_projects=True)

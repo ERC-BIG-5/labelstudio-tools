@@ -29,7 +29,7 @@ type OptionOccurances = dict[str, list[int]]
 class AgreementResult(BaseModel):
     variable: str
     single_overall: Optional[AgreementsCol] = None
-    options_agreements: Optional[dict[str, AgreementsCol]] = Field(
+    options_agreements: dict[str, AgreementsCol] = Field(
         default_factory=dict
     )
 
@@ -93,7 +93,7 @@ class Agreements:
         # todo: put that somewhere else? Another model
         # iter through all vars
         for var in variables:
-            # its a group var!
+            # it's a group var!
             if var in group_names:
                 # number of group items
                 idx_vars = list(self._groups[var].keys())
@@ -229,6 +229,7 @@ class Agreements:
     def get_variables_groups(self, variables: list[str]) -> Any:
         pass
 
+    @staticmethod
     def drop_unfinished_tasks(df_: DataFrame) -> DataFrame:
         df__ = Agreements.base_df(df_)
         return df__.groupby("task_id").filter(
@@ -288,7 +289,7 @@ class Agreements:
         if not agreement_types:
             agreement_types = self.agreement_types
 
-        variables = self.po.variables()
+        po_variables = self.po.variables()
         for var, v_df in variables_dfs.items():
             print(var, len(v_df))
             result = AgreementResult(variable=var)
@@ -297,7 +298,7 @@ class Agreements:
                 v_df = v_df.drop("variable", axis=1)
             v_df = Agreements.drop_unfinished_tasks(v_df)
 
-            options = variables[var].options
+            options = po_variables[var].options
 
             if v_df.iloc[0]["type"] == "single":
                 v_df_s = v_df.explode("value")
