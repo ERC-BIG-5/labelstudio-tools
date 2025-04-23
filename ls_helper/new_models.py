@@ -506,7 +506,7 @@ class ProjectOverview(BaseModel):
 
     @staticmethod
     def load() -> "ProjectOverview":
-        pp = Path(SETTINGS.BASE_DATA_DIR / "projects.json")
+        pp = SETTINGS.projects_main_file
         if not pp.exists():
             print("projects file missing")
         # print(pp.read_text())
@@ -568,8 +568,7 @@ class ProjectOverview(BaseModel):
 
     def save(self):
         projects = {p.id: p for p in self.projects.values()}
-        pp = Path(SETTINGS.BASE_DATA_DIR / "projects.json")
-        pp.write_text(
+        SETTINGS.projects_main_file.write_text(
             json.dumps({id: p.model_dump() for id, p in projects.items()}, indent=2)
         )
 

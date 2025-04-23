@@ -1,6 +1,8 @@
 from typing import Annotated, Optional
 
 import typer
+from tqdm import tqdm
+
 from tools.files import read_data
 from tools.project_logging import get_logger
 
@@ -38,18 +40,27 @@ def add_projects():
     for p in projects:
         if p.id not in stored_projects_ids:
             if p.alias in overview.alias_map:
-                logger.warning(f"Cannot add project {repr(p)} becuase alias: {p.alias} exists already in overview file")
+                logger.warning(f"Cannot add project {repr(p)} because alias: {p.alias} exists already in overview file")
                 continue
             added.append(p)
             overview.projects[p.id] = p
     # in case program doesn't quit
     overview.create_map()
     overview.save()
-    logger.info(f"Added the projects:\n {'\n '.join([repr(p) for p in added])}")
+    logger.info(f"Added the projects:\n {'\n '.join([repr(p) for p in added])}\n"
+                f"You might want to edit {SETTINGS.projects_main_file} and replace the aliases, platform and language values.")
 
 
+@setup_app.command(
+    short_help="Download all LS project data"
+)
+def download_all_projects():
+    for project in tqdm(ProjectOverview.load().project_list()):
+        project_data = ls_client().get_project(project.id)
 
-
+        if not project_data:
+            raise ValueError(f"No project found: {project.id}")
+        project.save_project_data(project_data)
 
 @setup_app.command(
     short_help="[setup] Required for annotation result processing. needs project-data"

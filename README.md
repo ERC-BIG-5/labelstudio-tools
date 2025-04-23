@@ -52,6 +52,9 @@ Run
 > [!NOTE] 
 > you might add the `:.` to the PYTHONPATH because python does not find the main source package.
 
+Next, you might want to download the ls project details of each project (if you don't want to do that individually).
+
+`PYTHONPATH=../python-project-tools:. typer main.py run setup download-all-projects`
 
 ## main.py
 

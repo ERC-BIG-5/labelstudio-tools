@@ -16,7 +16,7 @@ backup_app = typer.Typer(
 
 @backup_app.command(short_help="[stats] Annotation basic results")
 def backup(
-    objects: Annotated[Optional[list[str]], typer.Option()] = None,
+    #objects: Annotated[Optional[list[str]], typer.Option()] = None,
     dl_all_projects: Annotated[Optional[bool], typer.Option()] = None,
 ) -> None:
     if dl_all_projects:
