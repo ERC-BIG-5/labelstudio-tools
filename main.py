@@ -603,61 +603,6 @@ if __name__ == "__main__":
     yt_en4 = {"id": 50}
     _default = tw_en
 
-    # generate_result_fixes_template(**_default)
-    # build_ls_labeling_interface(Path("twitter-2.json"))
-    # build_extension_index(project_ids=[39, 43])
-    # exit()
-    # status(**_default)
-    # annotations(**_default)
-    # download_project_data(**_default)
-    # agreements(**_default, accepted_ann_age=0)
-    # delete_view(110)
-    # download_project_views(**_default)
-    # create_conflict_view(**_default, variable="landscape-type_text")
-    # create_conflict_view(**_default, variable="landscape-type_visual")
-    # create_conflict_view("nature_text",**_default)
-    # update_coding_game(**_default)
-
-    # alternative builts possible
-    # sub apps:
-    # annotations
-    # generate_variable_extensions_template(50)
-    # build_extension_index(project_ids=[50,43,33,39])
-    # annotations.annotations(platform="twitter", language="en")
-
-    # setup_project_settings(platform="youtube", language="en")
-    #
-    # setup_project_settings(platform=twitter, language=en,maximum_annotations=1)
-    # labeling_conf.build_ls_labeling_interface(platform="youtube", language="en")
-    # labeling_conf.update_labeling_config(platform="youtube", language="en")
-    # pipeline.reformat_for_datapipelines(33,0)
-    # check_labelling_config("twitter_reduced", **_default)
-
-    # DONE!!
-    # create_project("Twitter - ES - protocol.v4","twitter-es-4","twitter","es")
-    # from ls_helper.command.task import get_tasks, patch_tasks
-    #
-    # # task.create_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/youtube-en-4"),
-    # #                   alias="youtube-en-4" )
-    #
-    # get_tasks(**yt_en4)
-    # patch_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/youtube-en-4"), **yt_en4)
-    # task.create_tasks(
-    #     Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/p1_twitter-es-4"),
-    #                       alias="twitter-es-4"
-    # )
-    # labeling_conf.build_ls_labeling_interface(alias="twitter-es-4")
-    # labeling_conf.update_labeling_config(alias="twitter-es-4")
-    # setup_project_settings(alias="twitter-es-4")
-    # task.patch_tasks(Path("/home/rsoleyma/projects/DataPipeline/data/ls_tasks/p1_twitter-es-4"), alias="twitter-es-4")
-    # setup.generate_variable_extensions_template(alias="twitter-es-4")
-    # setup_project_settings(id=51, maximum_annotations=2)
-    # print(download_project_data(id=50))
-    # print(list(f["name"] for f in filter(lambda f: f["required"], get_variables_info(alias="twitter-es-4"))))
-    # annotations.annotations(alias="twitter-es-4")
-    # add_prediction_test()
-    download_project_data(51)
-    status(50)
-    generate_variable_extensions_template(51)
-    agreements(id=51, variables=["nature_any", "nature_text", "nature_visual", "nep_material_visual", "extras"])
-    # backup(dl_all_projects=True)
+    # setup
+    from ls_helper.command import setup
+    setup.add_projects()

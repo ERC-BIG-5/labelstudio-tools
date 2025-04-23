@@ -1,11 +1,13 @@
 from pathlib import Path
 from typing import Annotated, Optional
 
-from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel
-from starlette.responses import FileResponse
-from starlette.staticfiles import StaticFiles
-
+try:
+    from fastapi import FastAPI, HTTPException, Query
+    from pydantic import BaseModel
+    from starlette.responses import FileResponse
+    from starlette.staticfiles import StaticFiles
+except ImportError:
+    print("You need to install the optional dependency [server]")
 from main import (
     agreements,
     create_conflict_view,

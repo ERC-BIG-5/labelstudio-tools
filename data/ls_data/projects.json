@@ -29,16 +29,6 @@
     "coding_game_view_id": 57,
     "id": 36
   },
-  "39": {
-    "title": "Twitter - en - part1",
-    "alias": "twitter-en-1",
-    "platform": "twitter",
-    "language": "en",
-    "description": null,
-    "default": false,
-    "coding_game_view_id": 67,
-    "id": 39
-  },
   "41": {
     "title": "units Tests",
     "alias": "units tests",
@@ -108,5 +98,15 @@
     "default": false,
     "coding_game_view_id": null,
     "id": 51
+  },
+  "39": {
+    "title": "Twitter - en - part1",
+    "alias": "100twitter-en-1",
+    "platform": "twitter",
+    "language": "en",
+    "description": null,
+    "default": false,
+    "coding_game_view_id": 67,
+    "id": 39
   }
 }

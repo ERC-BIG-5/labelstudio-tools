@@ -1,10 +1,57 @@
 # Readme
 
-Required repository:
+## Installation
+
+Make sure you have `python-dev`installed for your version installed on your system. 
+e.g. `sudo apt-get install python3.13-dev`.
+
+Install all dependencies with `uv sync` or `uv sync --python python3.XX` (your prefered python version).
+
+Alternatively, create a virtual environment and install the dependencies with pip:
+```shell
+# in linux
+python -m venv .venv
+. ./venv/bin/activate
+pip install -e .
+```
+
+You also need this tools repository:
 `https://github.com/transfluxus/python-project-tools`
 
 Currently, that repo, has no pyproject.toml nor setup.py, so it must be cloned and added to the
 pythonpath when running scripts from this project.
+
+linux:
+```
+# e.g. 
+PYTHONPATH=../python-project-tools python3 main.py
+```
+
+windows:
+```
+set PYTHONPATH=../python-project-tools
+python main.py
+```
+## Setup
+
+copy the `.template.env` file and name the copy .env
+You need to set the hostname of your labelstudio instance and your api key in that file
+You can find your API-KEY in your profile 
+e.g.
+
+```shell
+LS_HOSTNAME=https://MY-FANTASTIC-LS-STUDIO-INSTANCE.org
+LS_API_KEY=API-TOKEN
+```
+
+## Getting the LS projects ready
+
+Run 
+`PYTHONPATH=../python-project-tools:. typer main.py run setup add-projects`
+
+> [!NOTE] 
+> you might add the `:.` to the PYTHONPATH because python does not find the main source package.
+
 
 ## main.py
 
@@ -31,7 +78,6 @@ Commands sub folders:
 - pipeline: interacting with the pipeline package
 - backup: backing up project data and annotations
     
-
 
 ## ls_data folder
 The ls_data folder (`data/ls_data`) contains all relevant downloaded files.

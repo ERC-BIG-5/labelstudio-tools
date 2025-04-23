@@ -86,10 +86,11 @@ class ProjectCreate(BaseModel):
     language: Optional[str] = "xx"
     description: Optional[str] = None
     default: Optional[bool] = Field(
-        False, deprecated="default should be on the Overview model"
+        False, #deprecated="default should be on the ProjectOverview model"
     )
     coding_game_view_id: Optional[int] = None
 
+    # todo not sure if this is still needed, sinec alias is required now
     @model_validator(mode="after")
     def post_build(cls, data: "ProjectData") -> "ProjectData":
         if not data.alias:
@@ -471,32 +472,37 @@ class ProjectOverview(BaseModel):
     )
 
     @model_validator(mode="after")
-    def create_map(cls, overview: "ProjectOverview") -> "ProjectOverview":
+    def post_build(cls, overview: "ProjectOverview") -> "ProjectOverview":
+        overview.create_map()
+        return overview
+
+    def create_map(self):
         """
         create alias_map and default_map
         """
-        for project in overview.projects.values():
+        self.alias_map = {}
+        self.default_map = {}
+        for project in self.projects.values():
             # print(project.id, project.name)
-            if project.alias in overview.alias_map:
+            if project.alias in self.alias_map:
                 print(f"warning: alias {project.alias} already exists")
                 continue
-            overview.alias_map[project.alias] = project
+            self.alias_map[project.alias] = project
             pl_l = (project.platform, project.language)
 
             # is the project has the default flag...
             if project.default:
                 # check if the already set default, actually has the flat
-                if set_default := overview.default_map.get(pl_l, None):
+                if set_default := self.default_map.get(pl_l, None):
                     if set_default.default:
                         print(
                             f"warning: default {pl_l} already exists. Not setting {project.title} as default"
                         )
                         continue
-                overview.default_map[pl_l] = project
+                self.default_map[pl_l] = project
             # just set the first pl_l into the default map
-            elif pl_l not in overview.default_map:
-                overview.default_map[pl_l] = project
-        return overview
+            elif pl_l not in self.default_map:
+                self.default_map[pl_l] = project
 
     @staticmethod
     def load() -> "ProjectOverview":
@@ -564,9 +570,11 @@ class ProjectOverview(BaseModel):
         projects = {p.id: p for p in self.projects.values()}
         pp = Path(SETTINGS.BASE_DATA_DIR / "projects.json")
         pp.write_text(
-            json.dumps({id: p.model_dump() for id, p in projects.items()})
+            json.dumps({id: p.model_dump() for id, p in projects.items()}, indent=2)
         )
 
+    def project_list(self) ->list[ProjectData]:
+        return list(self.projects.values())
 
 platforms_overview: ProjectOverview = ProjectOverview.load()
 
