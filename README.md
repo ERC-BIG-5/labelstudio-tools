@@ -3,6 +3,9 @@
 Required repository:
 `https://github.com/transfluxus/python-project-tools`
 
+Currently, that repo, has no pyproject.toml nor setup.py, so it must be cloned and added to the
+pythonpath when running scripts from this project.
+
 ## main.py
 
 main uses [Typer](https://typer.tiangolo.com/), so we can run commands from the commandline
