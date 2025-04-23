@@ -158,9 +158,6 @@ class Agreements:
             return list(result_groups.values())[0]
         return result_groups
 
-    @staticmethod
-    def prepare_single_select(df: DataFrame) -> DataFrame:
-        return df.explode("value")
 
     @staticmethod
     def create_coder_pivot_df(df: DataFrame) -> DataFrame:
@@ -218,8 +215,6 @@ class Agreements:
         df: DataFrame = self.po.get_annotations_results(
             self.accepted_ann_age
         ).raw_annotation_df.copy()
-        # df.rename(columns={"category": "variable"},
-        #          inplace=True)  # todo fix further up in logic. when reading ls studio response
         df.drop(["ann_id", "platform_id"], axis=1, inplace=True)
         df["date"] = df["ts"].dt.date
         df.set_index(["task_id", "user_id"], inplace=True)
@@ -264,7 +259,7 @@ class Agreements:
         # df = df.join(df_ts)
         # df = df.sort_values("ts", ascending=False).groupby(level=0).head(max_coders).sort_index()
         if base_df.iloc[0]["type"] == "single":
-            base_df = Agreements.prepare_single_select(base_df)
+            base_df = base_df.explode("value")
         else:
             pass  # todo
         # df = df.drop("type", axis=1)
