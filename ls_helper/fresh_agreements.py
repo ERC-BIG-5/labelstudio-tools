@@ -237,11 +237,13 @@ class Agreements:
         reduced = df__.groupby("task_id").filter(
             lambda x: len(x.index.get_level_values(1).unique()) > 1
         )
-        if num_dropped := (len(df__) - len(reduced)):
+        task_id_set = lambda df: set(df.index.get_level_values("task_id").unique().tolist())
+        df__tasks = task_id_set(df__)
+        reduced_tasks = task_id_set(reduced)
+        if (num_dropped := (len(df__tasks) - len(reduced_tasks))) > 0:
             self.logger.info(f"dropped unfinished tasks: {num_dropped}")
             if self.logger.level == logging.DEBUG:
-                task_id_set = lambda df: set(df.index.get_level_values("task_id").unique().tolist())
-                self.logger.debug(f"dropped tasks: {task_id_set(df__) - task_id_set(reduced)}")
+                self.logger.debug(f"dropped tasks: {df__tasks - reduced_tasks}")
         return reduced
 
     @staticmethod
@@ -305,8 +307,7 @@ class Agreements:
             if "variable" in v_df.columns:
                 v_df = v_df.drop("variable", axis=1)
 
-
-
+            # TODO, this crashes for "visual_any"
             options = po_variables[var].options
             if v_df.empty:
                 continue

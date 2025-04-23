@@ -883,8 +883,6 @@ class ProjectResult(BaseModel):
 
         ag = Agreements(self.project_data)
         ag.agreement_calc(variables, max_coders=max_num_coders)
-        # agreement_report = analyze_coder_agreement(self.raw_annotation_df, self.assignment_df,
-        #                                           self.project_data.choices, min_num_coders, variables)
 
         dest = self.project_data.store_agreement_report(ag, gen_csv_tables)
         logger.info(f"agreement-results: {dest.as_posix()}")
