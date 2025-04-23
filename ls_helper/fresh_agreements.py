@@ -1,3 +1,4 @@
+import logging
 import re
 from datetime import date
 from typing import TYPE_CHECKING, Annotated, Any, Generator, Literal, Optional
@@ -36,10 +37,10 @@ class AgreementResult(BaseModel):
 
 class Agreements:
     def __init__(
-        self,
-        po: "ProjectData",
-        accepted_ann_age: int = 6,
-        agreement_types: Agreement_types = ("gwet", "ratio", "abs"),
+            self,
+            po: "ProjectData",
+            accepted_ann_age: int = 6,
+            agreement_types: Agreement_types = ("gwet", "ratio", "abs"),
     ) -> None:
         self.po = po
         self.accepted_ann_age = accepted_ann_age
@@ -82,9 +83,10 @@ class Agreements:
             return df.set_index(["task_id", "user_id"])
 
     def select_variables(
-        self, variables: list[str], always_as_dict: bool = True
+            self, variables: list[str], always_as_dict: bool = True
     ) -> dict[str, DataFrame] | DataFrame:
         df = self.get_init_df()
+
         group_names = list(self._groups.keys())
         selected_orig_vars = []
         has_groups = False
@@ -169,7 +171,7 @@ class Agreements:
 
     @staticmethod
     def _calc_agreements(
-        df: DataFrame, agreement_types: Agreement_types
+            df: DataFrame, agreement_types: Agreement_types
     ) -> AgreementsCol:
         if len(df) == 0:
             return {_: nan for _ in agreement_types}
@@ -225,18 +227,26 @@ class Agreements:
         return df
 
     def get_init_df(self) -> DataFrame:
-        return self._init_df.copy()
+        df_ = self._init_df.copy()
+        df_ = self.drop_unfinished_tasks(df_)
+        return df_
 
-    @staticmethod
-    def drop_unfinished_tasks(df_: DataFrame) -> DataFrame:
+    def drop_unfinished_tasks(self, df_: DataFrame) -> DataFrame:
         df__ = Agreements.base_df(df_)
-        return df__.groupby("task_id").filter(
+        # todo, could also be the project, max_annotation value instead of 1
+        reduced = df__.groupby("task_id").filter(
             lambda x: len(x.index.get_level_values(1).unique()) > 1
         )
+        if num_dropped := (len(df__) - len(reduced)):
+            self.logger.info(f"dropped unfinished tasks: {num_dropped}")
+            if self.logger.level == logging.DEBUG:
+                task_id_set = lambda df: set(df.index.get_level_values("task_id").unique().tolist())
+                self.logger.debug(f"dropped tasks: {task_id_set(df__) - task_id_set(reduced)}")
+        return reduced
 
     @staticmethod
     def time_move(
-        df_: DataFrame,
+            df_: DataFrame,
     ) -> Generator[tuple[date, DataFrame], None, None]:
         for day in sorted(df_.date.unique()):
             yield day, df_[df_["date"] <= day]
@@ -273,12 +283,12 @@ class Agreements:
         return base_df
 
     def agreement_calc(
-        self,
-        variables: Optional[list[str]] = None,
-        force_default: Optional[str] = "NONE",
-        max_coders: int = 2,
-        agreement_types: Optional[Agreement_types] = None,
-        keep_tasks: bool = False,
+            self,
+            variables: Optional[list[str]] = None,
+            force_default: Optional[str] = "NONE",
+            max_coders: int = 2,
+            agreement_types: Optional[Agreement_types] = None,
+            keep_tasks: bool = False,
     ) -> dict[str, AgreementResult]:
         if not variables:
             variables = list(self.po.choices.keys())
@@ -294,9 +304,9 @@ class Agreements:
             self.results[var] = result
             if "variable" in v_df.columns:
                 v_df = v_df.drop("variable", axis=1)
-            self.logger.warning(f"df before dropping unfinished tasks: {len(v_df)}")
-            #v_df = Agreements.drop_unfinished_tasks(v_df)
-            self.logger.warning(f"df before dropping unfinished tasks: {len(v_df)}")
+
+
+
             options = po_variables[var].options
             if v_df.empty:
                 continue
