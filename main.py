@@ -6,16 +6,6 @@ from typing import Annotated, Optional
 
 import typer
 from deepdiff import DeepDiff
-from deprecated.classic import deprecated
-
-from ls_helper.command.project import project_setup_app
-from ls_helper.fresh_agreements import Agreements
-from ls_helper.models.main_models import (
-    ProjectCreate,
-    get_p_access,
-    get_project,
-    platforms_overview,
-)
 from tqdm import tqdm
 
 from ls_helper.annotation_timing import (
@@ -28,17 +18,22 @@ from ls_helper.command.annotations import annotations_app
 from ls_helper.command.backup import backup_app
 from ls_helper.command.labeling_conf import labeling_conf_app
 from ls_helper.command.pipeline import pipeline_app
+from ls_helper.command.project_setup import project_app
 from ls_helper.command.setup import (
     setup_app,
 )
 from ls_helper.command.task import task_add_predictions, task_app
-from ls_helper.config_helper import check_config_update, parse_label_config_xml
-from ls_helper.exp.build_configs import build_configs
+from ls_helper.config_helper import parse_label_config_xml
+from ls_helper.fresh_agreements import Agreements
 from ls_helper.funcs import build_view_with_filter_p_ids
 from ls_helper.models.interface_models import IChoices
+from ls_helper.models.main_models import (
+    get_p_access,
+    get_project,
+    platforms_overview,
+)
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import (
-    ProjectModel,
     ProjectViewCreate,
     ProjectViewDataModel,
     ProjectViewModel,
@@ -55,7 +50,7 @@ app = typer.Typer(
 )
 
 app.add_typer(setup_app, name="setup", short_help="Commands related to initializing the project")
-app.add_typer(project_setup_app, name="project-setup", short_help="Commands related to project setup")
+app.add_typer(project_app, name="project", short_help="Commands related to project setup and maintenance")
 app.add_typer(backup_app, name="backup", short_help="Commands related to bulkbacking up projects and annotations")
 app.add_typer(labeling_conf_app, name="labeling-conf",
               short_help="Commands related to building, validating and uploading project label configurations")
@@ -69,21 +64,6 @@ def open_image_simple(image_path):
     file_path = Path(image_path).absolute().as_uri()
     webbrowser.open(file_path)
 
-
-@app.command(
-    short_help="[setup] run build_config function and copy it into 'labeling_configs_dir'. Run 'update_labeling_configs' afterward"
-)
-def generate_labeling_config(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None,
-):
-    config_files = build_configs()
-    check_config_update(config_files)
-    pass  # TODO
-    # platform_projects.
-    # check_against_fixes(next_conf, )
 
 
 @app.command(
@@ -116,95 +96,6 @@ def strict_update_project_tasks(
 
     print(f"{len(new_data_list)} tasks updated")
 
-
-@deprecated
-@app.command(
-    short_help="[ls fixes] delete the json files from the local storage folder, from tasks that habe been deleted (not crucial)"
-)
-def clean_project_task_files(
-        project_id: Annotated[int, typer.Option()],
-        title: Annotated[Optional[str], typer.Option()] = None,
-        just_check: Annotated[bool, typer.Option()] = False,
-):
-    # TODO, put this away. we rather just patch tasks per api
-    # 1. get project_sync folder
-    # 2. get project tasks
-    # remove all files that are not in a task
-    """
-    ON THE VM:
-    sudo env PYTHONPATH=.  /home/ubuntu/projects/big5/platform_clients/.venv/bin/typer main.py run clean-project-task-files ...
-    """
-
-    client = ls_client()
-
-    resp = client.list_import_storages(project_id)
-    local_storages = resp.json()
-
-    if len(local_storages) == 0:
-        print("No storages found")
-        return
-    if len(local_storages) > 1:
-        if not title:
-            print("Multiple storages found.provide the 'title'")
-            return
-        lc = [lc for lc in local_storages if lc["title"] == title]
-        if len(lc) == 0:
-            print(f"No storages found with title: {title}")
-            return
-        lc = lc[0]
-    else:
-        lc = local_storages[0]
-    path = Path(lc["path"])
-
-    rel_path = path.relative_to(SETTINGS.IN_CONTAINER_LOCAL_STORAGE_BASE)
-    host_path = SETTINGS.HOST_STORAGE_BASE / rel_path
-
-    existing_task_files = list(host_path.glob("*.json"))
-    existing_task_files = [f.title for f in existing_task_files]
-    # print(existing_task_files)
-    # print("**************")
-    # print(host_path.absolute())
-    print("getting task  list...")
-    resp = client.get_task_list(project=project_id)
-    tasks = resp.json()["tasks"]
-    used_task_files = [task.get("storage_filename") for task in tasks]
-    # filter Nones
-    used_task_files = [Path(t) for t in used_task_files if t]
-    used_task_files = [t.name for t in used_task_files]
-    # print(used_task_files)
-
-    obsolete_files = set(existing_task_files) - set(used_task_files)
-
-    # print([o.relative_to(host_path) for o in obsolete_files])
-    # json.dump(list(obsolete_files), Path("t.json").open("w"))
-    if just_check:
-        print(f"{len(obsolete_files)} would be moved")
-        return
-    print(f"{len(obsolete_files)} will be moved")
-
-    backup_dir = SETTINGS.DELETED_TASK_FILES_BACKUP_BASE_DIR
-    backup_final_dir = backup_dir / str(project_id)
-    backup_final_dir.mkdir(parents=True, exist_ok=True)
-    for f in obsolete_files:
-        src = host_path / f
-        # print(src.exists())
-        shutil.move(src, backup_final_dir / f)
-
-
-@app.command(short_help="[maint]")
-def download_project_data(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Argument()] = None,
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None,
-) -> ProjectModel:
-    po = get_project(id, alias, platform, language)
-    project_data = ls_client().get_project(po.id)
-
-    if not project_data:
-        raise ValueError(f"No project found: {po.id}")
-    po.save_project_data(project_data)
-    return project_data
 
 
 @app.command(short_help="[maint]")
@@ -426,25 +317,6 @@ def agreements(
     return dest, agreement
 
 
-@app.command(short_help="Create a new project in LS",
-             help="xxxx")
-def create_project(
-        title: Annotated[str, typer.Option()],
-        alias: Annotated[str, typer.Option()],
-        platform: Annotated[str, typer.Option()],
-        language: Annotated[str, typer.Option()]
-):
-    platforms_overview.create(
-        ProjectCreate(
-            title=title,
-            platform=platform,
-            language=language,
-            alias=alias,
-            default=False,
-        )
-    )
-
-
 def get_all_variable_names(
         id: Annotated[Optional[int], typer.Option()] = None,
         alias: Annotated[Optional[str], typer.Option("-a")] = None,
@@ -627,7 +499,6 @@ if __name__ == "__main__":
     from ls_helper.command import setup
 
     setup.add_projects()
-    from ls_helper.command import annotations
 
     # this will work, since there is just one spanish twitter (so its set to default)
     agreements(**{"alias": "twitter-en-3"}, variables=["nature_any"])

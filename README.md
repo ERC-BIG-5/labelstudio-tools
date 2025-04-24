@@ -118,8 +118,8 @@ Todo:
 
 ### Creating a new project
 
-`create-project`
-`setup setup-project-settings`
+`project create-project`
+`project setup-project-settings`
 this will also create a <id>.xml in the `labeling_configs` folder
 `labeling-conf build-ls-labeling-interface`
 use the platform specific template...
