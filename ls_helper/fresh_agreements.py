@@ -60,6 +60,9 @@ class Agreements:
         self.collections: dict[str, OptionOccurances] = {}
         self.logger = get_logger(__file__)
 
+        # variable: option: filtered_ids: all_occurrences, agreements, disagreements
+        self.option_tasks: dict[str,dict[str, dict[str, list[str]]]] = {}
+
     @staticmethod
     def find_groups(variables):
         pattern = re.compile(r"^(.+)_(\d+)$")
@@ -282,7 +285,7 @@ class Agreements:
             force_default: Optional[str] = "NONE",
             max_coders: int = 2,
             agreement_types: Optional[Agreement_types] = None,
-            keep_tasks: bool = False,
+            keep_tasks: bool = True,
     ) -> dict[str, AgreementResult]:
         if not variables:
             variables = list(self.po.choices.keys())
@@ -316,6 +319,31 @@ class Agreements:
                     )
                     result.options_agreements[option] = self._calc_agreements(
                         option_df, agreement_types)
+
+                    # todo....bring in the conflicts.
+                    # TODO. the pivot is calculated multiple times, per option?
+                    if keep_tasks:
+                        #self.collections.setdefault(var, {})[option] = task_ids
+                        var_col = self.option_tasks.setdefault(var, {})
+                        option_col = var_col.setdefault(option,{})
+                        option_col["filtered_ids"]= option_df.index.get_level_values('task_id').unique().tolist()
+                        pv_df = Agreements.create_coder_pivot_df(option_df)
+
+                        def match_mask_func(row):
+                            # Get non-NaN values
+                            non_nan_values = row.dropna().unique()
+                            # If all values are the same, there will be only one unique value
+                            # (or none if all were NaN)
+                            return len(non_nan_values) <= 1
+
+                        # Apply the function to each row
+                        match_mask = pv_df.apply(match_mask_func, axis=1)
+
+                        # Split the dataframe
+                        option_col["match"] = pv_df[match_mask].index.get_level_values('task_id').unique().tolist()
+                        option_col["conflict"] = pv_df[~match_mask].index.get_level_values('task_id').unique().tolist()
+
+
             # multi-select
             else:
                 v_df = self.add_multi_select_default(v_df)

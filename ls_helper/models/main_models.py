@@ -9,6 +9,8 @@ import pandas as pd
 from lxml.etree import ElementTree
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from tools.files import read_data, save_json
 from tools.project_logging import get_logger
 from tools.pydantic_annotated_types import SerializableDatetime
 
@@ -425,64 +427,69 @@ class ProjectData(ProjectCreate):
 
     def store_agreement_report(
             self, agreement_report: "Agreements", gen_csv_tables: bool = True
-    ) -> Path:
+    ) -> list[Path]:
         raw_dest = self.path_for(SETTINGS.agreements_dir)
-
+        paths = [raw_dest]
         raw_dest.write_text(
             json.dumps({var: res.model_dump()
                         for var, res in agreement_report.results.items()}))
 
-        if not gen_csv_tables:
-            return raw_dest
-        dest = self.path_for(SETTINGS.agreements_dir, ext=".csv")
+        if gen_csv_tables:
+            dest = self.path_for(SETTINGS.agreements_dir, ext=".csv")
+            paths.append(dest)
+            variables = self.variables()
+            writer = DictWriter(
+                dest.open("w", encoding="utf-8"),
+                fieldnames=[
+                    "variable",
+                    "type",
+                    "option",
+                    "fleiss",
+                    "gwet",
+                    "ratio",
+                    "abs",
+                    "total",
+                ],
+            )
+            writer.writeheader()
 
-        variables = self.variables()
-        writer = DictWriter(
-            dest.open("w", encoding="utf-8"),
-            fieldnames=[
-                "variable",
-                "type",
-                "option",
-                "fleiss",
-                "gwet",
-                "ratio",
-                "abs",
-                "total",
-            ],
-        )
-        writer.writeheader()
-
-        for var_agreement in agreement_report.results.values():
-            var = var_agreement.variable
-            _choice_type = cast(ChoiceVariableModel, variables[var]).choice
-            var_data = {"variable": var, "type": _choice_type}
-            if _choice_type == "single":
-                row_data = var_data | {"option": "VARIABLE_LEVEL"}
-                for (
-                        agreement_type,
-                        agreement_value,
-                ) in var_agreement.single_overall.items():
-                    row_data[agreement_type] = agreement_value
-                writer.writerow(row_data)
-
-            for (
-                    option,
-                    option_agreements,
-            ) in var_agreement.options_agreements.items():
-                row_data = var_data | {"option": option}
-                for (
-                        agreement_type,
-                        agreement_value,
-                ) in option_agreements.items():
-                    row_data[agreement_type] = agreement_value
-                writer.writerow(row_data)
-
-                if _choice_type == "multiple":
-                    row_data = var_data | {"option": f"{option}-SEL"}
-                    for (agreement_type, agreement_value) in var_agreement.multi_select_inclusion_agreeement[option].items():
+            for var_agreement in agreement_report.results.values():
+                var = var_agreement.variable
+                _choice_type = cast(ChoiceVariableModel, variables[var]).choice
+                var_data = {"variable": var, "type": _choice_type}
+                if _choice_type == "single":
+                    row_data = var_data | {"option": "VARIABLE_LEVEL"}
+                    for (
+                            agreement_type,
+                            agreement_value,
+                    ) in var_agreement.single_overall.items():
                         row_data[agreement_type] = agreement_value
                     writer.writerow(row_data)
-        return dest
+
+                for (
+                        option,
+                        option_agreements,
+                ) in var_agreement.options_agreements.items():
+                    row_data = var_data | {"option": option}
+                    for (
+                            agreement_type,
+                            agreement_value,
+                    ) in option_agreements.items():
+                        row_data[agreement_type] = agreement_value
+                    writer.writerow(row_data)
+
+                    if _choice_type == "multiple":
+                        row_data = var_data | {"option": f"{option}-SEL"}
+                        for (agreement_type, agreement_value) in var_agreement.multi_select_inclusion_agreeement[option].items():
+                            row_data[agreement_type] = agreement_value
+                        writer.writerow(row_data)
+
+        conflicts_dest = self.path_for(SETTINGS.agreements_dir)
+        conflicts_dest = conflicts_dest.parent / f"{conflicts_dest.stem}_conflicts.json"
+        paths.append(conflicts_dest)
+        save_json(conflicts_dest, agreement_report.option_tasks)
+
+        return paths
 
     def get_agreement_data(self) -> dict[str, AgreementResult]:
         # todo test
@@ -939,15 +946,15 @@ class ProjectResult(BaseModel):
             max_num_coders: int = 2,
             variables: Optional[list[str]] = None,
             gen_csv_tables: bool = True,
-    ) -> tuple[Path, "Agreements"]:
+    ) -> tuple[list[Path], "Agreements"]:
         from ls_helper.fresh_agreements import Agreements
 
         ag = Agreements(self.project_data)
         ag.agreement_calc(variables, max_coders=max_num_coders)
 
-        dest = self.project_data.store_agreement_report(ag, gen_csv_tables)
-        logger.info(f"agreement-results: {dest.as_posix()}")
-        return dest, ag
+        dest_files = self.project_data.store_agreement_report(ag, gen_csv_tables)
+        logger.info(f"agreement-results: {[dest.as_posix() for dest in dest_files]}")
+        return dest_files, ag
 
     model_config = ConfigDict(
         validate_assignment=True, arbitrary_types_allowed=True

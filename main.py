@@ -423,7 +423,8 @@ def agreements(
     return dest, agreement
 
 
-@app.command()
+@app.command(short_help="Create a new project in LS",
+             help="xxxx")
 def create_project(
     title: Annotated[str, typer.Option()],
     alias: Annotated[str, typer.Option()],
@@ -470,7 +471,7 @@ def get_variables_info(
     ]
 
 
-@app.command()
+@app.command(short_help="create or update a view for variable conflict")
 def create_conflict_view(
     variable: Annotated[str, typer.Option()],
     id: Annotated[Optional[int], typer.Option()] = None,
@@ -624,4 +625,4 @@ if __name__ == "__main__":
     #setup.add_projects()
     from ls_helper.command import annotations
     # this will work, since there is just one spanish twitter (so its set to default)
-    agreements(**tw_es)#, variables=["nature_any","extras"])
+    agreements(**tw_es, variables=["nature_any","extras"])
