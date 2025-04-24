@@ -23,7 +23,7 @@
       "class": "logging.handlers.RotatingFileHandler",
       "level": "DEBUG",
       "formatter": "detailed",
-      "filename": "/home/rsoleyma/projects/big5/labelstudio-tools/data/logs/app.log",
+      "filename": "app.log",
       "maxBytes": 10485760,
       "backupCount": 5,
       "encoding": "utf8"
@@ -32,7 +32,7 @@
       "class": "logging.handlers.RotatingFileHandler",
       "level": "ERROR",
       "formatter": "detailed",
-      "filename": "/home/rsoleyma/projects/big5/labelstudio-tools/data/logs/error.log",
+      "filename": "error.log",
       "maxBytes": 10485760,
       "backupCount": 5,
       "encoding": "utf8"
