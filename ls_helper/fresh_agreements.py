@@ -344,8 +344,7 @@ class Agreements:
                     # Filter the DataFrame to keep only those tasks
                     option_select = option_df[option_df['task_id'].isin(tasks_with_option_select)]
                     result.multi_select_inclusion_agreeement[option] = self._calc_agreements(
-                        option_select, agreement_types, "multiple"
-                    )
+                        option_select, agreement_types)
 
             # for day, accum_df in self.time_move(v_df):
             # pass
