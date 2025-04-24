@@ -211,7 +211,7 @@ class ProjectData(ProjectCreate):
 
     def variables(self) -> dict[str, VariableModel]:
         variables = {}
-        #pattern = re.compile(r"^(.+)_(\d+)(?:_(.*))?$")
+        # pattern = re.compile(r"^(.+)_(\d+)(?:_(.*))?$")
 
         # initial basics
         for (
@@ -386,31 +386,31 @@ class ProjectData(ProjectCreate):
             return self._ann_results
         from ls_helper.project_mgmt import ProjectMgmt
 
-        mp = ProjectResult(project_data=self)
-        from_existing, mp.raw_annotation_result = (
-            ProjectMgmt.get_recent_annotations(mp.id, accepted_ann_age)
+        ann_results = ProjectResult(project_data=self)
+        from_existing, ann_results.raw_annotation_result = (
+            ProjectMgmt.get_recent_annotations(ann_results.id, accepted_ann_age)
         )
         if from_existing:
             raw_df_file = SETTINGS.annotations_dir / f"raw_{self.id}.pickle"
             if raw_df_file.exists():
-                mp.raw_annotation_df = pd.read_pickle(raw_df_file)
-                mp.assignment_df = pd.read_pickle(
+                ann_results.raw_annotation_df = pd.read_pickle(raw_df_file)
+                ann_results.assignment_df = pd.read_pickle(
                     SETTINGS.annotations_dir / f"ass_{self.id}.pickle"
                 )
                 # this, cuz values are lists.
                 # mp.raw_annotation_df['value'] = mp.raw_annotation_df['value'].apply(ast.literal_eval)
                 # mp.raw_annotation_df['platform_id'] = mp.raw_annotation_df['platform_id'].astype(str)
-                return mp
+                return ann_results
         # new file or there is no raw_dataframe
-        mp.raw_annotation_df, mp.assignment_df = mp.get_annotation_df()
-        mp.raw_annotation_df.to_pickle(
+        ann_results.raw_annotation_df, ann_results.assignment_df = ann_results.get_annotation_df()
+        ann_results.raw_annotation_df.to_pickle(
             SETTINGS.annotations_dir / f"raw_{self.id}.pickle"
         )
-        mp.assignment_df.to_pickle(
+        ann_results.assignment_df.to_pickle(
             SETTINGS.annotations_dir / f"ass_{self.id}.pickle"
         )
-        self._ann_results = mp
-        return mp
+        self._ann_results = ann_results
+        return ann_results
 
     # todo, move somewhere else?
     @staticmethod
@@ -432,6 +432,8 @@ class ProjectData(ProjectCreate):
             json.dumps({var: res.model_dump()
                         for var, res in agreement_report.results.items()}))
 
+        if not gen_csv_tables:
+            return raw_dest
         dest = self.path_for(SETTINGS.agreements_dir, ext=".csv")
 
         variables = self.variables()
@@ -462,6 +464,7 @@ class ProjectData(ProjectCreate):
                 ) in var_agreement.single_overall.items():
                     row_data[agreement_type] = agreement_value
                 writer.writerow(row_data)
+
             for (
                     option,
                     option_agreements,
@@ -473,20 +476,12 @@ class ProjectData(ProjectCreate):
                 ) in option_agreements.items():
                     row_data[agreement_type] = agreement_value
                 writer.writerow(row_data)
-        """
-        (p := self.path_for(ItemType.agreement_report)).write_text(
-            agreement_report.model_dump_json(exclude_none=True, indent=2))
-        print(f"agreement_report -> {p.as_posix()}")
-        if gen_csv_tables:
-            p_csv = self.path_for(ItemType.agreement_report, ".csv")
-            rows = [dict(r) for r in export_agreement_metrics_to_csv(agreement_report, p_csv)]
-            print(f"agreement_report -> {p_csv.as_posix()}")
-            df = DataFrame(rows)
-            df = df[df["option"] == "VARIABLE_LEVEL"]
-            p_csv = self.path_for(ItemType.agreement_report, "_vars.csv")
-            df.to_csv(p_csv)
-            print(f"agreement_report -> {p_csv.as_posix()}")
-        """
+
+                if _choice_type == "multiple":
+                    row_data = var_data | {"option": f"{option}-SEL"}
+                    for (agreement_type, agreement_value) in var_agreement.multi_select_inclusion_agreeement[option].items():
+                        row_data[agreement_type] = agreement_value
+                    writer.writerow(row_data)
         return dest
 
     def get_agreement_data(self) -> dict[str, AgreementResult]:
@@ -732,15 +727,23 @@ class ProjectResult(BaseModel):
                         {
                             "task_id": task.id,
                             "ann_id": ann.id,
-                            "platform_id": task.data[DFCols.P_ID],
+                            "platform_id": task.data[DFCols.P_ID], # todo just keep it in assignment_df and take it from there
                             "user_id": ann.completed_by,
-                            "ts": ann.updated_at,
+                            "ts": ann.updated_at, # todo, same as platform_id
                             "variable": new_name,
                             "idx": idx,
                             "type": type_,
                             "value": question.value.direct_value,
                         }
                     )
+                assignment_df_rows.append(
+                    {
+                        "task_id": task.id,
+                        "ann_id": ann.id,
+                        "platform_id": task.data[DFCols.P_ID],
+                        "user_id": ann.completed_by,
+                        "ts": ann.updated_at }
+                )
 
             if debug_mode:
                 debug_task_limit -= 1
