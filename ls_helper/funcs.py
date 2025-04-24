@@ -3,7 +3,6 @@ import json
 from pathlib import Path
 from typing import Literal, Optional
 
-import httpx
 import jsonpath_ng
 
 from ls_helper.my_labelstudio_client.client import LabelStudioBase
@@ -227,23 +226,6 @@ def get_latest_annotation_file(project_id: int) -> Optional[Path]:
         print("no annotations found")
         return None
     return sorted(annotation_files)[-1]
-
-
-def download_project_views(project_id: int, store: bool = True):
-    views_resp = httpx.get(
-        f"{SETTINGS.LS_HOSTNAME}/api/dm/views/?project={project_id}",
-        headers={"Authorization": f"Token {SETTINGS.LS_API_KEY}"},
-    )
-    if views_resp.status_code == 200:
-        data = views_resp.json()
-
-    if store:
-        view_dir = SETTINGS.BASE_DATA_DIR / "views"
-        view_dir.mkdir(parents=True, exist_ok=True)
-        json.dump(
-            data, open(f"{view_dir}/{project_id}.json", "w", encoding="utf-8")
-        )
-    return data
 
 
 def update_user_nicknames(refresh_users: bool = True):

@@ -2,7 +2,7 @@ import logging
 import re
 import warnings
 from datetime import date
-from typing import TYPE_CHECKING, Annotated, Any, Generator, Literal, Optional
+from typing import TYPE_CHECKING, Annotated, Generator, Literal, Optional
 
 import irrCAC.raw
 import pandas as pd
@@ -35,16 +35,18 @@ class AgreementResult(BaseModel):
     variable: str
     single_overall: Optional[AgreementsCol] = Field(default_factory=dict)
     options_agreements: dict[str, AgreementsCol] = Field(default_factory=dict)
-    multi_select_inclusion_agreeement: dict[str, AgreementsCol] = Field(default_factory=dict,
-                                                                        description="for multi-select, filtering only those, where at least one coder included the option")
+    multi_select_inclusion_agreeement: dict[str, AgreementsCol] = Field(
+        default_factory=dict,
+        description="for multi-select, filtering only those, where at least one coder included the option",
+    )
 
 
 class Agreements:
     def __init__(
-            self,
-            po: "ProjectData",
-            accepted_ann_age: int = 6,
-            agreement_types: Agreement_types = ("gwet", "ratio", "abs"),
+        self,
+        po: "ProjectData",
+        accepted_ann_age: int = 6,
+        agreement_types: Agreement_types = ("gwet", "ratio", "abs"),
     ) -> None:
         self.po = po
         self.accepted_ann_age = accepted_ann_age
@@ -61,7 +63,7 @@ class Agreements:
         self.logger = get_logger(__file__)
 
         # variable: option: filtered_ids: all_occurrences, agreements, disagreements
-        self.option_tasks: dict[str,dict[str, dict[str, list[str]]]] = {}
+        self.option_tasks: dict[str, dict[str, dict[str, list[str]]]] = {}
 
     @staticmethod
     def find_groups(variables):
@@ -91,9 +93,7 @@ class Agreements:
             return df.set_index(["task_id", "user_id"])
 
     def select_variables(
-            self,
-            variables: list[str],
-            always_as_dict: bool = True
+        self, variables: list[str], always_as_dict: bool = True
     ) -> dict[str, DataFrame] | DataFrame:
         df = self.get_init_df()
 
@@ -102,20 +102,21 @@ class Agreements:
         variables_dfs: dict[str, DataFrame] = {}
 
         for var in variables:
-
             variable_def = po_variables.get(var)
             if not variable_def:
                 self.logger.error(f"Unknown Variable: {var}")
                 continue
             if not isinstance(variable_def, ChoiceVariableModel):
-                self.logger.warning(f"Variable: '{var}' is not a choice variable. Skipping")
+                self.logger.warning(
+                    f"Variable: '{var}' is not a choice variable. Skipping"
+                )
                 continue
 
             selected_variables.append(var)
 
-            variables_dfs = df[df["variable"].isin(selected_variables)].groupby(
-                "variable"
-            )
+            variables_dfs = df[
+                df["variable"].isin(selected_variables)
+            ].groupby("variable")
 
         if not always_as_dict and len(variables_dfs) == 1:
             return list(variables_dfs.values())[0]
@@ -130,8 +131,7 @@ class Agreements:
 
     @staticmethod
     def _calc_agreements(
-            df: DataFrame,
-            agreement_types: Agreement_types
+        df: DataFrame, agreement_types: Agreement_types
     ) -> AgreementsCol:
         if len(df) == 0:
             return {_: nan for _ in agreement_types}
@@ -199,18 +199,23 @@ class Agreements:
         reduced = df__.groupby("task_id").filter(
             lambda x: len(x.index.get_level_values(1).unique()) > 1
         )
-        task_id_set = lambda df: set(df.index.get_level_values("task_id").unique().tolist())
+
+        def task_id_set(df: DataFrame) -> set:
+            return set(df.index.get_level_values("task_id").unique().tolist())
+
         df__tasks = task_id_set(df__)
         reduced_tasks = task_id_set(reduced)
         if (num_dropped := (len(df__tasks) - len(reduced_tasks))) > 0:
             self.logger.info(f"dropped unfinished tasks: {num_dropped}")
             if self.logger.level == logging.DEBUG:
-                self.logger.debug(f"dropped tasks: {df__tasks - reduced_tasks}")
+                self.logger.debug(
+                    f"dropped tasks: {df__tasks - reduced_tasks}"
+                )
         return reduced
 
     @staticmethod
     def time_move(
-            df_: DataFrame,
+        df_: DataFrame,
     ) -> Generator[tuple[date, DataFrame], None, None]:
         for day in sorted(df_.date.unique()):
             yield day, df_[df_["date"] <= day]
@@ -249,43 +254,45 @@ class Agreements:
     def add_multi_select_default(self, v_df: DataFrame) -> DataFrame:
         ass_df = self._assignment_df.copy()
 
-        ass_df['date'] = pd.to_datetime(ass_df['ts']).dt.date
+        ass_df["date"] = pd.to_datetime(ass_df["ts"]).dt.date
 
         # Create a new dataframe with only the necessary columns from df2
-        df2_subset = ass_df[['task_id', 'user_id', 'ts', 'date']]
+        df2_subset = ass_df[["task_id", "user_id", "ts", "date"]]
 
         # Perform an outer merge on task_id and user_id
         merged_df = pd.merge(
             v_df,
             df2_subset,
-            on=['task_id', 'user_id'],
-            how='outer',
-            suffixes=('', '_y')
+            on=["task_id", "user_id"],
+            how="outer",
+            suffixes=("", "_y"),
         )
 
         # For rows that exist only in df2, fill in default values
-        merged_df['idx'] = merged_df['idx'].fillna(0)
-        merged_df['type'] = merged_df['type'].fillna('multiple')
-        merged_df['value'] = merged_df['value'].fillna('[]')
+        merged_df["idx"] = merged_df["idx"].fillna(0)
+        merged_df["type"] = merged_df["type"].fillna("multiple")
+        merged_df["value"] = merged_df["value"].fillna("[]")
 
         # Use timestamps from df1 where available, otherwise from df2
-        merged_df['ts'] = merged_df['ts'].combine_first(merged_df['ts_y'])
-        merged_df['date'] = merged_df['date'].combine_first(merged_df['date_y'])
+        merged_df["ts"] = merged_df["ts"].combine_first(merged_df["ts_y"])
+        merged_df["date"] = merged_df["date"].combine_first(
+            merged_df["date_y"]
+        )
 
         # Drop the extra columns
-        merged_df = merged_df.drop(columns=['ts_y', 'date_y'])
+        merged_df = merged_df.drop(columns=["ts_y", "date_y"])
 
         # Sort by task_id and user_id
-        merged_df = merged_df.sort_values(['task_id', 'user_id'])
+        merged_df = merged_df.sort_values(["task_id", "user_id"])
         return merged_df
 
     def agreement_calc(
-            self,
-            variables: Optional[list[str]] = None,
-            force_default: Optional[str] = "NONE",
-            max_coders: int = 2,
-            agreement_types: Optional[Agreement_types] = None,
-            keep_tasks: bool = True,
+        self,
+        variables: Optional[list[str]] = None,
+        force_default: Optional[str] = "NONE",
+        max_coders: int = 2,
+        agreement_types: Optional[Agreement_types] = None,
+        keep_tasks: bool = True,
     ) -> dict[str, AgreementResult]:
         if not variables:
             variables = list(self.po.choices.keys())
@@ -309,7 +316,8 @@ class Agreements:
                 v_df_s = v_df.explode("value")
                 v_df_s.fillna(force_default, inplace=True)
                 result.single_overall = self._calc_agreements(
-                    v_df_s, agreement_types)
+                    v_df_s, agreement_types
+                )
                 for option in options:
                     # Use vectorized operations when possible for performance
                     option_df = v_df.copy()
@@ -318,15 +326,20 @@ class Agreements:
                         lambda group: (group["value"] == option).any()
                     )
                     result.options_agreements[option] = self._calc_agreements(
-                        option_df, agreement_types)
+                        option_df, agreement_types
+                    )
 
                     # todo....bring in the conflicts.
                     # TODO. the pivot is calculated multiple times, per option?
                     if keep_tasks:
-                        #self.collections.setdefault(var, {})[option] = task_ids
+                        # self.collections.setdefault(var, {})[option] = task_ids
                         var_col = self.option_tasks.setdefault(var, {})
-                        option_col = var_col.setdefault(option,{})
-                        option_col["filtered_ids"]= option_df.index.get_level_values('task_id').unique().tolist()
+                        option_col = var_col.setdefault(option, {})
+                        option_col["filtered_ids"] = (
+                            option_df.index.get_level_values("task_id")
+                            .unique()
+                            .tolist()
+                        )
                         pv_df = Agreements.create_coder_pivot_df(option_df)
 
                         def match_mask_func(row):
@@ -340,9 +353,18 @@ class Agreements:
                         match_mask = pv_df.apply(match_mask_func, axis=1)
 
                         # Split the dataframe
-                        option_col["match"] = pv_df[match_mask].index.get_level_values('task_id').unique().tolist()
-                        option_col["conflict"] = pv_df[~match_mask].index.get_level_values('task_id').unique().tolist()
-
+                        option_col["match"] = (
+                            pv_df[match_mask]
+                            .index.get_level_values("task_id")
+                            .unique()
+                            .tolist()
+                        )
+                        option_col["conflict"] = (
+                            pv_df[~match_mask]
+                            .index.get_level_values("task_id")
+                            .unique()
+                            .tolist()
+                        )
 
             # multi-select
             else:
@@ -365,14 +387,20 @@ class Agreements:
                         self.collections.setdefault(var, {})[option] = task_ids
                     # Calculate agreement for this option
                     result.options_agreements[option] = self._calc_agreements(
-                        option_df, agreement_types)
+                        option_df, agreement_types
+                    )
                     # only the tasks, where one select the option
                     # Group by task_id and check if any user has a value of 1
-                    tasks_with_option_select= option_df[option_df['value'] == 1]['task_id'].unique()
+                    tasks_with_option_select = option_df[
+                        option_df["value"] == 1
+                    ]["task_id"].unique()
                     # Filter the DataFrame to keep only those tasks
-                    option_select = option_df[option_df['task_id'].isin(tasks_with_option_select)]
-                    result.multi_select_inclusion_agreeement[option] = self._calc_agreements(
-                        option_select, agreement_types)
+                    option_select = option_df[
+                        option_df["task_id"].isin(tasks_with_option_select)
+                    ]
+                    result.multi_select_inclusion_agreeement[option] = (
+                        self._calc_agreements(option_select, agreement_types)
+                    )
 
             # for day, accum_df in self.time_move(v_df):
             # pass

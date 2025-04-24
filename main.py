@@ -29,17 +29,44 @@ app = typer.Typer(
     name="Labelstudio helper", pretty_exceptions_show_locals=False
 )
 
-app.add_typer(setup_app, name="setup", short_help="Commands related to initializing the project")
-app.add_typer(project_app, name="project", short_help="Commands related to project setup and maintenance")
-app.add_typer(backup_app, name="backup", short_help="Commands related to bulkbacking up projects and annotations")
-app.add_typer(labeling_conf_app, name="labeling-conf",
-              short_help="Commands related to building, validating and uploading project label configurations")
-app.add_typer(task_app, name="task", short_help="Commands related to downloading, creating and patching project tasks")
-app.add_typer(view_app, name="view", short_help="Commands related to project views")
-app.add_typer(annotations_app, name="annotations",
-              short_help="Commands related to downloading and analyzing annotations")
-app.add_typer(pipeline_app, name="pipeline", short_help="Commands related to interaction with the Pipeline package")
-
+app.add_typer(
+    setup_app,
+    name="setup",
+    short_help="Commands related to initializing the project",
+)
+app.add_typer(
+    project_app,
+    name="project",
+    short_help="Commands related to project setup and maintenance",
+)
+app.add_typer(
+    backup_app,
+    name="backup",
+    short_help="Commands related to bulkbacking up projects and annotations",
+)
+app.add_typer(
+    labeling_conf_app,
+    name="labeling-conf",
+    short_help="Commands related to building, validating and uploading project label configurations",
+)
+app.add_typer(
+    task_app,
+    name="task",
+    short_help="Commands related to downloading, creating and patching project tasks",
+)
+app.add_typer(
+    view_app, name="view", short_help="Commands related to project views"
+)
+app.add_typer(
+    annotations_app,
+    name="annotations",
+    short_help="Commands related to downloading and analyzing annotations",
+)
+app.add_typer(
+    pipeline_app,
+    name="pipeline",
+    short_help="Commands related to interaction with the Pipeline package",
+)
 
 
 @app.command(
@@ -47,8 +74,7 @@ app.add_typer(pipeline_app, name="pipeline", short_help="Commands related to int
 )
 # todo: more testing
 def strict_update_project_tasks(
-        new_data_file: Path,
-        existing_data_file: Optional[Path] = None
+    new_data_file: Path, existing_data_file: Optional[Path] = None
 ):
     raise NotImplementedError("client.patch_task parameters changed")
     new_data_list = json.loads(new_data_file.read_text(encoding="utf-8"))
@@ -74,10 +100,10 @@ def strict_update_project_tasks(
 
 
 def get_all_variable_names(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Option()] = None,
-        language: Annotated[Optional[str], typer.Option()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Option()] = None,
+    language: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
     # todo redo and test...
@@ -86,10 +112,10 @@ def get_all_variable_names(
 
 
 def get_variables_info(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Option()] = None,
-        language: Annotated[Optional[str], typer.Option()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Option()] = None,
+    language: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
     return [
