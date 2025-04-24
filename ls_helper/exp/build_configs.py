@@ -342,8 +342,9 @@ def check_references(root) -> dict[str, list[str]]:
                         component = comp
                         break
                     if not comp:
-                        if p := cur_elem.getparent():
-                            cur_elem = p
+                        if (parent := cur_elem.getparent()) is None:
+                            break
+                        cur_elem = parent
 
             deps = [
                 f"{d.tag}:{d.attrib.get('name', '')} [component:{component}]"
@@ -428,8 +429,7 @@ def build_from_template(
                 "Label",
                 "TimelineLabels",
                 "a",
-                "div",
-                "script",
+                "div"
             ]:
                 continue
             # print(node.tag)
