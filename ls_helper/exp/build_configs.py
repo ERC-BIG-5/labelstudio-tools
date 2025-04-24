@@ -1,8 +1,4 @@
-import copy
-import json
-import os
 from pathlib import Path
-from string import Template
 from typing import Any, Optional
 
 import pystache
@@ -79,6 +75,7 @@ def remove_hidden_parts(xml_file: Path):
     tree.write(
         xml_file, pretty_print=True, encoding="utf-8", xml_declaration=False
     )
+
 
 def check_references(root) -> dict[str, list[str]]:
     names = list(find_all_names(root).keys())
@@ -184,7 +181,7 @@ def build_from_template(
                 "Label",
                 "TimelineLabels",
                 "a",
-                "div"
+                "div",
             ]:
                 continue
             # print(node.tag)

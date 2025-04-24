@@ -21,11 +21,13 @@ labeling_conf_app = typer.Typer(
 # todo duplicate in main
 
 
-@labeling_conf_app.command(short_help="Create labeling config from template",
-                           help="Uses platform specific template")
+@labeling_conf_app.command(
+    short_help="Create labeling config from template",
+    help="Uses platform specific template",
+)
 def build_ls_labeling_interface(
     id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("--alias","-a")] = None,
+    alias: Annotated[Optional[str], typer.Option("--alias", "-a")] = None,
     platform: Annotated[Optional[str], typer.Option()] = None,
     language: Annotated[Optional[str], typer.Option()] = None,
     alternative_template: Annotated[Optional[str], typer.Argument()] = None,
@@ -73,10 +75,10 @@ def update_labeling_config(
 
 @app.command()
 def build_extension_index(
-        take_all_defaults: Annotated[
-            bool, typer.Option(help="take default projects (pl/lang)")
-        ] = True,
-        project_ids: Annotated[Optional[list[int]], typer.Option("-pid")] = None,
+    take_all_defaults: Annotated[
+        bool, typer.Option(help="take default projects (pl/lang)")
+    ] = True,
+    project_ids: Annotated[Optional[list[int]], typer.Option("-pid")] = None,
 ):
     """
     Checks
@@ -96,8 +98,8 @@ def build_extension_index(
         raise ValueError("Unclear parameter for build_extension_index")
     index = _build_extension_index(projects)
     dest = (
-            SETTINGS.temp_file_path
-            / f"annot_ext_index_{'_'.join(str(p.id) for p in projects)}.json"
+        SETTINGS.temp_file_path
+        / f"annot_ext_index_{'_'.join(str(p.id) for p in projects)}.json"
     )
     dest.write_text(index.model_dump_json(indent=2))
     print(f"index saved to {dest}")
@@ -105,11 +107,11 @@ def build_extension_index(
 
 @app.command()
 def check_labelling_config(
-        build_file_name: str,
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Option()] = None,
-        language: Annotated[Optional[str], typer.Option()] = None,
+    build_file_name: str,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Option()] = None,
+    language: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
 
