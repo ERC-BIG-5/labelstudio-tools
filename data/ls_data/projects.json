@@ -1,11 +1,11 @@
 {
   "43": {
     "title": "Step 1 - Twitter EN - protocol.v3",
-    "alias": "twitter-en-2",
+    "alias": "twitter-en-3",
     "platform": "twitter",
     "language": "en",
     "description": null,
-    "default": true,
+    "default": false,
     "coding_game_view_id": 85,
     "id": 43
   },
@@ -91,12 +91,22 @@
   },
   "39": {
     "title": "Twitter - en - part1",
-    "alias": "100twitter-en-1",
+    "alias": "twitter-en-1",
     "platform": "twitter",
     "language": "en",
     "description": null,
     "default": false,
     "coding_game_view_id": 67,
     "id": 39
+  },
+  "53": {
+    "title": "Twitter - EN - protocol.v4",
+    "alias": "twitter-en-4",
+    "platform": "twitter",
+    "language": "en",
+    "description": null,
+    "default": true,
+    "coding_game_view_id": null,
+    "id": 53
   }
 }
