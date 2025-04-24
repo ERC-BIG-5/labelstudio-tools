@@ -10,6 +10,7 @@ from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import ProjectViewCreate, ProjectViewDataModel, ProjectViewModel
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
+from main import app, logger
 from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
@@ -122,3 +123,68 @@ def set_view_items(
 def delete_view(view_id: int):
     ls_client().delete_view(view_id)
 
+
+@app.command(short_help="Download the views of a project")
+def download_project_views(
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+) -> list[ProjectViewModel]:
+    p_a = get_p_access(id, alias, platform, language)
+    po = get_project(p_a)
+    views = ProjectMgmt.refresh_views(po)
+    logger.debug(f"view file -> {po.view_file}")
+    return views
+
+
+@app.command(short_help="create or update a view for variable conflict")
+def create_conflict_view(
+        variable: Annotated[str, typer.Option()],
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
+        variable_option: Annotated[Optional[str], typer.Option()] = None,
+):
+    # todo redo with fresh_agreement
+    """
+    po = get_project(id, alias, platform, language)
+    # po.validate_extensions()
+    # mp = po.get_annotations_results()
+
+    # just check existence
+    # if not po.interface.ordered_fields_map.get(variable):
+    #    raise ValueError(f"Variable {variable} has not been defined")
+    # agreement_data = json.loads((SETTINGS.agreements_dir / f"{po.id}.json").read_text())
+
+    agg_metrics = po.get_agreement_data().agreement_metrics
+    if variable.endswith("_visual"):
+        variable = variable + "_0"
+    print(variable)
+    am = agg_metrics.all_variables.get(variable)
+    if not am or not len(am.conflicts):
+        all_c = po.get_agreement_data().conflicts
+
+        dd_t = []
+        for c in all_c:
+            # print(c)
+            if c.variable == variable:
+                dd_t.append(c)
+            task_ids = [c.task_id for c in dd_t][:50]
+    else:
+        # for the broken version, single are strings of task-id and _0
+        if isinstance(am, SingleChoiceAgreement):
+            task_ids = [int(s.split("_")[0]) for s in am.conflicts][:30]
+
+        else:
+            task_ids = [int(str(s.task_id)[:-1]) for s in am.conflicts][:30]
+
+    title = f"conflict:{variable}"
+    view = ProjectMgmt.create_view(ProjectViewCreate.model_validate({"project": po.id, "data": {
+        "title": title,
+        "filters": build_platform_id_filter(task_ids, "task_id")}}))
+    url = f"{SETTINGS.LS_HOSTNAME}/projects/{po.id}/data?tab={view.id}"
+    print(url)
+    return url
+    """

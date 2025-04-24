@@ -9,11 +9,11 @@ try:
 except ImportError:
     print("You need to install the optional dependency [server]")
 from main import (
-    agreements,
-    create_conflict_view,
     get_all_variable_names,
     update_coding_game,
 )
+from ls_helper.command.view import create_conflict_view
+from ls_helper.command.annotations import agreements
 
 # app = FastAPI()
 app = FastAPI(root_path="/DATA")
