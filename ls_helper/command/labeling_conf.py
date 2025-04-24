@@ -16,10 +16,11 @@ labeling_conf_app = typer.Typer(
 # todo duplicate in main
 
 
-@labeling_conf_app.command()
+@labeling_conf_app.command(short_help="Create labeling config from template",
+                           help="Uses platform specific template")
 def build_ls_labeling_interface(
     id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    alias: Annotated[Optional[str], typer.Option("--alias","-a")] = None,
     platform: Annotated[Optional[str], typer.Option()] = None,
     language: Annotated[Optional[str], typer.Option()] = None,
     alternative_template: Annotated[Optional[str], typer.Argument()] = None,

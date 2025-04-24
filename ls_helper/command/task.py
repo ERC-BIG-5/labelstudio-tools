@@ -171,3 +171,4 @@ def get_tasks(
     po: ProjectData = get_project(id, alias, platform, language)
     tasks = ls_client().get_task_list(project=po.id)
     po.save_tasks(tasks)
+    return tasks

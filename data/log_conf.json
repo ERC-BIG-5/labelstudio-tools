@@ -23,7 +23,7 @@
       "class": "logging.handlers.RotatingFileHandler",
       "level": "DEBUG",
       "formatter": "detailed",
-      "filename": "app.log",
+      "filename": "/home/rsoleyma/projects/big5/labelstudio-tools/data/logs/app.log",
       "maxBytes": 10485760,
       "backupCount": 5,
       "encoding": "utf8"
@@ -32,7 +32,7 @@
       "class": "logging.handlers.RotatingFileHandler",
       "level": "ERROR",
       "formatter": "detailed",
-      "filename": "error.log",
+      "filename": "/home/rsoleyma/projects/big5/labelstudio-tools/data/logs/error.log",
       "maxBytes": 10485760,
       "backupCount": 5,
       "encoding": "utf8"
@@ -166,6 +166,15 @@
       "propagate": false
     },
     "ls_helper.fresh_agreements": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.command.project": {
       "level": "DEBUG",
       "handlers": [
         "console",

@@ -113,3 +113,14 @@ Todo:
     and finding where they are still in use (in order to create LS views) so people can update the annotations.
     A final step  would be removing them from the label_configs, and fixes, when data is clean.
    the configs, should work with the "hidden" or "deprecated" classes, to hidden, highlight them (red).
+
+## Guidelines
+
+### Creating a new project
+
+`create-project`
+`setup setup-project-settings`
+this will also create a <id>.xml in the `labeling_configs` folder
+`labeling-conf build-ls-labeling-interface`
+use the platform specific template...
+`labeling-conf update-labeling-config`

@@ -168,6 +168,7 @@ class ProjectData(ProjectCreate):
         destination_path = self.path_for(
             SETTINGS.built_labeling_configs, alternative_template, ".xml"
         )
+        destination_path.parent.mkdir(exist_ok=True)
 
         if not template_path.exists():
             raise FileNotFoundError(f"No template File: {template_path.stem}")

@@ -8,6 +8,7 @@ import typer
 from deepdiff import DeepDiff
 from deprecated.classic import deprecated
 
+from ls_helper.command.project import project_setup_app
 from ls_helper.fresh_agreements import Agreements
 from ls_helper.models.main_models import (
     ProjectCreate,
@@ -53,12 +54,14 @@ app = typer.Typer(
     name="Labelstudio helper", pretty_exceptions_show_locals=True
 )
 
-app.add_typer(setup_app, name="setup")
-app.add_typer(labeling_conf_app, name="label_conf")
-app.add_typer(pipeline_app, name="pipeline")
-app.add_typer(annotations_app, name="annotations")
-app.add_typer(backup_app, name="backup")
-app.add_typer(task_app, name="task")
+app.add_typer(setup_app, name="setup", short_help="Commands related to initializing the project")
+app.add_typer(project_setup_app, name="project-setup", short_help="Commands related to project setup")
+app.add_typer(backup_app, name="backup", short_help="Commands related to bulkbacking up projects and annotations")
+app.add_typer(labeling_conf_app, name="labeling-conf",
+              short_help="Commands related to building, validating and uploading project label configurations")
+app.add_typer(task_app, name="task", short_help="Commands related to downloading, creating and patching project tasks")
+app.add_typer(annotations_app, name="annotations", short_help="Commands related to downloading and analyzing annotations")
+app.add_typer(pipeline_app, name="pipeline", short_help="Commands related to interaction with the Pipeline package")
 
 
 def open_image_simple(image_path):
@@ -70,11 +73,11 @@ def open_image_simple(image_path):
 @app.command(
     short_help="[setup] run build_config function and copy it into 'labeling_configs_dir'. Run 'update_labeling_configs' afterward"
 )
-def generate_labeling_configs(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
+def generate_labeling_config(
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
 ):
     config_files = build_configs()
     check_config_update(config_files)
@@ -88,7 +91,7 @@ def generate_labeling_configs(
 )
 # todo: more testing
 def strict_update_project_tasks(
-    new_data_file: Path, existing_data_file: Optional[Path] = None
+        new_data_file: Path, existing_data_file: Optional[Path] = None
 ):
     raise NotImplementedError("client.patch_task parameters changed")
     client = ls_client()
@@ -119,9 +122,9 @@ def strict_update_project_tasks(
     short_help="[ls fixes] delete the json files from the local storage folder, from tasks that habe been deleted (not crucial)"
 )
 def clean_project_task_files(
-    project_id: Annotated[int, typer.Option()],
-    title: Annotated[Optional[str], typer.Option()] = None,
-    just_check: Annotated[bool, typer.Option()] = False,
+        project_id: Annotated[int, typer.Option()],
+        title: Annotated[Optional[str], typer.Option()] = None,
+        just_check: Annotated[bool, typer.Option()] = False,
 ):
     # TODO, put this away. we rather just patch tasks per api
     # 1. get project_sync folder
@@ -190,10 +193,10 @@ def clean_project_task_files(
 
 @app.command(short_help="[maint]")
 def download_project_data(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Argument()] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Argument()] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
 ) -> ProjectModel:
     po = get_project(id, alias, platform, language)
     project_data = ls_client().get_project(po.id)
@@ -206,10 +209,10 @@ def download_project_data(
 
 @app.command(short_help="[maint]")
 def download_project_views(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
 ) -> list[ProjectViewModel]:
     p_a = get_p_access(id, alias, platform, language)
     po = get_project(p_a)
@@ -220,13 +223,13 @@ def download_project_views(
 
 @app.command(short_help="[plot] Plot the completed tasks over time")
 def status(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    accepted_ann_age: Annotated[
-        int, typer.Option(help="Download annotations if older than x hours")
-    ] = 6,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")
+        ] = 6,
 ):
     from ls_helper import main_funcs
 
@@ -249,13 +252,13 @@ def status(
 
 @app.command(short_help="[plot] Plot the total completed tasks over day")
 def total_over_time(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    accepted_ann_age: Annotated[
-        int, typer.Option(help="Download annotations if older than x hours")
-    ] = 6,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")
+        ] = 6,
 ):
     print(get_p_access(id, alias, platform, language))
     po = get_project(id, alias, platform, language)
@@ -272,13 +275,13 @@ def total_over_time(
 
 @app.command(short_help="[plot] Plot the total completed tasks over day")
 def annotation_lead_times(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    accepted_ann_age: Annotated[
-        int, typer.Option(help="Download annotations if older than x hours")
-    ] = 6,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")
+        ] = 6,
 ):
     po = get_project(id, alias, platform, language)
     project_annotations = ProjectMgmt.get_recent_annotations(
@@ -294,15 +297,15 @@ def annotation_lead_times(
 
 @app.command(short_help="[ls func]")
 def set_view_items(
-    view_title: Annotated[
-        str, typer.Option(help="search for view with this name")
-    ],
-    platform_ids_file: Annotated[Path, typer.Option()],
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    create_view: Annotated[Optional[bool], typer.Option()] = True,
+        view_title: Annotated[
+            str, typer.Option(help="search for view with this name")
+        ],
+        platform_ids_file: Annotated[Path, typer.Option()],
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        create_view: Annotated[Optional[bool], typer.Option()] = True,
 ):
     po = get_project(id, alias, platform, language)
     views = po.get_views()
@@ -341,12 +344,12 @@ def set_view_items(
 
 @app.command(short_help="[ls func]")
 def update_coding_game(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    accepted_ann_age: Annotated[int, typer.Option("-age")] = 6,
-    refresh_views: Annotated[bool, typer.Option("-r")] = False,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        accepted_ann_age: Annotated[int, typer.Option("-age")] = 6,
+        refresh_views: Annotated[bool, typer.Option("-r")] = False,
 ) -> Optional[tuple[int, int]]:
     """
     if successful sends back project_id, view_id
@@ -393,15 +396,15 @@ def update_coding_game(
 
 @app.command(short_help="[stats] calculate general agreements stats")
 def agreements(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    accepted_ann_age: Annotated[
-        int, typer.Option(help="Download annotations if older than x hours")
-    ] = 6,
-    max_num_coders: Annotated[int, typer.Option()] = 2,
-    variables: Annotated[Optional[list[str]], typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")
+        ] = 6,
+        max_num_coders: Annotated[int, typer.Option()] = 2,
+        variables: Annotated[Optional[list[str]], typer.Argument()] = None,
 ) -> tuple[Path, Agreements]:
     """
 
@@ -426,10 +429,10 @@ def agreements(
 @app.command(short_help="Create a new project in LS",
              help="xxxx")
 def create_project(
-    title: Annotated[str, typer.Option()],
-    alias: Annotated[str, typer.Option()],
-    platform: Annotated[str, typer.Option()],
-    language: Annotated[str, typer.Option()],
+        title: Annotated[str, typer.Option()],
+        alias: Annotated[str, typer.Option()],
+        platform: Annotated[str, typer.Option()],
+        language: Annotated[str, typer.Option()]
 ):
     platforms_overview.create(
         ProjectCreate(
@@ -443,10 +446,10 @@ def create_project(
 
 
 def get_all_variable_names(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
     # todo redo and test...
@@ -455,10 +458,10 @@ def get_all_variable_names(
 
 
 def get_variables_info(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
     return [
@@ -473,12 +476,12 @@ def get_variables_info(
 
 @app.command(short_help="create or update a view for variable conflict")
 def create_conflict_view(
-    variable: Annotated[str, typer.Option()],
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
-    variable_option: Annotated[Optional[str], typer.Option()] = None,
+        variable: Annotated[str, typer.Option()],
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
+        variable_option: Annotated[Optional[str], typer.Option()] = None,
 ):
     # todo redo with fresh_agreement
     """
@@ -525,10 +528,10 @@ def create_conflict_view(
 
 @app.command()
 def build_extension_index(
-    take_all_defaults: Annotated[
-        bool, typer.Option(help="take default projects (pl/lang)")
-    ] = True,
-    project_ids: Annotated[Optional[list[int]], typer.Option("-pid")] = None,
+        take_all_defaults: Annotated[
+            bool, typer.Option(help="take default projects (pl/lang)")
+        ] = True,
+        project_ids: Annotated[Optional[list[int]], typer.Option("-pid")] = None,
 ):
     """
     Checks
@@ -548,8 +551,8 @@ def build_extension_index(
         raise ValueError("Unclear parameter for build_extension_index")
     index = _build_extension_index(projects)
     dest = (
-        SETTINGS.temp_file_path
-        / f"annot_ext_index_{'_'.join(str(p.id) for p in projects)}.json"
+            SETTINGS.temp_file_path
+            / f"annot_ext_index_{'_'.join(str(p.id) for p in projects)}.json"
     )
     dest.write_text(index.model_dump_json(indent=2))
     print(f"index saved to {dest}")
@@ -562,11 +565,11 @@ def delete_view(view_id: int):
 
 @app.command()
 def check_labelling_config(
-    build_file_name: str,
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
+        build_file_name: str,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
 
@@ -621,8 +624,10 @@ if __name__ == "__main__":
     _default = tw_es
 
     # setup
-    #from ls_helper.command import setup
-    #setup.add_projects()
+    from ls_helper.command import setup
+
+    setup.add_projects()
     from ls_helper.command import annotations
+
     # this will work, since there is just one spanish twitter (so its set to default)
-    agreements(**tw_es, variables=["nature_any","extras"])
+    agreements(**{"alias": "twitter-en-3"}, variables=["nature_any"])
