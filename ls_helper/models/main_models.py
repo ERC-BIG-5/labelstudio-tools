@@ -26,7 +26,7 @@ from ls_helper.models.interface_models import (
 from ls_helper.models.variable_models import (
     ChoiceVariableModel,
     VariableModel,
-ChoiceVariableModel
+    ChoiceVariableModel
 )
 from ls_helper.my_labelstudio_client.models import (
     ProjectModel as LSProjectModel,
@@ -184,9 +184,34 @@ class ProjectData(ProjectCreate):
             SETTINGS.built_labeling_configs, alternative_build, ".xml"
         ).read_text(encoding="utf-8")
 
+    def group_index_variable(self, variable_name: str) -> tuple[str, int]:
+        """
+        returns the group-name, index
+        :param variable:
+        :return:
+        """
+        pattern = re.compile(r"^(.+)_(\d+)(?:_(.*))?$")
+
+        match = re.match(pattern, variable_name)
+        if not match:
+            return variable_name, 0
+
+        # MATCH! kick out None
+        match_groups = list(filter(lambda g: g, match.groups()))
+
+        var_strings = []
+        index_string = []
+
+        for m in match_groups:
+            if m.isnumeric():
+                index_string.append(int(m))
+            else:
+                var_strings.append(m)
+        return "_".join(var_strings), index_string[0]
+
     def variables(self) -> dict[str, VariableModel]:
         variables = {}
-        pattern = re.compile(r"^(.+)_(\d+)(?:_(.*))?$")
+        #pattern = re.compile(r"^(.+)_(\d+)(?:_(.*))?$")
 
         # initial basics
         for (
@@ -209,26 +234,25 @@ class ProjectData(ProjectCreate):
                 data["orig_options"] = field.raw_options_list()
                 data["default"] = field_extension.default
 
-            # check if it belongs to a group
-            match = re.match(pattern, name)
-            if not match:
-                variables[name] = model_class.model_validate(data)
-                continue
-            # MATCH! kick out None
-            match_groups = list(filter(lambda g: g, match.groups()))
-            var_strings = list(filter(lambda g: not g.isnumeric(), match_groups))
-            base_name = "_".join(var_strings)
+            variable: VariableModel = model_class.model_validate(data)
+            variables[name] = variable
 
-            if base_name not in variables:
-                # print(var, base_name,idx)
-                # create group variable
+            group_name, index = self.group_index_variable(name)
+            if group_name == name:
+                continue
+
+            variable.group_name = group_name
+            variable.group_index = index
+
+            if group_name not in variables:
                 group_data = data
-                group_data["name"] = base_name
+                group_data["name"] = group_name
                 group_data["group_variables"] = [orig_name]
-                variables[base_name] = model_class.model_validate(group_data)
+                variables[group_name] = model_class.model_validate(group_data)
             else:
-                assert len(variables[base_name].group_variables) > 0, f"group name is already taken by regular variable"
-                variables[base_name].group_variables.append(orig_name)
+                assert len(
+                    variables[group_name].group_variables) > 0, f"group name is already taken by regular variable"
+                variables[group_name].group_variables.append(orig_name)
 
         return variables
 
@@ -305,7 +329,7 @@ class ProjectData(ProjectCreate):
             logger.error(
                 f"{repr(self)} has no 'variable_extensions' file. Call: 'generate_variable_extensions_template'"
             )
-        self._variable_extensions = extensions
+
         return extensions
 
     def get_views(self) -> Optional[list[ProjectViewModel]]:
@@ -643,6 +667,12 @@ class ProjectResult(BaseModel):
     def get_annotation_df(
             self, debug_task_limit: Optional[int] = None, drop_cancels: bool = True
     ) -> tuple[DataFrame, DataFrame]:
+        """
+
+        :param debug_task_limit:
+        :param drop_cancels:
+        :return:
+        """
         logger.info("Building raw annotations dataframe")
         assignment_df_rows = []
         rows = []
@@ -681,7 +711,13 @@ class ProjectResult(BaseModel):
                         )
                     new_name = q_extens.get(question.from_name)
                     if not new_name:
+                        print(f"unknown variable... {question.from_name}")
                         continue
+                    var_def = variables[new_name]
+                    idx = 0
+                    if var_def.group_name:
+                        new_name = var_def.group_name
+                        idx = var_def.group_index
                     # print(question)
                     if question.type == "choices":
                         type_ = cast(
@@ -700,6 +736,7 @@ class ProjectResult(BaseModel):
                             "user_id": ann.completed_by,
                             "ts": ann.updated_at,
                             "variable": new_name,
+                            "idx": idx,
                             "type": type_,
                             "value": question.value.direct_value,
                         }

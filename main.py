@@ -624,4 +624,4 @@ if __name__ == "__main__":
     #setup.add_projects()
     from ls_helper.command import annotations
     # this will work, since there is just one spanish twitter (so its set to default)
-    agreements(**tw_es, variables=["nature_any"])
+    agreements(**tw_es)#, variables=["nature_visual"])

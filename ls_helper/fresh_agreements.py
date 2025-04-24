@@ -10,6 +10,7 @@ from numpy import nan
 from pandas import DataFrame
 from pydantic import BaseModel, Field
 
+from ls_helper.models.variable_models import ChoiceVariableModel
 from tools.project_logging import get_logger
 
 if TYPE_CHECKING:
@@ -83,80 +84,35 @@ class Agreements:
             return df.set_index(["task_id", "user_id"])
 
     def select_variables(
-            self, variables: list[str], always_as_dict: bool = True
+            self,
+            variables: list[str],
+            always_as_dict: bool = True
     ) -> dict[str, DataFrame] | DataFrame:
         df = self.get_init_df()
 
-        group_names = list(self._groups.keys())
-        selected_orig_vars = []
-        has_groups = False
-        assignments = {}
+        selected_variables = []
+        po_variables = self.po.variables()
+        variables_dfs: dict[str, DataFrame] = {}
 
-        # collect all originals
-        # todo: put that somewhere else? Another model
-        # iter through all vars
         for var in variables:
-            # it's a group var!
-            if var in group_names:
-                # number of group items
-                idx_vars = list(self._groups[var].keys())
-                # add the items to keep
-                selected_orig_vars.extend(idx_vars)
-                # add orig name with
-                assignments.update(
-                    {
-                        idx_v: {
-                            "group": var,
-                            "gr_variable": self._groups[var][idx_v],
-                        }
-                        for idx_v in idx_vars
-                    }
-                )
-                has_groups = True
-                # print(assignments)
-            else:
-                selected_orig_vars.append(var)
 
-        # select all relevant variables
-        orig_vars_groups = df[df["variable"].isin(selected_orig_vars)].groupby(
-            "variable"
-        )
+            variable_def = po_variables.get(var)
+            if not variable_def:
+                self.logger.error(f"Unknown Variable: {var}")
+                continue
+            if not isinstance(variable_def, ChoiceVariableModel):
+                self.logger.warning(f"Variable: '{var}' is not a choice variable. Skipping")
+                continue
 
-        # if there are no groups we can for convenience also just return the single variable df
-        if not has_groups:
-            group_dict = {name: group for name, group in orig_vars_groups}
-            if not always_as_dict and len(group_dict) == 1:
-                return list(group_dict.values())[0]
-            return group_dict
+            selected_variables.append(var)
 
-        result_groups: dict[str, DataFrame] = {}
-        # go through all variables and concat their dataframes when in a group
-        for variable, group_df in orig_vars_groups:
-            if variable in assignments:
-                group_name = assignments[variable]["group"]
-                group_df["variable"] = group_name
-                group_df["idx"] = assignments[variable]["gr_variable"]
-                # set or concat
-                if group_name not in result_groups:
-                    # print(f"adding {gn=}")
-                    result_groups[group_name] = group_df
-                else:
-                    result_groups[group_name] = pd.concat(
-                        [result_groups[group_name], group_df]
-                    )
-                # todo: TEST THIS APPROACH, remove the outer else, so in case there is none its set...
-                # if existing_df := result_groups.get(group_name):
-                #     result_groups[group_name] = pd.concat(existing_df, group_df)
-                #     continue
-            else:
-                group_df["idx"] = 0
-                result_groups[variable] = group_df
+            variables_dfs = df[df["variable"].isin(selected_variables)].groupby(
+                "variable"
+            )
 
-        for rg in result_groups.values():
-            rg["idx"] = rg["idx"].astype(int)
-        if not always_as_dict and len(result_groups) == 1:
-            return list(result_groups.values())[0]
-        return result_groups
+        if not always_as_dict and len(variables_dfs) == 1:
+            return list(variables_dfs.values())[0]
+        return dict(list(variables_dfs))
 
 
     @staticmethod
