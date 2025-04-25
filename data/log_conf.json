@@ -182,6 +182,24 @@
         "error_file_handler"
       ],
       "propagate": false
+    },
+    "ls_helper.command.project_setup": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.command.view": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
     }
   },
   "root": {

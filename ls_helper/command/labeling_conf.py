@@ -6,7 +6,6 @@ from deepdiff import DeepDiff
 
 from ls_helper.config_helper import parse_label_config_xml
 from ls_helper.settings import SETTINGS
-from main import app
 from tools.project_logging import get_logger
 
 from ls_helper.my_labelstudio_client.client import ls_client
@@ -73,7 +72,7 @@ def update_labeling_config(
     print(f"updated labeling config for {po.platform}/{po.language}/{po.id}")
 
 
-@app.command()
+@labeling_conf_app.command()
 def build_extension_index(
     take_all_defaults: Annotated[
         bool, typer.Option(help="take default projects (pl/lang)")
@@ -105,7 +104,7 @@ def build_extension_index(
     print(f"index saved to {dest}")
 
 
-@app.command()
+@labeling_conf_app.command()
 def check_labelling_config(
     build_file_name: str,
     id: Annotated[Optional[int], typer.Option()] = None,

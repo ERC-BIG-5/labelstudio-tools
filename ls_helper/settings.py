@@ -113,7 +113,7 @@ class Settings(BaseSettings):
         return self.BASE_DATA_DIR / "tasks"
 
     @property
-    def projects_main_file(self) ->Path:
+    def projects_main_file(self) -> Path:
         return self.BASE_DATA_DIR / "projects.json"
 
 

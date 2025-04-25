@@ -12,8 +12,11 @@ from ls_helper.models.interface_models import (
     ProjectVariableExtensions,
 )
 from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.models.main_models import get_project, ProjectData, ProjectOverview
-from ls_helper.project_mgmt import ProjectMgmt
+from ls_helper.models.main_models import (
+    get_project,
+    ProjectData,
+    ProjectOverview,
+)
 from ls_helper.settings import SETTINGS
 
 logger = get_logger(__file__)
@@ -40,20 +43,22 @@ def add_projects():
     for p in projects:
         if p.id not in stored_projects_ids:
             if p.alias in overview.alias_map:
-                logger.warning(f"Cannot add project {repr(p)} because alias: {p.alias} exists already in overview file")
+                logger.warning(
+                    f"Cannot add project {repr(p)} because alias: {p.alias} exists already in overview file"
+                )
                 continue
             added.append(p)
             overview.projects[p.id] = p
     # in case program doesn't quit
     overview.create_map()
     overview.save()
-    logger.info(f"Added the projects:\n {'\n '.join([repr(p) for p in added])}\n"
-                f"You might want to edit {SETTINGS.projects_main_file} and replace the aliases, platform and language values.")
+    logger.info(
+        f"Added the projects:\n {'\n '.join([repr(p) for p in added])}\n"
+        f"You might want to edit {SETTINGS.projects_main_file} and replace the aliases, platform and language values."
+    )
 
 
-@setup_app.command(
-    short_help="Download all LS project data"
-)
+@setup_app.command(short_help="Download all LS project data")
 def download_all_projects():
     for project in tqdm(ProjectOverview.load().project_list()):
         project_data = ls_client().get_project(project.id)
@@ -62,21 +67,22 @@ def download_all_projects():
             raise ValueError(f"No project found: {project.id}")
         project.save_project_data(project_data)
 
+
 @setup_app.command(
     short_help="[setup] Required for annotation result processing. needs project-data"
 )
 def generate_variable_extensions_template(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None,
-        add_if_not_exists: Annotated[bool, typer.Option()] = True,
-        overwrite_if_exists: Annotated[bool, typer.Option()] = False,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
+    add_if_not_exists: Annotated[bool, typer.Option()] = True,
+    overwrite_if_exists: Annotated[bool, typer.Option()] = False,
 ):
     po = get_project(id, alias, platform, language)
 
     def get_variable_extensions(
-            annotation_struct: InterfaceData,
+        annotation_struct: InterfaceData,
     ) -> ProjectVariableExtensions:
         data: dict[str, FieldExtension] = {}
 
@@ -103,4 +109,3 @@ def generate_variable_extensions_template(
         po.save_extensions(res_template)
     else:
         po.save_extensions(res_template, "alt")
-
