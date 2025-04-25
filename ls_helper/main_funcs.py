@@ -4,12 +4,12 @@ from ls_helper.annotation_timing import (
     annotation_timing,
     plot_date_distribution,
 )
+from ls_helper.command.annotations import open_image_simple
 from ls_helper.models.main_models import (
     ProjectAnnotationResultsModel,
     ProjectData,
 )
 from ls_helper.project_mgmt import ProjectMgmt
-from main import open_image_simple
 
 
 def status(project: ProjectData, accepted_ann_age: int = 6):
