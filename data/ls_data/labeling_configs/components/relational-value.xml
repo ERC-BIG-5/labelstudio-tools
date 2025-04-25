@@ -1,7 +1,7 @@
 <View className="V_{{{var}}}" visibleWhen="choice-selected" whenTagName="val-expr_{{{var}}}"
       whenChoiceValue="Explicit,Implicit">
     <!-- {var,title} -->
-    <Header value="Relational values" size="3"/>
+    <Header value="Relational values" size="4"/>
     <Text name="rel-value_{{{var}}}_t"
           value="For the {{{title}}} content: What are the RVs expressed?"/>
     <Choices name="rel-value_{{{var}}}" toName="title" showInline="true" choice="multiple" required="true">
@@ -25,11 +25,10 @@
         <Choice value="Kinship" alias="kinship"/>
     </Choices>
 
-    <Text name="rel-value_{{{var}}}_expl_t" value="Optional comments"/>
-    <TextArea name="rel-value_{{{var}}}_expl" toName="title" showSubmitButton="true"/>
+    <!--<Text name="rel-value_{{{var}}}_expl_t" value="Optional comments"/>
+    <TextArea name="rel-value_{{{var}}}_expl" toName="title" showSubmitButton="true"/>-->
 
-    <!-- CONFUSION -->
-    <Header value="Confusion" size="5"/>
+    <Header value="Confusions" size="5"/>
     <View>
         <View visibleWhen="choice-selected" whenTagName="rel-value_{{{var}}}"
               whenChoiceValue="personal-identity">

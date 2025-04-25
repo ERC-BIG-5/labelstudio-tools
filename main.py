@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
+import yaml
 from tqdm import tqdm
 
 from ls_helper.command.annotations import annotations_app, agreements
@@ -21,6 +22,7 @@ from ls_helper.models.main_models import (
 )
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.tasks import strict_update_project_task_data
+from tools.files import save_json
 from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
@@ -74,7 +76,7 @@ app.add_typer(
 )
 # todo: more testing
 def strict_update_project_tasks(
-    new_data_file: Path, existing_data_file: Optional[Path] = None
+        new_data_file: Path, existing_data_file: Optional[Path] = None
 ):
     raise NotImplementedError("client.patch_task parameters changed")
     new_data_list = json.loads(new_data_file.read_text(encoding="utf-8"))
@@ -100,10 +102,10 @@ def strict_update_project_tasks(
 
 
 def get_all_variable_names(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
     # todo redo and test...
@@ -112,17 +114,17 @@ def get_all_variable_names(
 
 
 def get_variables_info(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
     return [
         {
             "name": k,
             "required": v.required,
-            "choice_type": v.choice if isinstance(v, IChoices) else None,
+            "choice_type": str(v.choice) if isinstance(v, IChoices) else "text",
         }
         for k, v in po.raw_interface_struct.ordered_fields_map.items()
     ]
@@ -170,5 +172,18 @@ if __name__ == "__main__":
 
     setup.add_projects()
 
-    # this will work, since there is just one spanish twitter (so its set to default)
-    agreements(**{"alias": "twitter-en-3"}, variables=["nature_any"])
+    # this will work, since there is just one spanish twitter (so it's set to default)
+    """
+    agreements(
+        **{"alias": "twitter-es-4"}
+        #variables=["nature_text", "nature_any", "nature_visual"],
+    )
+    """
+    from ls_helper.command import labeling_conf
+
+    p, valid = labeling_conf.build_ls_labeling_interface(**{"id": 53})
+
+    if valid:
+        labeling_conf.update_labeling_config(**{"id": 53})
+
+    yaml.dump(get_variables_info(id=53), Path("53.yaml").open("w", encoding="utf-8"))

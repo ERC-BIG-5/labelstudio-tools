@@ -8,8 +8,8 @@
         <Choice value="Material" alias="material"/>
         <Choice value="Immaterial" alias="immaterial"/>
     </Choices>
-    <Text name="nep_materiality_expl_{{{var}}}_t" value="Optional comments"/>
-    <TextArea name="nep_materiality_expl_{{{var}}}" toName="title"/>
+    <!--<Text name="nep_materiality_expl_{{{var}}}_t" value="Optional comments"/>
+    <TextArea name="nep_materiality_expl_{{{var}}}" toName="title"/>-->
 
     <Header value="Biological" size="5"/>
     <Choices name="nep_biological_{{{var}}}" toName="title" showInline="true" required="false"
@@ -17,8 +17,8 @@
         <Choice value="Biotic" alias="biotic"/>
         <Choice value="Abiotic" alias="abiotic"/>
     </Choices>
-    <Text name="nep_biological_expl_{{{var}}}_t" value="Optional comments"/>
-    <TextArea name="nep_biological_expl_{{{var}}}" toName="title"/>
+   <!-- <Text name="nep_biological_expl_{{{var}}}_t" value="Optional comments"/>
+    <TextArea name="nep_biological_expl_{{{var}}}" toName="title"/>-->
 
     <Header value="Landscape type" size="5"/>
     <Choices name="landscape-type_{{{var}}}" toName="title" showInline="true" required="false"
@@ -46,7 +46,7 @@
             <Choice value="Ice-snowscape" alias="ice-snowscape"/>
         </Choices>
     </View>
-    <Text name="landscape-type_expl_{{{var}}}_t" value="Optional comments"/>
-    <TextArea name="landscape-type_expl_{{{var}}}" toName="title"/>
+    <!--<Text name="landscape-type_expl_{{{var}}}_t" value="Optional comments"/>
+    <TextArea name="landscape-type_expl_{{{var}}}" toName="title"/>-->
 
 </View>

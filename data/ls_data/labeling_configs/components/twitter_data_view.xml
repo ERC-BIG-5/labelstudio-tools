@@ -1,5 +1,4 @@
 <View>
-    <!-- twitter_data_view -->
     <Header value="Images"/>
     <View style="display: flex; flex-wrap: wrap;">
         <View>

@@ -157,7 +157,12 @@ class ProjectData(ProjectCreate):
 
     def build_ls_labeling_config(
         self, alternative_template: Optional[str] = None
-    ) -> tuple[Path, ElementTree]:
+    ) -> tuple[Path, ElementTree, bool]:
+        """
+
+        :param alternative_template:
+        :return: the path of the file, the tree, if its valid
+        """
         template_path = self.path_for(
             SETTINGS.labeling_templates, alternative_template, ".xml"
         )
@@ -169,12 +174,13 @@ class ProjectData(ProjectCreate):
         if not template_path.exists():
             raise FileNotFoundError(f"No template File: {template_path.stem}")
         build_config = LabelingInterfaceBuildConfig(template=template_path)
-        built_tree = build_from_template(build_config)
+        built_tree, broken_refs, duplicates = build_from_template(build_config)
         built_tree.write(destination_path, encoding="utf-8", pretty_print=True)
         print(
             f"labelstudio xml labeling config written to file://{destination_path.absolute()}"
         )
-        return self.path_for(SETTINGS.built_labeling_configs), built_tree
+        valid = not broken_refs and not duplicates
+        return self.path_for(SETTINGS.built_labeling_configs), built_tree, valid
 
     def read_labeling_config(
         self, alternative_build: Optional[str] = None

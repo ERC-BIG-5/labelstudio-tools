@@ -2,15 +2,26 @@
     <Style>
         .title_view .lsf-richtext__line {font-size: 22px;}
 
-        .text_part {border-left: 2px solid #aba3ff; padding-left: 3px;}
-        .text_part h4 {text-decoration-line: underline;text-decoration-color: #aba3ff;text-decoration-thickness:3px }
-        .visual_part {border-left: 2px solid #c6dcff; padding-left: 3px;}
-        .visual_part h4 {text-decoration-line: underline;text-decoration-color: #c6dcff;text-decoration-thickness:3px }
+        .text_part {border-left: 2px solid #aba3ff; padding-left: 7px}
+        .text_part :is(h3, h4) {text-decoration-line: underline;text-decoration-color:
+        #aba3ff;text-decoration-thickness:3px }
+        .text_part h5 {text-decoration-line: underline;text-decoration-color: #aba3ff;text-decoration-thickness:2px }
 
         .text_underline .lsf-richtext__line { text-decoration: underline; text-decoration-color:
         #aba3ff;text-decoration-thickness:2px }
+
+        .visual_part {border-left: 2px solid #c6dcff; padding-left: 7px}
+        .visual_part :is(h3, h4) {text-decoration-line: underline;text-decoration-color:
+        #c6dcff;text-decoration-thickness:3px }
+        .visual_part h5 {text-decoration-line: underline;text-decoration-color: #c6dcff;text-decoration-thickness:2px }
+
         .visual_underline .lsf-richtext__line { text-decoration: underline; text-decoration-color:
         #c6dcff;text-decoration-thickness:2px }
+
+        .compound_part {border-left: 2px solid #ffd700; padding-left: 7px}
+        .compound_part :is(h3, h4) {text-decoration-line: underline;text-decoration-color:
+        #ffd700;text-decoration-thickness:3px}
+        .compound_part h5 {text-decoration-line: underline;text-decoration-color: #ffd700;text-decoration-thickness:2px}
 
         .hidden {display: none;}
         .deprecated {border: 2px red solid;}

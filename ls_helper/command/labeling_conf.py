@@ -30,10 +30,19 @@ def build_ls_labeling_interface(
     platform: Annotated[Optional[str], typer.Option()] = None,
     language: Annotated[Optional[str], typer.Option()] = None,
     alternative_template: Annotated[Optional[str], typer.Argument()] = None,
-) -> Optional[Path]:
+) -> tuple[Path, bool]:
+    """
+
+    :param id:
+    :param alias:
+    :param platform:
+    :param language:
+    :param alternative_template:
+    :return:  path, is_valid
+    """
     po = get_project(id, alias, platform, language)
-    path, tree = po.build_ls_labeling_config(alternative_template)
-    return path
+    path, tree, valid = po.build_ls_labeling_config(alternative_template)
+    return path, valid
 
 
 @labeling_conf_app.command(help="[ls maint] Upload labeling config")
