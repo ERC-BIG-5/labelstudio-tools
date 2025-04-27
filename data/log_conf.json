@@ -200,6 +200,15 @@
         "error_file_handler"
       ],
       "propagate": false
+    },
+    "ls_helper.command.extra": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
     }
   },
   "root": {

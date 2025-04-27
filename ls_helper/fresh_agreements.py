@@ -2,7 +2,7 @@ import logging
 import re
 import warnings
 from datetime import date
-from typing import TYPE_CHECKING, Annotated, Generator, Literal, Optional
+from typing import Annotated, Generator, Literal, Optional
 
 import irrCAC.raw
 import pandas as pd
@@ -13,9 +13,6 @@ from pydantic import BaseModel, Field
 
 from ls_helper.models.variable_models import ChoiceVariableModel
 from tools.project_logging import get_logger
-
-if TYPE_CHECKING:
-    from ls_helper.models.main_models import ProjectData
 
 
 # experimental...
@@ -43,20 +40,20 @@ class AgreementResult(BaseModel):
 
 class Agreements:
     def __init__(
-        self,
-        po: "ProjectData",
-        accepted_ann_age: int = 6,
-        agreement_types: Agreement_types = ("gwet", "ratio", "abs"),
+            self,
+            res: "ProjectResult",
+            agreement_types: Agreement_types = ("gwet", "ratio", "abs"),
     ) -> None:
-        self.po = po
-        self.accepted_ann_age = accepted_ann_age
+        self.po_results = res
+        self.po = res.project_data
+        self.max_coders: Optional[int] = None
         self.agreement_types = agreement_types
         # group-name: variable-name: index
         self._groups: dict[str, dict[str, int]] = self.find_groups(
-            list(po.variable_extensions.extensions.keys())
+            list(self.po.variable_extensions.extensions.keys())
         )
         self._init_df: Optional[DataFrame] = self.create_init_df()
-        self._assignment_df = self.po.get_annotations_results().assignment_df
+        self._assignment_df = self.po_results.assignment_df
 
         self.results: dict[str, AgreementResult] = {}
         self.collections: dict[str, OptionOccurances] = {}
@@ -93,7 +90,7 @@ class Agreements:
             return df.set_index(["task_id", "user_id"])
 
     def select_variables(
-        self, variables: list[str], always_as_dict: bool = True
+            self, variables: list[str], always_as_dict: bool = True
     ) -> dict[str, DataFrame] | DataFrame:
         df = self.get_init_df()
 
@@ -122,20 +119,42 @@ class Agreements:
             return list(variables_dfs.values())[0]
         return dict(list(variables_dfs))
 
-    @staticmethod
-    def create_coder_pivot_df(df: DataFrame) -> DataFrame:
+    def create_coder_pivot_df(self, df: DataFrame) -> DataFrame:
+        """
+        pivot the long foramt to the agreement calculation format (one task per row, column for coders)
+        in some cases the pivot fails, because of individual tasks/annotations. we only remove those, in a catch step
+        issue comes (at least, from multi choices, being turned into single choices. The annotations, would still have multiple values
+        :param df:
+        :return:
+        """
         df = df.reset_index()
-        index = ["task_id"] + (["idx"] if "idx" in df.columns else [])
-        pv_df = df.pivot(columns="user_id", values="value", index=index)
-        return pv_df
+        index = ["task_id", "idx"]
+        try:
+            pv_df = df.pivot(columns="user_id", values="value", index=index)
+            return pv_df
+        except ValueError:
+            pv_g_df = list(df.groupby("task_id"))
+            valid_df = None
+            for idx, g_df in enumerate(pv_g_df):
+                try:
+                    task_df = g_df[1].pivot(columns="user_id", values="value", index=index)
+                    if valid_df is None:
+                        valid_df = task_df
+                    else:
+                        valid_df = pd.concat([valid_df, task_df])
+                except ValueError:
+                    self.logger.error(f"error creating coder-pivot df for task-id: {g_df[0]}")
+                    pass
+        return valid_df
 
-    @staticmethod
     def _calc_agreements(
-        df: DataFrame, agreement_types: Agreement_types
+            self,
+            df: DataFrame,
+            agreement_types: Agreement_types
     ) -> AgreementsCol:
         if len(df) == 0:
             return {_: nan for _ in agreement_types}
-        pv_df = Agreements.create_coder_pivot_df(df)
+        pv_df = self.create_coder_pivot_df(df)
         result = {}
 
         _cac = None
@@ -179,18 +198,46 @@ class Agreements:
 
     # this annotated stuff is just experimental...
     def create_init_df(self) -> Annotated[DataFrame, DFAgreementsInitModel]:
-        df: DataFrame = self.po.get_annotations_results(
-            self.accepted_ann_age
-        ).raw_annotation_df.copy()
-        df.drop(["ann_id", "platform_id"], axis=1, inplace=True)
+        df: DataFrame = self.po_results.raw_annotation_df.copy()
+        df.drop(["platform_id"], axis=1, inplace=True)
         df["date"] = df["ts"].dt.date
         df.set_index(["task_id", "user_id"], inplace=True)
         self._init_df = df
         return df
 
+    def limit_coders(self, df: DataFrame) -> DataFrame:
+        if not self.max_coders:
+            return df
+
+        def keep_first_k_coders(group):
+            first_k_coders = group.index.get_level_values(1).unique()[:self.max_coders]
+            return group[group.index.get_level_values(1).isin(first_k_coders)]
+
+        return df.groupby(level=0, group_keys=False).apply(keep_first_k_coders)
+
+    def remove_multiple_codings(self, df: DataFrame) -> DataFrame:
+        """remove multiple codings for one coder. (limit_coders will not capture that)"""
+
+        def keep_first(group):
+            group_reset = group.reset_index()
+            # For each user_id, get the first ann_id
+            first_index_per_value = list(group_reset.groupby('user_id')['ann_id'].first())
+            group_reset = group_reset[group_reset["ann_id"].isin(list(first_index_per_value))]
+            group_reset.set_index(["task_id", "user_id"], inplace=True)
+            return group_reset
+
+        # we also need to do this for the assigment df, because this is used to create multi-select defaults (empty lists)
+        assignment = self._assignment_df.set_index(["task_id", "ann_id"])
+        self._assignment_df = assignment.groupby(level=0, group_keys=False).apply(keep_first).reset_index()
+        df = df.reset_index().set_index(["task_id", "ann_id"])
+
+        return df.groupby(level=0, group_keys=False).apply(keep_first)
+
     def get_init_df(self) -> DataFrame:
         df_ = self._init_df.copy()
         df_ = self.drop_unfinished_tasks(df_)
+        df_ = self.remove_multiple_codings(df_)
+        df_ = self.limit_coders(df_)
         return df_
 
     def drop_unfinished_tasks(self, df_: DataFrame) -> DataFrame:
@@ -215,7 +262,7 @@ class Agreements:
 
     @staticmethod
     def time_move(
-        df_: DataFrame,
+            df_: DataFrame,
     ) -> Generator[tuple[date, DataFrame], None, None]:
         for day in sorted(df_.date.unique()):
             yield day, df_[df_["date"] <= day]
@@ -287,15 +334,16 @@ class Agreements:
         return merged_df
 
     def agreement_calc(
-        self,
-        variables: Optional[list[str]] = None,
-        force_default: Optional[str] = "NONE",
-        max_coders: int = 2,
-        agreement_types: Optional[Agreement_types] = None,
-        keep_tasks: bool = True,
+            self,
+            variables: Optional[list[str]] = None,
+            force_default: Optional[str] = "NONE",
+            max_coders: int = 2,
+            agreement_types: Optional[Agreement_types] = None,
+            keep_tasks: bool = True,
     ) -> dict[str, AgreementResult]:
         if not variables:
             variables = list(self.po.choices.keys())
+        self.max_coders = max_coders
         variables_dfs = self.select_variables(variables)
 
         if not agreement_types:
@@ -340,7 +388,7 @@ class Agreements:
                             .unique()
                             .tolist()
                         )
-                        pv_df = Agreements.create_coder_pivot_df(option_df)
+                        pv_df = self.create_coder_pivot_df(option_df)
 
                         def match_mask_func(row):
                             # Get non-NaN values
@@ -393,7 +441,7 @@ class Agreements:
                     # Group by task_id and check if any user has a value of 1
                     tasks_with_option_select = option_df[
                         option_df["value"] == 1
-                    ]["task_id"].unique()
+                        ]["task_id"].unique()
                     # Filter the DataFrame to keep only those tasks
                     option_select = option_df[
                         option_df["task_id"].isin(tasks_with_option_select)

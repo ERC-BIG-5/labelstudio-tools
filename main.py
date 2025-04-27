@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from ls_helper.command.annotations import annotations_app, agreements
 from ls_helper.command.backup import backup_app
+from ls_helper.command.extra import extras_app, get_confusions
 from ls_helper.command.labeling_conf import labeling_conf_app
 from ls_helper.command.pipeline import pipeline_app
 from ls_helper.command.project_setup import project_app
@@ -68,6 +69,11 @@ app.add_typer(
     pipeline_app,
     name="pipeline",
     short_help="Commands related to interaction with the Pipeline package",
+)
+app.add_typer(
+    extras_app,
+    name="extras",
+    short_help="Some extra commands: [relational-values confusions]",
 )
 
 
@@ -170,15 +176,19 @@ if __name__ == "__main__":
     # setup
     from ls_helper.command import setup
 
-    setup.add_projects()
+    #setup.add_projects()
 
     # this will work, since there is just one spanish twitter (so it's set to default)
-    """
+
     agreements(
-        **{"alias": "twitter-es-4"}
+        **{"alias": "twitter-es-4"},
+        accepted_ann_age=20
         #variables=["nature_text", "nature_any", "nature_visual"],
     )
+
+
     """
+    # for creating/testing version 5 of the protocol
     from ls_helper.command import labeling_conf
 
     p, valid = labeling_conf.build_ls_labeling_interface(**{"id": 53})
@@ -187,3 +197,5 @@ if __name__ == "__main__":
         labeling_conf.update_labeling_config(**{"id": 53})
 
     yaml.dump(get_variables_info(id=53), Path("53.yaml").open("w", encoding="utf-8"))
+    """
+    #get_confusions(id=51)

@@ -699,8 +699,9 @@ class ProjectResult(BaseModel):
 
         :param debug_task_limit:
         :param drop_cancels:
-        :return:
+        :return: the value df, the assignment df
         """
+        # todo the value-df still has too many cols, drop them, since we have the assignment df
         logger.info("Building raw annotations dataframe")
         assignment_df_rows = []
         rows = []
@@ -978,7 +979,7 @@ class ProjectResult(BaseModel):
     ) -> tuple[list[Path], "Agreements"]:
         from ls_helper.fresh_agreements import Agreements
 
-        ag = Agreements(self.project_data)
+        ag = Agreements(self)
         ag.agreement_calc(variables, max_coders=max_num_coders)
 
         dest_files = self.project_data.store_agreement_report(
