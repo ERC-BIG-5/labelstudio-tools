@@ -6,7 +6,7 @@ import typer
 import yaml
 from tqdm import tqdm
 
-from ls_helper.command.annotations import annotations_app, agreements
+from ls_helper.command.annotations import annotations_app, agreements, add_conflicts_to_tasks
 from ls_helper.command.backup import backup_app
 from ls_helper.command.extra import extras_app, get_confusions
 from ls_helper.command.labeling_conf import labeling_conf_app
@@ -15,8 +15,8 @@ from ls_helper.command.project_setup import project_app
 from ls_helper.command.setup import (
     setup_app,
 )
-from ls_helper.command.task import task_add_predictions, task_app
-from ls_helper.command.view import view_app
+from ls_helper.command.task import task_add_predictions, task_app, get_tasks
+from ls_helper.command.view import view_app, create_conflict_view
 from ls_helper.models.interface_models import IChoices
 from ls_helper.models.main_models import (
     get_project,
@@ -180,12 +180,16 @@ if __name__ == "__main__":
 
     # this will work, since there is just one spanish twitter (so it's set to default)
 
+    """
     agreements(
         **{"alias": "twitter-es-4"},
         accepted_ann_age=20
         #variables=["nature_text", "nature_any", "nature_visual"],
-    )
+    )"""
 
+    #create_conflict_view("nature_any",**{"alias": "twitter-es-4"})
+    #get_tasks(**{"alias": "twitter-es-4"})
+    #add_conflicts_to_tasks(**{"alias": "twitter-es-4"})
 
     """
     # for creating/testing version 5 of the protocol
@@ -198,4 +202,6 @@ if __name__ == "__main__":
 
     yaml.dump(get_variables_info(id=53), Path("53.yaml").open("w", encoding="utf-8"))
     """
+    #get_confusions(id=51)
+
     #get_confusions(id=51)

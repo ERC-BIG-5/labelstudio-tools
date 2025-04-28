@@ -122,5 +122,7 @@ Todo:
 `project setup-project-settings`
 this will also create a <id>.xml in the `labeling_configs` folder
 `labeling-conf build-ls-labeling-interface`
-use the platform specific template...
+use the platform-specific template...
 `labeling-conf update-labeling-config`
+
+

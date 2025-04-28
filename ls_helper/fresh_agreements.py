@@ -2,7 +2,7 @@ import logging
 import re
 import warnings
 from datetime import date
-from typing import Annotated, Generator, Literal, Optional
+from typing import Annotated, TYPE_CHECKING, Generator, Literal, Optional
 
 import irrCAC.raw
 import pandas as pd
@@ -13,6 +13,9 @@ from pydantic import BaseModel, Field
 
 from ls_helper.models.variable_models import ChoiceVariableModel
 from tools.project_logging import get_logger
+
+if TYPE_CHECKING:
+    from ls_helper.models.main_models import ProjectResult
 
 
 # experimental...
@@ -465,14 +468,3 @@ class Agreements:
 
         return self.results
 
-
-if __name__ == "__main__":
-    from ls_helper.models.main_models import get_project
-
-    po = get_project(43)
-    ag = Agreements(po)
-    ag.agreement_calc(
-        ["nature_any", "nature_text", "nature_visual", "nep_material_visual"],
-        keep_tasks=True,
-    )
-    pass

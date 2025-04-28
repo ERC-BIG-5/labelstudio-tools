@@ -19,9 +19,18 @@
         <View if="nature_visual_any" is="Yes" className="visual_part">
             <Header value="Visual Part"/>
             <Collapse>
-                <panel_nep_val-expr_rel-value title="Image 1" var="visual_0">
+                <panel_v5 title="Image 1" var="visual_0">
                     <visual_same_labels index="0"/>
-                </panel_nep_val-expr_rel-value>
+                </panel_v5>
+                <panel_v5 title="Image 2" var="visual_1">
+                    <visual_same_labels index="1"/>
+                </panel_v5>
+                <panel_v5 title="Image 3" var="visual_2">
+                    <visual_same_labels index="2"/>
+                </panel_v5>
+                <panel_v5 title="Image 4" var="visual_3">
+                    <visual_same_labels index="3"/>
+                </panel_v5>
             </Collapse>
         </View>
         <compounds/>

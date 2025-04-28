@@ -41,7 +41,10 @@ def get_confusions(
     df["value-index"] = df.groupby(level=['platform_id', 'user_id', "variable", "idx"]).cumcount()
     # sorted by re-value, and for each the confusion
     df = df.reset_index()
-
+    dest = po.path_for(SETTINGS.temp_file_path, alternative="rel-values_confusions", ext=".csv")
+    df.to_csv(dest)
+    print(dest)
+    return dest
     # todo: separate conf out
     rel_values = ['personal-identity', 'cultural-identity', 'social-responsibility', 'social-cohesion', 'social-memory',
                   'social-relations', 'sense-of-place', 'sense-of-agency', 'spirituality', 'stewardship-principle',
@@ -52,4 +55,5 @@ def get_confusions(
     pass
     # next, for each value, check, if there is a matching conf:
     # p_id,u_id, idx must be matching
-    df.to_csv(po.path_for(SETTINGS.temp_file_path, alternative="rel-values_confusions", ext=".csv"))
+    dest = po.path_for(SETTINGS.temp_file_path, alternative="rel-values_confusions", ext=".csv")
+    #df.to_csv(dest)
