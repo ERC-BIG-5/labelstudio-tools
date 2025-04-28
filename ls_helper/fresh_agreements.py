@@ -339,6 +339,7 @@ class Agreements:
     def agreement_calc(
             self,
             variables: Optional[list[str]] = None,
+            exclude_variables: Optional[list[str]] = None,
             force_default: Optional[str] = "NONE",
             max_coders: int = 2,
             agreement_types: Optional[Agreement_types] = None,
@@ -346,6 +347,9 @@ class Agreements:
     ) -> dict[str, AgreementResult]:
         if not variables:
             variables = list(self.po.choices.keys())
+            # todo. test this...
+            if exclude_variables:
+                variables = list(set(variables) - set(exclude_variables))
         self.max_coders = max_coders
         variables_dfs = self.select_variables(variables)
 
@@ -436,6 +440,45 @@ class Agreements:
                         ].apply(lambda x: (x == 1).any())
                         task_ids = tasks_with_1[tasks_with_1].index
                         self.collections.setdefault(var, {})[option] = task_ids
+
+                        # self.collections.setdefault(var, {})[option] = task_ids
+                        var_col = self.option_tasks.setdefault(var, {})
+                        option_col = var_col.setdefault(option, {})
+                        """
+                        option_col["filtered_ids"] = (
+                            option_df.index.get_level_values("task_id")
+                            .unique()
+                            .tolist()
+                        )
+                        """
+
+                        pv_df = self.create_coder_pivot_df(option_df)
+
+                        def match_mask_func(row):
+                            # Get non-NaN values
+                            non_nan_values = row.dropna().unique()
+                            # If all values are the same, there will be only one unique value
+                            # (or none if all were NaN)
+                            return len(non_nan_values) <= 1
+
+                        # Apply the function to each row
+                        match_mask = pv_df.apply(match_mask_func, axis=1)
+
+                        # Split the dataframe
+                        """option_col["match"] = (
+                            pv_df[match_mask]
+                            .index.get_level_values("task_id")
+                            .unique()
+                            .tolist()
+                        )"""
+                        option_col["conflict"] = (
+                            pv_df[~match_mask]
+                            .index.get_level_values("task_id")
+                            .unique()
+                            .tolist()
+                        )
+
+
                     # Calculate agreement for this option
                     result.options_agreements[option] = self._calc_agreements(
                         option_df, agreement_types

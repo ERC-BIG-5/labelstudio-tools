@@ -16,7 +16,7 @@ from ls_helper.command.setup import (
     setup_app,
 )
 from ls_helper.command.task import task_add_predictions, task_app, get_tasks
-from ls_helper.command.view import view_app, create_conflict_view
+from ls_helper.command.view import view_app, create_conflict_view, update_coding_game
 from ls_helper.models.interface_models import IChoices
 from ls_helper.models.main_models import (
     get_project,
@@ -183,8 +183,9 @@ if __name__ == "__main__":
     """
     agreements(
         **{"alias": "twitter-es-4"},
-        accepted_ann_age=20
+        accepted_ann_age=20,
         #variables=["nature_text", "nature_any", "nature_visual"],
+        exclude_variables=[]
     )"""
 
     #create_conflict_view("nature_any",**{"alias": "twitter-es-4"})
@@ -203,5 +204,6 @@ if __name__ == "__main__":
     yaml.dump(get_variables_info(id=53), Path("53.yaml").open("w", encoding="utf-8"))
     """
     #get_confusions(id=51)
-
+    #add_conflicts_to_tasks(id=51)
     #get_confusions(id=51)
+    update_coding_game(id=51)

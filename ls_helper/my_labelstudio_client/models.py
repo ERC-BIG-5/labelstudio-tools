@@ -192,7 +192,7 @@ class ProjectViewDataModel(BaseModel):
                 )
             ],
         },
-    ) = None
+    ) = Field(default_factory=dict)
     ordering: Optional[list[str]] = None
 
 

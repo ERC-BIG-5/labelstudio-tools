@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
+from deprecated import deprecated
 
 from ls_helper.funcs import build_view_with_filter_p_ids, build_platform_id_filter
 
@@ -39,19 +40,20 @@ def update_coding_game(
     if successful sends back project_id, view_id
 
     """
-    p_a = get_p_access(id, alias, platform, language)
-    po = get_project(p_a)
+    po = get_project(id, alias, platform, language)
     logger.info(po.alias)
     view_id = po.coding_game_view_id
     if not view_id:
         print("No views found for coding game")
-        return None
+        view = ProjectMgmt.create_view(ProjectViewCreate.model_validate({"project": po.id, "data": {
+            "title": "Coding Game"}}))
+        view_id = view.id
 
     if refresh_views:
         ProjectMgmt.refresh_views(po)
     views = po.get_views()
     if not views:
-        download_project_views(platform, language)
+        download_project_views(id, alias, platform, language)
         views = po.get_views()
         # print("No views found for project. Call 'download_project_views' first")
         # return
@@ -70,7 +72,7 @@ def update_coding_game(
     # project_annotations = _get_recent_annotations(po.id, 0)
 
     ann = mp.raw_annotation_df.copy()
-    ann = ann[ann["category"] == "coding-game"]
+    ann = ann[ann["variable"] == "coding-game"]
     ann = mp.simplify_single_choices(ann)
     platform_ids = ann[ann["single_value"] == "Yes"]["platform_id"].tolist()
     build_view_with_filter_p_ids(SETTINGS.client, view_, platform_ids)
@@ -134,16 +136,16 @@ def delete_view(view_id: int):
 def download_project_views(
         id: Annotated[Optional[int], typer.Option()] = None,
         alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
 ) -> list[ProjectViewModel]:
-    p_a = get_p_access(id, alias, platform, language)
-    po = get_project(p_a)
+    po = get_project(id, alias, platform, language)
     views = ProjectMgmt.refresh_views(po)
     logger.debug(f"view file -> {po.view_file}")
     return views
 
 
+@deprecated(reason="we can use annotation.add_conflicts_to_tasks instead")
 @view_app.command(short_help="create or update a view for variable conflict")
 def create_conflict_view(
         variable: Annotated[str, typer.Option()],
@@ -177,45 +179,3 @@ def create_conflict_view(
     url = f"{SETTINGS.LS_HOSTNAME}/projects/{po.id}/data?tab={view.id}"
     print(url)
     return url
-
-    # todo redo with fresh_agreement
-    """
-    
-    # po.validate_extensions()
-    # mp = po.get_annotations_results()
-
-    # just check existence
-    # if not po.interface.ordered_fields_map.get(variable):
-    #    raise ValueError(f"Variable {variable} has not been defined")
-    # agreement_data = json.loads((SETTINGS.agreements_dir / f"{po.id}.json").read_text())
-
-    agg_metrics = po.get_agreement_data().agreement_metrics
-    if variable.endswith("_visual"):
-        variable = variable + "_0"
-    print(variable)
-    am = agg_metrics.all_variables.get(variable)
-    if not am or not len(am.conflicts):
-        all_c = po.get_agreement_data().conflicts
-
-        dd_t = []
-        for c in all_c:
-            # print(c)
-            if c.variable == variable:
-                dd_t.append(c)
-            task_ids = [c.task_id for c in dd_t][:50]
-    else:
-        # for the broken version, single are strings of task-id and _0
-        if isinstance(am, SingleChoiceAgreement):
-            task_ids = [int(s.split("_")[0]) for s in am.conflicts][:30]
-
-        else:
-            task_ids = [int(str(s.task_id)[:-1]) for s in am.conflicts][:30]
-
-    title = f"conflict:{variable}"
-    view = ProjectMgmt.create_view(ProjectViewCreate.model_validate({"project": po.id, "data": {
-        "title": title,
-        "filters": build_platform_id_filter(task_ids, "task_id")}}))
-    url = f"{SETTINGS.LS_HOSTNAME}/projects/{po.id}/data?tab={view.id}"
-    print(url)
-    return url
-    """

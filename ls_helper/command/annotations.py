@@ -153,6 +153,7 @@ def agreements(
         ] = 6,
         max_num_coders: Annotated[int, typer.Option()] = 2,
         variables: Annotated[Optional[list[str]], typer.Argument()] = None,
+        exclude_variables: Annotated[Optional[list[str]], typer.Argument()] = None,
 ) -> tuple[Path, Agreements]:
     """
 
@@ -163,12 +164,13 @@ def agreements(
     :param accepted_ann_age:
     :param max_num_coders:
     :param variables:
+    :param exclude_variables: when no variables are selected, exclude those (from the all variables)
     :return:
     """
     dest, agreement = (
         get_project(id, alias, platform, language)
         .get_annotations_results(accepted_ann_age=accepted_ann_age)
-        .get_coder_agreements(max_num_coders, variables, True)
+        .get_coder_agreements(max_num_coders, variables, exclude_variables, True)
     )
 
     return dest, agreement
@@ -197,7 +199,7 @@ def add_conflicts_to_tasks(
     #
     po_tasks = po.get_tasks()
     for task in po_tasks.root:
-        task.data["conflicts"] = tasks_conflicts.get(task.id,"")
+        task.data["conflicts"] = tasks_conflicts.get(task.id, "")
 
     temp_file = po.path_for(SETTINGS.temp_file_path)
     temp_file.write_text(
@@ -209,5 +211,5 @@ def add_conflicts_to_tasks(
             indent=2,
         )
     )
-
-    patch_tasks(temp_file,po.id)
+    # pass
+    patch_tasks(temp_file, po.id)
