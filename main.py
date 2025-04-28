@@ -176,21 +176,50 @@ if __name__ == "__main__":
     # setup
     from ls_helper.command import setup
 
-    #setup.add_projects()
+    # setup.add_projects()
 
     # this will work, since there is just one spanish twitter (so it's set to default)
 
-    """
     agreements(
         **{"alias": "twitter-es-4"},
         accepted_ann_age=20,
-        #variables=["nature_text", "nature_any", "nature_visual"],
-        exclude_variables=[]
-    )"""
+        # variables=["nature_text", "nature_any", "nature_visual"],
+        exclude_variables=["rel-value_text_conf_aesthetics",
+                           "rel-value_text_conf_cultural-identity",
+                           "rel-value_text_conf_social-cohesion",
+                           "rel-value_text_conf_good-life",
+                           "rel-value_text_conf_kinship",
+                           "rel-value_text_conf_livelihoods",
+                           "rel-value_text_conf_personal-identity",
+                           "rel-value_text_conf_reciprocity",
+                           "rel-value_text_conf_sense-of-agency",
+                           "rel-value_text_conf_sense-of-place",
+                           "rel-value_text_conf_social-relations",
+                           "rel-value_text_conf_social-responsibility",
+                           "rel-value_text_conf_spirituality",
+                           "rel-value_text_conf_stewardship-principle",
+                           "rel-value_text_conf_well-being",
+                           "rel-value_visual_conf_aesthetics",
+                           "rel-value_visual_conf_cultural-identity",
+                           "rel-value_visual_conf_social-cohesion",
+                           "rel-value_visual_conf_good-life",
+                           "rel-value_visual_conf_kinship",
+                           "rel-value_visual_conf_livelihoods",
+                           "rel-value_visual_conf_personal-identity",
+                           "rel-value_visual_conf_reciprocity",
+                           "rel-value_visual_conf_sense-of-agency",
+                           "rel-value_visual_conf_sense-of-place",
+                           "rel-value_visual_conf_social-relations",
+                           "rel-value_visual_conf_social-responsibility",
+                           "rel-value_visual_conf_spirituality",
+                           "rel-value_visual_conf_stewardship-principle",
+                           "rel-value_visual_conf_well-being"
+                           ]
+    )
 
-    #create_conflict_view("nature_any",**{"alias": "twitter-es-4"})
-    #get_tasks(**{"alias": "twitter-es-4"})
-    #add_conflicts_to_tasks(**{"alias": "twitter-es-4"})
+    # create_conflict_view("nature_any",**{"alias": "twitter-es-4"})
+    # get_tasks(**{"alias": "twitter-es-4"})
+    # add_conflicts_to_tasks(**{"alias": "twitter-es-4"})
 
     """
     # for creating/testing version 5 of the protocol
@@ -203,7 +232,7 @@ if __name__ == "__main__":
 
     yaml.dump(get_variables_info(id=53), Path("53.yaml").open("w", encoding="utf-8"))
     """
-    #get_confusions(id=51)
-    #add_conflicts_to_tasks(id=51)
-    #get_confusions(id=51)
-    update_coding_game(id=51)
+    # get_confusions(id=51)
+    # add_conflicts_to_tasks(id=51)
+    # get_confusions(id=51)
+    # update_coding_game(id=51)

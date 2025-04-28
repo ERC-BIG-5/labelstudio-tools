@@ -216,7 +216,6 @@ class ProjectData(ProjectCreate):
 
     def variables(self) -> dict[str, VariableModel]:
         variables = {}
-        # pattern = re.compile(r"^(.+)_(\d+)(?:_(.*))?$")
 
         # initial basics
         for (

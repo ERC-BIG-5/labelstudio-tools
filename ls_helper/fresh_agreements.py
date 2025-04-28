@@ -59,7 +59,7 @@ class Agreements:
         self._assignment_df = self.po_results.assignment_df
 
         self.results: dict[str, AgreementResult] = {}
-        self.collections: dict[str, OptionOccurances] = {}
+        #self.collections: dict[str, OptionOccurances] = {}
         self.logger = get_logger(__file__)
 
         # variable: option: filtered_ids: all_occurrences, agreements, disagreements
@@ -439,18 +439,10 @@ class Agreements:
                             "value"
                         ].apply(lambda x: (x == 1).any())
                         task_ids = tasks_with_1[tasks_with_1].index
-                        self.collections.setdefault(var, {})[option] = task_ids
-
-                        # self.collections.setdefault(var, {})[option] = task_ids
                         var_col = self.option_tasks.setdefault(var, {})
                         option_col = var_col.setdefault(option, {})
-                        """
-                        option_col["filtered_ids"] = (
-                            option_df.index.get_level_values("task_id")
-                            .unique()
-                            .tolist()
-                        )
-                        """
+
+                        option_col["filtered_ids"] = task_ids
 
                         pv_df = self.create_coder_pivot_df(option_df)
 
@@ -464,13 +456,6 @@ class Agreements:
                         # Apply the function to each row
                         match_mask = pv_df.apply(match_mask_func, axis=1)
 
-                        # Split the dataframe
-                        """option_col["match"] = (
-                            pv_df[match_mask]
-                            .index.get_level_values("task_id")
-                            .unique()
-                            .tolist()
-                        )"""
                         option_col["conflict"] = (
                             pv_df[~match_mask]
                             .index.get_level_values("task_id")
