@@ -444,9 +444,10 @@ class ProjectData(ProjectCreate):
         raw_dest.write_text(
             json.dumps(
                 {
-                    var: res.model_dump()
+                    var: res.model_dump(exclude_defaults=True)
                     for var, res in agreement_report.results.items()
-                }
+                },
+                indent=2
             )
         )
 
@@ -499,7 +500,7 @@ class ProjectData(ProjectCreate):
                         for (
                                 agreement_type,
                                 agreement_value,
-                        ) in var_agreement.multi_select_inclusion_agreeement[
+                        ) in var_agreement.multi_select_inclusion_agreement[
                             option
                         ].items():
                             row_data[agreement_type] = agreement_value

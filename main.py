@@ -180,11 +180,11 @@ if __name__ == "__main__":
 
     # this will work, since there is just one spanish twitter (so it's set to default)
 
-    if False:
+    if True:
         agreements(
             **{"alias": "twitter-es-4"},
-            accepted_ann_age=20,
-            # variables=["nature_text", "nature_any", "nature_visual"],
+            accepted_ann_age=200,
+            #variables=["coding-game"],
             exclude_variables=["rel-value_text_conf_aesthetics",
                                "rel-value_text_conf_cultural-identity",
                                "rel-value_text_conf_social-cohesion",
@@ -238,4 +238,4 @@ if __name__ == "__main__":
     # get_confusions(id=51)
     # update_coding_game(id=51)
     from ls_helper.command import pipeline
-    pipeline.reformat_for_datapipelines(alias="twitter-es-4", accepted_ann_age=300)
+    #pipeline.reformat_for_datapipelines(alias="twitter-es-4", accepted_ann_age=300)

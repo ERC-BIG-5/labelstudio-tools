@@ -26,7 +26,7 @@ class DFAgreementsInitModel(BaseModel):
 Agreement_types = list[Literal["gwet", "fleiss", "ratio", "abs"]]
 
 # calculation-method: value
-type AgreementsCol = dict[str, float]
+type AgreementsCol = dict[str, Optional[float]]
 # option: task_id[]
 type OptionOccurances = dict[str, list[int]]
 
@@ -35,10 +35,11 @@ class AgreementResult(BaseModel):
     variable: str
     single_overall: Optional[AgreementsCol] = Field(default_factory=dict)
     options_agreements: dict[str, AgreementsCol] = Field(default_factory=dict)
-    multi_select_inclusion_agreeement: dict[str, AgreementsCol] = Field(
+    multi_select_inclusion_agreement: dict[str, AgreementsCol] = Field(
         default_factory=dict,
         description="for multi-select, filtering only those, where at least one coder included the option",
     )
+
 
 
 class Agreements:
@@ -156,7 +157,9 @@ class Agreements:
             agreement_types: Agreement_types
     ) -> AgreementsCol:
         if len(df) == 0:
-            return {_: nan for _ in agreement_types}
+            res = {_: None for _ in agreement_types}
+            res["abs"] = 0
+            return res
         pv_df = self.create_coder_pivot_df(df)
         result = {}
 
@@ -174,7 +177,7 @@ class Agreements:
                                 _cac.fleiss()["est"]["coefficient_value"], 4
                             )
                     except (ValueError, ZeroDivisionError):
-                        result[aggr_type] = nan
+                        result[aggr_type] = None
                 case "gwet":
                     try:
                         if not _cac:
@@ -185,7 +188,7 @@ class Agreements:
                                 _cac.gwet()["est"]["coefficient_value"], 4
                             )
                     except (ValueError, ZeroDivisionError):
-                        result[aggr_type] = nan
+                        result[aggr_type] = None
                 case "ratio":
                     if not _conflict_count:
                         _conflict_count = pv_df.apply(
@@ -262,7 +265,6 @@ class Agreements:
                     f"dropped tasks: {df__tasks - reduced_tasks}"
                 )
         return reduced
-
     @staticmethod
     def time_move(
             df_: DataFrame,
@@ -270,40 +272,9 @@ class Agreements:
         for day in sorted(df_.date.unique()):
             yield day, df_[df_["date"] <= day]
 
-    @staticmethod
-    def prepare_var(base_df, force_default_: Optional[str] = "NONE"):
-        if "variable" in base_df.columns:
-            base_df = base_df.drop("variable", axis=1)
 
-        base_df = Agreements.drop_unfinished_tasks(base_df)
-
-        # this part to throw out all with more than x coder. get the times, and only keep the latest 2.
-        # df = df.join(df_ts)
-        # df = df.sort_values("ts", ascending=False).groupby(level=0).head(max_coders).sort_index()
-        if base_df.iloc[0]["type"] == "single":
-            base_df = base_df.explode("value")
-        else:
-            pass  # todo
-        # df = df.drop("type", axis=1)
-        base_df.fillna(force_default_, inplace=True)
-
-        # nice for when having time_move
-        # Plot
-        """
-        df = df.sort_values('ts')
-        daily_counts = df.groupby('date').size().cumsum()
-        di = daily_counts.plot(
-            figsize=(10, 6),
-            title='Cumulative Number of Rows Over Time'
-        )
-        plt.show()
-        """
-
-        return base_df
-
-    def add_multi_select_default(self, v_df: DataFrame) -> DataFrame:
+    def add_default(self, v_df: DataFrame, fillNa: str) -> DataFrame:
         ass_df = self._assignment_df.copy()
-
         ass_df["date"] = pd.to_datetime(ass_df["ts"]).dt.date
 
         # Create a new dataframe with only the necessary columns from df2
@@ -321,7 +292,7 @@ class Agreements:
         # For rows that exist only in df2, fill in default values
         merged_df["idx"] = merged_df["idx"].fillna(0)
         merged_df["type"] = merged_df["type"].fillna("multiple")
-        merged_df["value"] = merged_df["value"].fillna("[]")
+        merged_df["value"] = merged_df["value"].fillna(fillNa)
 
         # Use timestamps from df1 where available, otherwise from df2
         merged_df["ts"] = merged_df["ts"].combine_first(merged_df["ts_y"])
@@ -334,7 +305,9 @@ class Agreements:
 
         # Sort by task_id and user_id
         merged_df = merged_df.sort_values(["task_id", "user_id"])
+        merged_df = merged_df.set_index(["task_id", "user_id"])
         return merged_df
+
 
     def agreement_calc(
             self,
@@ -347,7 +320,6 @@ class Agreements:
     ) -> dict[str, AgreementResult]:
         if not variables:
             variables = list(self.po.choices.keys())
-            # todo. test this...
             if exclude_variables:
                 variables = list(set(variables) - set(exclude_variables))
         self.max_coders = max_coders
@@ -356,9 +328,9 @@ class Agreements:
         if not agreement_types:
             agreement_types = self.agreement_types
 
-        po_variables = self.po.variables()
-        for var, v_df in variables_dfs.items():
-            print(var, len(v_df))
+        po_variables:dict[str,ChoiceVariableModel] = self.po.variables()
+        for idx,(var, v_df) in enumerate(variables_dfs.items()):
+            print(f"{idx:>2}/{len(variables_dfs)}", var, len(v_df), po_variables[var].choice)
             result = AgreementResult(variable=var)
             self.results[var] = result
             if "variable" in v_df.columns:
@@ -368,12 +340,13 @@ class Agreements:
             if v_df.empty:
                 continue
             if v_df.iloc[0]["type"] == "single":
+                v_df = self.add_default(v_df, force_default)
                 v_df_s = v_df.explode("value")
-                v_df_s.fillna(force_default, inplace=True)
+
                 result.single_overall = self._calc_agreements(
                     v_df_s, agreement_types
                 )
-                for option in options:
+                for option in options + [force_default]:
                     # Use vectorized operations when possible for performance
                     option_df = v_df.copy()
                     option_df = option_df.explode("value")
@@ -384,7 +357,6 @@ class Agreements:
                         option_df, agreement_types
                     )
 
-                    # todo....bring in the conflicts.
                     # TODO. the pivot is calculated multiple times, per option?
                     if keep_tasks:
                         # self.collections.setdefault(var, {})[option] = task_ids
@@ -423,7 +395,8 @@ class Agreements:
 
             # multi-select
             else:
-                v_df = self.add_multi_select_default(v_df)
+                v_df = self.add_default(v_df, "[]")
+                v_df.reset_index(inplace=True)
                 for option in options:
                     option_df = v_df.copy()
                     # Convert to 1/0 values based on option presence
@@ -477,7 +450,7 @@ class Agreements:
                     option_select = option_df[
                         option_df["task_id"].isin(tasks_with_option_select)
                     ]
-                    result.multi_select_inclusion_agreeement[option] = (
+                    result.multi_select_inclusion_agreement[option] = (
                         self._calc_agreements(option_select, agreement_types)
                     )
 
