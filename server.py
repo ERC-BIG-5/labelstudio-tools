@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Annotated, Optional
 
+from ls_helper.command.extra import get_confusions
+
 try:
     from fastapi import FastAPI, HTTPException, Query
     from pydantic import BaseModel
@@ -16,12 +18,13 @@ from ls_helper.command.view import create_conflict_view
 from ls_helper.command.annotations import agreements
 
 # app = FastAPI()
-app = FastAPI(root_path="/DATA")
+app = FastAPI(root_path="/")
 
 app.mount(
     "/static", StaticFiles(directory="data/server_static"), name="static"
 )
 app.mount("/data", StaticFiles(directory="data/ls_data"), name="data")
+
 
 
 class ProjectAccessQuery(BaseModel):
@@ -99,3 +102,18 @@ def _create_conflict_view(
     language: Optional[str] = None,
 ) -> str:
     return create_conflict_view(variable, id, alias, platform, language)
+
+@app.get("/confusion-analysis")
+def _confusion_analysis(alias: Annotated[str, Query(description="alias of the project")]):
+    try:
+        file_path = get_confusions(alias=alias, accepted_ann_age=300)
+        filename = f"confusion-{alias}.csv"
+        return FileResponse(
+            path=file_path,
+            filename=filename,
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+
+    except Exception as e:
+        return "Sorry, something went wrong. Contact Ramin", 500
