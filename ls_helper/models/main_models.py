@@ -19,7 +19,7 @@ from ls_helper.exp.build_configs import (
     LabelingInterfaceBuildConfig,
     build_from_template,
 )
-from ls_helper.fresh_agreements import AgreementResult
+from ls_helper.agreements_calculation import AgreementResult
 from ls_helper.models.interface_models import (
     IChoices,
     InterfaceData,
@@ -42,7 +42,7 @@ from ls_helper.my_labelstudio_client.models import (
 from ls_helper.settings import SETTINGS, DFCols, DFFormat
 
 if TYPE_CHECKING:
-    from ls_helper.fresh_agreements import Agreements
+    from ls_helper.agreements_calculation import Agreements
 
 PlLang = tuple[str, str]
 ProjectAccess = (
@@ -977,7 +977,7 @@ class ProjectResult(BaseModel):
             exclude_variables: Optional[list[str]] = None,
             gen_csv_tables: bool = True,
     ) -> tuple[list[Path], "Agreements"]:
-        from ls_helper.fresh_agreements import Agreements
+        from ls_helper.agreements_calculation import Agreements
 
         ag = Agreements(self)
         ag.agreement_calc(variables, exclude_variables, max_coders=max_num_coders)

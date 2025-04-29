@@ -13,7 +13,7 @@ from ls_helper.annotation_timing import (
     plot_date_distribution,
 )
 from ls_helper.command.task import patch_task, patch_tasks
-from ls_helper.fresh_agreements import Agreements
+from ls_helper.agreements_calculation import Agreements
 from ls_helper.project_mgmt import ProjectMgmt
 from tools.files import read_data
 
