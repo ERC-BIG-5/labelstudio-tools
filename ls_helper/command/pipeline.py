@@ -57,11 +57,9 @@ def reformat_for_datapipelines(
         po.id, accepted_ann_age
     )
     # print(results)
-    am: ProjectAnnotationResultsModel = ProjectAnnotationResultsModel(
-        task_results=results
-    )
-    print(am.stats())
-    am = am.drop_cancellations()
+
+    print(results.stats())
+    am = results.drop_cancellations()
     # print(am.stats())
     res = {}
     # print(am.completed())

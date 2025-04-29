@@ -618,7 +618,7 @@ class ProjectOverview(BaseModel):
             )
         raise ValueError(f"unknown project access: {p_access}")
 
-    def create(self, p: ProjectCreate, save: bool = True):
+    def create(self, p: ProjectCreate, save: bool = True) -> ProjectData:
         from ls_helper.project_mgmt import ProjectMgmt
 
         if p.alias in self.alias_map:
@@ -642,9 +642,8 @@ class ProjectOverview(BaseModel):
         print(f"project created and saved: {repr(p_i)}")
         dest = p_i.path_for(SETTINGS.labeling_templates, ext=".xml")
         dest.write_text(project_model.label_config)
-        # print(dest)
-        # todo: create default coding-game view
-        #
+
+        return p_i
 
     def save(self):
         projects = {p.id: p for p in self.projects.values()}
