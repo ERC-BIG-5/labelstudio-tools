@@ -26,7 +26,6 @@ app.mount(
 app.mount("/data", StaticFiles(directory="data/ls_data"), name="data")
 
 
-
 class ProjectAccessQuery(BaseModel):
     id: int = None
     aliat: str = None
@@ -103,8 +102,11 @@ def _create_conflict_view(
 ) -> str:
     return create_conflict_view(variable, id, alias, platform, language)
 
+
 @app.get("/confusion-analysis")
-def _confusion_analysis(alias: Annotated[str, Query(description="alias of the project")]):
+def _confusion_analysis(
+    alias: Annotated[str, Query(description="alias of the project")],
+):
     try:
         file_path = get_confusions(alias=alias, accepted_ann_age=300)
         filename = f"confusion-{alias}.csv"
@@ -112,8 +114,10 @@ def _confusion_analysis(alias: Annotated[str, Query(description="alias of the pr
             path=file_path,
             filename=filename,
             media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            },
         )
 
-    except Exception as e:
+    except Exception:
         return "Sorry, something went wrong. Contact Ramin", 500

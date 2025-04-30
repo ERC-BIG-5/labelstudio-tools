@@ -1,19 +1,10 @@
-from typing import Annotated, Optional
-
 import typer
 from tqdm import tqdm
 
-from tools.files import read_data
 from tools.project_logging import get_logger
 
-from ls_helper.models.interface_models import (
-    FieldExtension,
-    InterfaceData,
-    ProjectVariableExtensions,
-)
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.models.main_models import (
-    get_project,
     ProjectData,
     ProjectOverview,
 )
@@ -66,4 +57,3 @@ def download_all_projects():
         if not project_data:
             raise ValueError(f"No project found: {project.id}")
         project.save_project_data(project_data)
-

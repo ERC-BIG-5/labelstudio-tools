@@ -1,11 +1,6 @@
-import copy
-import json
-import os
 from pathlib import Path
-from string import Template
 from typing import Optional
 
-import pystache
 from lxml import etree
 
 
@@ -49,5 +44,3 @@ def remove_hidden_parts(xml_file: Path):
     tree.write(
         xml_file, pretty_print=True, encoding="utf-8", xml_declaration=False
     )
-
-

@@ -172,4 +172,3 @@ def check_against_fixes(
 
 if __name__ == "__main__":
     pass
-

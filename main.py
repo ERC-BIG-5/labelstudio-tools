@@ -3,10 +3,9 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
-import yaml
 from tqdm import tqdm
 
-from ls_helper.command.annotations import annotations_app, agreements, add_conflicts_to_tasks
+from ls_helper.command.annotations import annotations_app, agreements
 from ls_helper.command.backup import backup_app
 from ls_helper.command.extra import extras_app, get_confusions
 from ls_helper.command.labeling_conf import labeling_conf_app
@@ -15,15 +14,17 @@ from ls_helper.command.project_setup import project_app
 from ls_helper.command.setup import (
     setup_app,
 )
-from ls_helper.command.task import task_add_predictions, task_app, get_tasks
-from ls_helper.command.view import view_app, create_conflict_view, update_coding_game
-from ls_helper.models.interface_models import IChoices
+from ls_helper.command.task import task_add_predictions, task_app
+from ls_helper.command.view import view_app
+from ls_helper.config_helper import parse_label_config_xml
+from ls_helper.models.interface_models import IChoices, InterfaceData
 from ls_helper.models.main_models import (
     get_project,
 )
 from ls_helper.my_labelstudio_client.client import ls_client
+from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
-from tools.files import save_json
+from tools.files import save_yaml
 from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
@@ -82,7 +83,7 @@ app.add_typer(
 )
 # todo: more testing
 def strict_update_project_tasks(
-        new_data_file: Path, existing_data_file: Optional[Path] = None
+    new_data_file: Path, existing_data_file: Optional[Path] = None
 ):
     raise NotImplementedError("client.patch_task parameters changed")
     new_data_list = json.loads(new_data_file.read_text(encoding="utf-8"))
@@ -108,10 +109,10 @@ def strict_update_project_tasks(
 
 
 def get_all_variable_names(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Option()] = None,
-        language: Annotated[Optional[str], typer.Option()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Option()] = None,
+    language: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
     # todo redo and test...
@@ -120,20 +121,43 @@ def get_all_variable_names(
 
 
 def get_variables_info(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Option()] = None,
-        language: Annotated[Optional[str], typer.Option()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Option()] = None,
+    language: Annotated[Optional[str], typer.Option()] = None,
+    from_built: Annotated[
+        bool,
+        typer.Option(False, help="Use the built instead of the project-data"),
+    ] = False,
 ):
     po = get_project(id, alias, platform, language)
-    return [
+
+    if from_built:
+        config: InterfaceData = parse_label_config_xml(
+            po.path_for(
+                SETTINGS.built_labeling_configs, ext=".xml"
+            ).read_text()
+        )
+    else:
+        config = po.raw_interface_struct
+
+    interface_data = [
         {
             "name": k,
             "required": v.required,
-            "choice_type": str(v.choice) if isinstance(v, IChoices) else "text",
+            "choice_type": str(v.choice)
+            if isinstance(v, IChoices)
+            else "text",
+            "choices": v.raw_options_list() if isinstance(v, IChoices) else "",
         }
-        for k, v in po.raw_interface_struct.ordered_fields_map.items()
+        for k, v in config.ordered_fields_map.items()
     ]
+
+    # yaml.dump(interface_data, po.path_for(SETTINGS.temp_file_path, ext=".yaml").open("w"), indent=True, default_flow_style=False, encoding="utf-8")
+    save_yaml(
+        po.path_for(SETTINGS.temp_file_path, ext=".yaml"), interface_data
+    )
+    return interface_data
 
 
 def add_prediction_test():
@@ -174,49 +198,68 @@ if __name__ == "__main__":
     _default = tw_es
 
     # setup
-    from ls_helper.command import setup
 
     # setup.add_projects()
 
     # this will work, since there is just one spanish twitter (so it's set to default)
 
-    if True:
+    if False:
         agreements(
             **{"alias": "twitter-es-4"},
             accepted_ann_age=200,
-            #variables=["coding-game"],
-            exclude_variables=["rel-value_text_conf_aesthetics",
-                               "rel-value_text_conf_cultural-identity",
-                               "rel-value_text_conf_social-cohesion",
-                               "rel-value_text_conf_good-life",
-                               "rel-value_text_conf_kinship",
-                               "rel-value_text_conf_livelihoods",
-                               "rel-value_text_conf_personal-identity",
-                               "rel-value_text_conf_reciprocity",
-                               "rel-value_text_conf_sense-of-agency",
-                               "rel-value_text_conf_sense-of-place",
-                               "rel-value_text_conf_social-relations",
-                               "rel-value_text_conf_social-responsibility",
-                               "rel-value_text_conf_spirituality",
-                               "rel-value_text_conf_stewardship-principle",
-                               "rel-value_text_conf_well-being",
-                               "rel-value_visual_conf_aesthetics",
-                               "rel-value_visual_conf_cultural-identity",
-                               "rel-value_visual_conf_social-cohesion",
-                               "rel-value_visual_conf_good-life",
-                               "rel-value_visual_conf_kinship",
-                               "rel-value_visual_conf_livelihoods",
-                               "rel-value_visual_conf_personal-identity",
-                               "rel-value_visual_conf_reciprocity",
-                               "rel-value_visual_conf_sense-of-agency",
-                               "rel-value_visual_conf_sense-of-place",
-                               "rel-value_visual_conf_social-relations",
-                               "rel-value_visual_conf_social-responsibility",
-                               "rel-value_visual_conf_spirituality",
-                               "rel-value_visual_conf_stewardship-principle",
-                               "rel-value_visual_conf_well-being"
-                               ]
+            # variables=["coding-game"],
+            exclude_variables=[
+                "rel-value_text_conf_aesthetics",
+                "rel-value_text_conf_cultural-identity",
+                "rel-value_text_conf_social-cohesion",
+                "rel-value_text_conf_good-life",
+                "rel-value_text_conf_kinship",
+                "rel-value_text_conf_livelihoods",
+                "rel-value_text_conf_personal-identity",
+                "rel-value_text_conf_reciprocity",
+                "rel-value_text_conf_sense-of-agency",
+                "rel-value_text_conf_sense-of-place",
+                "rel-value_text_conf_social-relations",
+                "rel-value_text_conf_social-responsibility",
+                "rel-value_text_conf_spirituality",
+                "rel-value_text_conf_stewardship-principle",
+                "rel-value_text_conf_well-being",
+                "rel-value_visual_conf_aesthetics",
+                "rel-value_visual_conf_cultural-identity",
+                "rel-value_visual_conf_social-cohesion",
+                "rel-value_visual_conf_good-life",
+                "rel-value_visual_conf_kinship",
+                "rel-value_visual_conf_livelihoods",
+                "rel-value_visual_conf_personal-identity",
+                "rel-value_visual_conf_reciprocity",
+                "rel-value_visual_conf_sense-of-agency",
+                "rel-value_visual_conf_sense-of-place",
+                "rel-value_visual_conf_social-relations",
+                "rel-value_visual_conf_social-responsibility",
+                "rel-value_visual_conf_spirituality",
+                "rel-value_visual_conf_stewardship-principle",
+                "rel-value_visual_conf_well-being",
+            ],
         )
+
+    # project_setup.generate_variable_extensions_template(id=50)
+    # project_setup.generate_variable_extensions_template(id=51)
+
+    # labeling_conf.build_ls_labeling_interface(id=53)
+
+    # print(get_variables_info(53, from_built=True))
+
+    # labeling_conf.build_extension_index(False,[51,50])
+    # labeling_conf.build_ls_labeling_interface(53)
+    # labeling_conf.update_labeling_config(53)
+    """project_setup.create_project(
+        title="Twitter - ES - protocol.v5",
+        alias="twitter-es-5",
+        platform="twitter",
+        language="en",
+    )"""
+    # project_setup.generate_variable_extensions_template(53)
+    # project_setup.generate_variable_extensions_template(54)
 
     # create_conflict_view("nature_any",**{"alias": "twitter-es-4"})
     # get_tasks(**{"alias": "twitter-es-4"})
@@ -237,5 +280,6 @@ if __name__ == "__main__":
     # add_conflicts_to_tasks(id=51)
     # get_confusions(id=51)
     # update_coding_game(id=51)
-    from ls_helper.command import pipeline
-    #pipeline.reformat_for_datapipelines(alias="twitter-es-4", accepted_ann_age=300)
+    # pipeline.reformat_for_datapipelines(alias="twitter-es-4", accepted_ann_age=300)
+
+    get_confusions(id=51)

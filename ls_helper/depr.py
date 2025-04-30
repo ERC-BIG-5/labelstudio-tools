@@ -1,6 +1,7 @@
 import numpy as np
 from deprecated.classic import deprecated
 
+
 @deprecated(
     reason="We don't really use that... But we could. Main difference is that it should not throw a warning when dividing by zero or agreement would be 1 (also a 'nan' in the package implementation"
 )

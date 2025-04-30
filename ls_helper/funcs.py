@@ -202,7 +202,9 @@ def build_platform_id_filter(
 def build_view_with_filter_p_ids(
     client: LabelStudioBase, view: ProjectViewModel, platform_ids: list[str]
 ):
-    new_filters = build_platform_id_filter(platform_ids,ls_main_field="platform_id")
+    new_filters = build_platform_id_filter(
+        platform_ids, ls_main_field="platform_id"
+    )
 
     res = {
         "data": {

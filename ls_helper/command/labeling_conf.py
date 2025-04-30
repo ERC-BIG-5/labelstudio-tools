@@ -17,6 +17,7 @@ labeling_conf_app = typer.Typer(
     name="Labeling config", pretty_exceptions_show_locals=True
 )
 
+
 @labeling_conf_app.command(
     short_help="Create labeling config from template",
     help="Uses platform specific template",

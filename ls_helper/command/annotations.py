@@ -6,21 +6,24 @@ from typing import Annotated, Optional
 
 import typer
 
+from ls_helper.agreements_calculation import Agreements
 from ls_helper.annotation_timing import (
     annotation_total_over_time,
     plot_cumulative_annotations,
     get_annotation_lead_times,
-    plot_date_distribution, annotation_timing,
+    plot_date_distribution,
+    annotation_timing,
 )
-from ls_helper.command.task import patch_task, patch_tasks
-from ls_helper.agreements_calculation import Agreements
+from ls_helper.command.task import patch_tasks
+from ls_helper.models.main_models import (
+    get_project,
+    get_p_access,
+    ProjectAnnotationResultsModel,
+)
 from ls_helper.project_mgmt import ProjectMgmt
-from tools.files import read_data
-
-from tools.project_logging import get_logger
-
-from ls_helper.models.main_models import get_project, get_p_access, ProjectAnnotationResultsModel
 from ls_helper.settings import SETTINGS
+from tools.files import read_data
+from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 
@@ -37,14 +40,14 @@ def open_image_simple(image_path):
 
 @annotations_app.command(short_help="[stats] Annotation basic results")
 def annotations(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None,
-        accepted_ann_age: Annotated[
-            int, typer.Option(help="Download annotations if older than x hours")
-        ] = 6,
-        min_coders: Annotated[int, typer.Option()] = 2,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
+    accepted_ann_age: Annotated[
+        int, typer.Option(help="Download annotations if older than x hours")
+    ] = 6,
+    min_coders: Annotated[int, typer.Option()] = 2,
 ) -> tuple[Path, str]:
     po = get_project(id, alias, platform, language)
     po.validate_extensions()
@@ -64,15 +67,14 @@ def annotations(
     short_help="[plot] Plot the completed tasks over time"
 )
 def status(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None,
-        accepted_ann_age: Annotated[
-            int, typer.Option(help="Download annotations if older than x hours")
-        ] = 6,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
+    accepted_ann_age: Annotated[
+        int, typer.Option(help="Download annotations if older than x hours")
+    ] = 6,
 ):
-
     po = get_project(id, alias, platform, language)
     _, project_annotations = ProjectMgmt.get_recent_annotations(
         po.id, accepted_ann_age
@@ -102,13 +104,13 @@ def status(
     short_help="[plot] Plot the total completed tasks over day"
 )
 def total_over_time(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None,
-        accepted_ann_age: Annotated[
-            int, typer.Option(help="Download annotations if older than x hours")
-        ] = 6,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
+    accepted_ann_age: Annotated[
+        int, typer.Option(help="Download annotations if older than x hours")
+    ] = 6,
 ):
     print(get_p_access(id, alias, platform, language))
     po = get_project(id, alias, platform, language)
@@ -127,13 +129,13 @@ def total_over_time(
     short_help="[plot] Plot the total completed tasks over day"
 )
 def annotation_lead_times(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None,
-        accepted_ann_age: Annotated[
-            int, typer.Option(help="Download annotations if older than x hours")
-        ] = 6,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
+    accepted_ann_age: Annotated[
+        int, typer.Option(help="Download annotations if older than x hours")
+    ] = 6,
 ):
     po = get_project(id, alias, platform, language)
     project_annotations = ProjectMgmt.get_recent_annotations(
@@ -151,16 +153,16 @@ def annotation_lead_times(
     short_help="[stats] calculate general agreements stats"
 )
 def agreements(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None,
-        accepted_ann_age: Annotated[
-            int, typer.Option(help="Download annotations if older than x hours")
-        ] = 6,
-        max_num_coders: Annotated[int, typer.Option()] = 2,
-        variables: Annotated[Optional[list[str]], typer.Argument()] = None,
-        exclude_variables: Annotated[Optional[list[str]], typer.Argument()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
+    accepted_ann_age: Annotated[
+        int, typer.Option(help="Download annotations if older than x hours")
+    ] = 6,
+    max_num_coders: Annotated[int, typer.Option()] = 2,
+    variables: Annotated[Optional[list[str]], typer.Argument()] = None,
+    exclude_variables: Annotated[Optional[list[str]], typer.Argument()] = None,
 ) -> tuple[Path, Agreements]:
     """
 
@@ -177,30 +179,34 @@ def agreements(
     dest, agreement = (
         get_project(id, alias, platform, language)
         .get_annotations_results(accepted_ann_age=accepted_ann_age)
-        .get_coder_agreements(max_num_coders, variables, exclude_variables, True)
+        .get_coder_agreements(
+            max_num_coders, variables, exclude_variables, True
+        )
     )
 
     return dest, agreement
 
 
-@annotations_app.command(
-    short_help="Add conflicts to tasks data"
-)
+@annotations_app.command(short_help="Add conflicts to tasks data")
 def add_conflicts_to_tasks(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
 ):
     po = get_project(id, alias, platform, language)
     # get conflicts and create the strings that are added to the tasks data
-    conflicts = read_data(po.path_for(SETTINGS.agreements_dir, alternative=f"{po.id}_conflicts"))
+    conflicts = read_data(
+        po.path_for(SETTINGS.agreements_dir, alternative=f"{po.id}_conflicts")
+    )
     tasks: dict[int, set] = {}
     for variable, variable_data in conflicts.items():
         for option, var_option in variable_data.items():
             for task_id in var_option["conflict"]:
                 task_conflicts = tasks.setdefault(task_id, set())
-                task_conflicts.update([f"{variable};", f"{variable}@{option};"])
+                task_conflicts.update(
+                    [f"{variable};", f"{variable}@{option};"]
+                )
     tasks_conflicts = {t: "".join(c) for t, c in tasks.items()}
 
     #

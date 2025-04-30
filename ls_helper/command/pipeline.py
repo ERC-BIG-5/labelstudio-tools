@@ -6,7 +6,6 @@ import typer
 from tools.project_logging import get_logger
 
 from ls_helper.models.main_models import (
-    ProjectAnnotationResultsModel,
     get_project,
 )
 from ls_helper.project_mgmt import ProjectMgmt

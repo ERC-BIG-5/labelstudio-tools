@@ -43,7 +43,7 @@ def build_extension_index(projects: list[ProjectData]) -> DataExtensionIndex:
                 variables[k].projects.append(p.id)
             else:
                 if v.model_dump() == (i_v := variables[k]).model_dump(
-                        exclude={"projects"}
+                    exclude={"projects"}
                 ):
                     i_v.projects.append(p.id)
                 else:
