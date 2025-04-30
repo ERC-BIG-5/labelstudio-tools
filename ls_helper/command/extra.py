@@ -27,7 +27,7 @@ def get_confusions(
         min_coders: Annotated[int, typer.Option()] = 2,
 ) -> Path:
     po = get_project(id, alias, platform, language)
-    po.validate_extensions()
+    #po.validate_extensions()
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     df, _ = mp.get_annotation_df()
     # standard shape

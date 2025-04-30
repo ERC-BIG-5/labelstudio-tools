@@ -3,8 +3,8 @@
     <Header value="Nature Elements/Processes" size="4"/>
     <!--<Header value="What are the Nature Elements/Process in the {{{title}}}?" name="nep_{{{var}}}_t"/>-->
     <Header value="Materiality" size="5"/>
-    <Choices name="nep_materiality_{{{var}}}" toName="title" showInline="true" required="false"
-             choice="single">
+    <Choices name="nep_materiality_{{{var}}}" toName="title" showInline="true" required="true"
+             choice="multiple">
         <Choice value="Material" alias="material"/>
         <Choice value="Immaterial" alias="immaterial"/>
     </Choices>
@@ -12,18 +12,17 @@
     <TextArea name="nep_materiality_expl_{{{var}}}" toName="title"/>-->
 
     <Header value="Biological" size="5"/>
-    <Choices name="nep_biological_{{{var}}}" toName="title" showInline="true" required="false"
-             choice="single">
+    <Choices name="nep_biological_{{{var}}}" toName="title" showInline="true" required="true"
+             choice="multiple">
         <Choice value="Biotic" alias="biotic"/>
         <Choice value="Abiotic" alias="abiotic"/>
     </Choices>
    <!-- <Text name="nep_biological_expl_{{{var}}}_t" value="Optional comments"/>
     <TextArea name="nep_biological_expl_{{{var}}}" toName="title"/>-->
 
-    <Header value="Landscape type" size="5"/>
+    <Header value="Landscape type (Multiple)" size="5"/>
     <Choices name="landscape-type_{{{var}}}" toName="title" showInline="true" required="false"
-             choice="single">
-        <Choice value="None" alias="none" selected="true"/>
+             choice="multiple">
         <Choice value="Artificial surfaces" alias="artificial_surfaces"/>
         <Choice value="Agricultural areas" alias="agricultural_areas"/>
         <Choice value="Forest and seminatural areas" alias="forest_and_seminatural_areas"/>

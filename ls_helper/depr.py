@@ -1,35 +1,84 @@
 import numpy as np
-import pandas as pd
-from pandas import DataFrame
+from deprecated.classic import deprecated
 
+@deprecated(
+    reason="We don't really use that... But we could. Main difference is that it should not throw a warning when dividing by zero or agreement would be 1 (also a 'nan' in the package implementation"
+)
+def fleiss_kappa(table, method="fleiss"):
+    """Fleiss' and Randolph's kappa multi-rater agreement measure
 
-def convert_strings_to_indices(df: DataFrame, string_list: list[str]):
-    result_df = df.copy()
+    Parameters
+    ----------
+    table : array_like, 2-D
+        assumes subjects in rows, and categories in columns. Convert raw data
+        into this format by using
+        :func:`statsmodels.stats.inter_rater.aggregate_raters`
+    method : str
+        Method 'fleiss' returns Fleiss' kappa which uses the sample margin
+        to define the chance outcome.
+        Method 'randolph' or 'uniform' (only first 4 letters are needed)
+        returns Randolph's (2005) multirater kappa which assumes a uniform
+        distribution of the categories to define the chance outcome.
 
-    # Create a mapping dictionary for faster lookups
-    # Each string maps to its index in the list
-    string_to_index = {s: i for i, s in enumerate(string_list)}
+    Returns
+    -------
+    kappa : float
+        Fleiss's or Randolph's kappa statistic for inter rater agreement
 
-    # Define a function to apply to each element
-    def map_to_index(value):
-        if pd.isna(value):
-            return np.nan
-        elif value in string_to_index:
-            return string_to_index[value]
-        else:
-            # Optional: handle case when string is not in the list
-            # Could return np.nan, -1, or raise an error
-            return np.nan
+    Notes
+    -----
+    no variance or hypothesis tests yet
 
-    # Apply the function to all elements in the DataFrame
-    result_df = result_df.map(lambda x: map_to_index(x))
+    Interrater agreement measures like Fleiss's kappa measure agreement relative
+    to chance agreement. Different authors have proposed ways of defining
+    these chance agreements. Fleiss' is based on the marginal sample distribution
+    of categories, while Randolph uses a uniform distribution of categories as
+    benchmark. Warrens (2010) showed that Randolph's kappa is always larger or
+    equal to Fleiss' kappa. Under some commonly observed condition, Fleiss' and
+    Randolph's kappa provide lower and upper bounds for two similar kappa_like
+    measures by Light (1971) and Hubert (1977).
 
-    # Convert all columns to int32, with NaN represented as pd.NA
-    for col in result_df.columns:
-        # First convert to nullable integer type
-        result_df[col] = pd.to_numeric(result_df[col], errors="coerce")
-        result_df[col] = result_df[col].astype(
-            "Int32"
-        )  # Note: capital 'I' for nullable integer
+    References
+    ----------
+    Wikipedia https://en.wikipedia.org/wiki/Fleiss%27_kappa
 
-    return result_df
+    Fleiss, Joseph L. 1971. "Measuring Nominal Scale Agreement among Many
+    Raters." Psychological Bulletin 76 (5): 378-82.
+    https://doi.org/10.1037/h0031619.
+
+    Randolph, Justus J. 2005 "Free-Marginal Multirater Kappa (multirater
+    K [free]): An Alternative to Fleiss' Fixed-Marginal Multirater Kappa."
+    Presented at the Joensuu Learning and Instruction Symposium, vol. 2005
+    https://eric.ed.gov/?id=ED490661
+
+    Warrens, Matthijs J. 2010. "Inequalities between Multi-Rater Kappas."
+    Advances in Data Analysis and Classification 4 (4): 271-86.
+    https://doi.org/10.1007/s11634-010-0073-4.
+    """
+
+    table = 1.0 * np.asarray(table)  # avoid integer division
+    n_sub, n_cat = table.shape
+    n_total = table.sum()
+    n_rater = table.sum(1)
+    n_rat = n_rater.max()
+    # assume fully ranked
+    assert n_total == n_sub * n_rat
+
+    # marginal frequency  of categories
+    p_cat = table.sum(0) / n_total
+
+    table2 = table * table
+    p_rat = (table2.sum(1) - n_rat) / (n_rat * (n_rat - 1.0))
+    p_mean = p_rat.mean()
+
+    if method == "fleiss":
+        p_mean_exp = (p_cat * p_cat).sum()
+    elif method.startswith("rand") or method.startswith("unif"):
+        p_mean_exp = 1 / n_cat
+    else:  # fleiss
+        p_mean_exp = (p_cat * p_cat).sum()
+
+    if p_mean == 1:  # Perfect agreement
+        return 1.0
+    else:
+        return (p_mean - p_mean_exp) / (1 - p_mean_exp)

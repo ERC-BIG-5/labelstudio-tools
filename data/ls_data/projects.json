@@ -108,5 +108,15 @@
     "default": true,
     "coding_game_view_id": null,
     "id": 53
+  },
+  "54": {
+    "title": "Twitter - ES - protocol.v5",
+    "alias": "twitter-es-5",
+    "platform": "twitter",
+    "language": "es",
+    "description": null,
+    "default": false,
+    "coding_game_view_id": null,
+    "id": 54
   }
 }

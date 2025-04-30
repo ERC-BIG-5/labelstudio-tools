@@ -10,7 +10,7 @@ from ls_helper.annotation_timing import (
     annotation_total_over_time,
     plot_cumulative_annotations,
     get_annotation_lead_times,
-    plot_date_distribution,
+    plot_date_distribution, annotation_timing,
 )
 from ls_helper.command.task import patch_task, patch_tasks
 from ls_helper.agreements_calculation import Agreements
@@ -19,7 +19,7 @@ from tools.files import read_data
 
 from tools.project_logging import get_logger
 
-from ls_helper.models.main_models import get_project, get_p_access
+from ls_helper.models.main_models import get_project, get_p_access, ProjectAnnotationResultsModel
 from ls_helper.settings import SETTINGS
 
 logger = get_logger(__file__)
@@ -72,10 +72,17 @@ def status(
             int, typer.Option(help="Download annotations if older than x hours")
         ] = 6,
 ):
-    from ls_helper import main_funcs
 
     po = get_project(id, alias, platform, language)
-    main_funcs.status(po, accepted_ann_age)
+    _, project_annotations = ProjectMgmt.get_recent_annotations(
+        po.id, accepted_ann_age
+    )
+    pa: Optional[ProjectAnnotationResultsModel] = project_annotations
+    if project_annotations:
+        df = annotation_timing(pa, po.project_data.maximum_annotations)
+        temp_file = plot_date_distribution(df)
+        open_image_simple(temp_file.name)
+        temp_file.close()
 
     """ experiment. redo nicer. getting count per user
     po = get_project(id, alias, platform, language)

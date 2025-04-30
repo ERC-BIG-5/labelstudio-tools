@@ -172,33 +172,4 @@ def check_against_fixes(
 
 if __name__ == "__main__":
     pass
-    # p_info = ProjectOverview.projects().get_project(("twitter", "en"))
-    # check_against_fixes(p_info)
-    """ not sure, what was done here...
-    project_p = os.getcwd()
-    step1_t = Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/configs/step1/output/gen_twitter.xml")
-    # step1_t = Path(f"{project_p}/data//home/rsoleyma/projects/MyLabelstudioHelper/data/configs/step1/output/gen_twitter.xml")
-    duplicates = find_duplicates(step1_t)
-    print(f"{duplicates=}")
-    # complete_config((Path("/home/rsoleyma/projects/platforms-clients/data/labelstudio_configs/final1_t/config.xml")))
 
-    # tree = ET.parse(Path("/home/rsoleyma/projects/platforms-clients/data/labelstudio_configs/test_session_1_2025.xml"))
-    tree = ET.parse(step1_t)
-    root = tree.getroot()
-
-    check_references(root)
-
-    all_names = find_all_names(get_tree_n_root(step1_t)[1])
-    all_names = list(all_names.keys())
-    all_names_s = [s.split("_") for s in all_names]
-    # print(json.dumps(list(zip(all_names,all_names_s)), indent=2))
-    """
-
-    # print(all_names_s)
-    # fout = Path(f"{project_p}/data/extra/name_checker.csv")
-    # writer = csv.writer(fout.open("w", encoding="utf-8"))
-    # for s in all_names_s:
-    #     # print(",".join(s))
-    #     writer.writerow(s)
-    #
-    # print(f"-> {fout}")

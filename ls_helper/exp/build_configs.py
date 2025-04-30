@@ -219,6 +219,12 @@ def build_from_template(
                             "whenChoiceValue": _is,
                         }
                     )
+                # todo, this is an infinite loop. but all we want is process internal nodes...
+                """
+                view_node = parse_tree(
+                    etree.ElementTree(node), parent_attrib, parent_slot_fillers
+                )
+                node.getparent().replace(node, view_node)"""
                 continue
 
             if node.tag == "slot":

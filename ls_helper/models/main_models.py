@@ -152,7 +152,7 @@ class ProjectData(ProjectCreate):
 
     def save_project_data(self, project_data: "LSProjectModel") -> None:
         dest = self.path_for(SETTINGS.projects_dir)
-        dest.write_text(project_data.model_dump_json())
+        dest.write_text(project_data.model_dump_json(exclude={"control_weights","parsed_label_config"}))
         print(f"project-data saved for {repr(self)}: -> {dest}")
 
     def build_ls_labeling_config(
@@ -185,6 +185,11 @@ class ProjectData(ProjectCreate):
     def read_labeling_config(
             self, alternative_build: Optional[str] = None
     ) -> str:
+        """
+        reads the built labeling config file
+        :param alternative_build:
+        :return:
+        """
         return self.path_for(
             SETTINGS.built_labeling_configs, alternative_build, ".xml"
         ).read_text(encoding="utf-8")
@@ -286,7 +291,6 @@ class ProjectData(ProjectCreate):
         """
         if self._interface_data:
             return self._interface_data
-
         self._interface_data = parse_label_config_xml(
             self.project_data.label_config
         )
