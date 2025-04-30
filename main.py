@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from ls_helper.command.annotations import annotations_app, agreements
 from ls_helper.command.backup import backup_app
-from ls_helper.command.extra import extras_app, get_confusions
+from ls_helper.command.extra import extras_app
 from ls_helper.command.labeling_conf import labeling_conf_app
 from ls_helper.command.pipeline import pipeline_app
 from ls_helper.command.project_setup import project_app
@@ -79,7 +79,8 @@ app.add_typer(
 
 
 @app.command(
-    short_help="[ls maint] Update tasks. Files must be matching lists of {id: , data:}"
+    name="strict task update",
+    short_help="[ls maint] Update tasks. Files must be matching lists of {id: , data:}",
 )
 # todo: more testing
 def strict_update_project_tasks(
@@ -188,6 +189,29 @@ def add_prediction_test():
     print(json.dumps(resp.json(), indent=2))
 
 
+@app.command(name="overview", short_help="Overview of all commands")
+def overview():
+    def _print_commands(current_app, prefix="", indent=0):
+        """Recursively print commands and subcommands."""
+        indent_str = "  " * indent
+
+        # Print commands at this level
+        for cmd in current_app.registered_commands:
+            name = cmd.name or cmd.callback.__name__
+            help_text = cmd.short_help or ""
+            print(f"{indent_str}• '{name}' - {help_text}")
+
+        # Find and process all subapps
+        for group in current_app.registered_groups:
+            subapp_name = group.name
+            subapp = group.typer_instance
+            print(f"{indent_str}▼ {prefix}{subapp_name}")
+            _print_commands(subapp, f"{prefix}{subapp_name} ", indent + 1)
+
+    # Start the recursive printing from the main app
+    _print_commands(app)
+
+
 if __name__ == "__main__":
     twitter = "twitter"
     youtube = "youtube"
@@ -282,4 +306,4 @@ if __name__ == "__main__":
     # update_coding_game(id=51)
     # pipeline.reformat_for_datapipelines(alias="twitter-es-4", accepted_ann_age=300)
 
-    get_confusions(id=51)
+    overview()
