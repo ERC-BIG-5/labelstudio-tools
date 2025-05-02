@@ -19,6 +19,7 @@ from ls_helper.models.main_models import (
     get_project,
     get_p_access,
     ProjectAnnotationResultsModel,
+    ProjectResult,
 )
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
@@ -28,7 +29,9 @@ from tools.project_logging import get_logger
 logger = get_logger(__file__)
 
 annotations_app = typer.Typer(
-    name="Annotations", pretty_exceptions_show_locals=True
+    name="Annotations",
+    pretty_exceptions_show_locals=False,
+    pretty_exceptions_enable=False,
 )
 
 
@@ -51,13 +54,23 @@ def annotations(
 ) -> tuple[Path, str]:
     po = get_project(id, alias, platform, language)
     po.validate_extensions()
-    mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
-    # todo, this is not nice lookin ... lol
-    res = mp.flatten_annotation_results(
-        min_coders, mp.interface.ordered_fields
+
+    ann_results = ProjectResult(project_data=po)
+    use_local, ann_results.raw_annotation_result = (
+        ProjectMgmt.get_recent_annotations(ann_results.id, accepted_ann_age)
     )
-    res = mp.format_df_for_csv(res)
-    dest = SETTINGS.annotations_results_dir / f"{mp.id}.csv"
+    # todo: should be stored in that object, directly
+    ann_results.raw_annotation_df, _ = ann_results.get_annotation_df(
+        ignore_groups=True
+    )
+
+    # mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
+    # todo, this is not nice lookin ... lol
+    res = ann_results.flatten_annotation_results(
+        min_coders, ann_results.interface.ordered_fields
+    )
+    res = ann_results.format_df_for_csv(res)
+    dest = SETTINGS.annotations_results_dir / f"{ann_results.id}.csv"
     res.to_csv(dest, index=False)
     print(f"annotation results -> {dest}")
     return dest

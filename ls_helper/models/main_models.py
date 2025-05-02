@@ -227,7 +227,9 @@ class ProjectData(ProjectCreate):
                 var_strings.append(m)
         return "_".join(var_strings), index_string[0]
 
-    def variables(self) -> dict[str, VariableModel]:
+    def variables(
+        self, ignore_groups: bool = False
+    ) -> dict[str, VariableModel]:
         variables = {}
 
         # initial basics
@@ -258,6 +260,8 @@ class ProjectData(ProjectCreate):
             variable: VariableModel = model_class.model_validate(data)
             variables[name] = variable
 
+            if ignore_groups:
+                continue
             group_name, index = self.group_index_variable(name)
             if group_name == name:
                 continue
@@ -401,8 +405,15 @@ class ProjectData(ProjectCreate):
         return mp.raw_annotation_result
 
     def get_annotations_results(
-        self, accepted_ann_age: Optional[int] = 6
+        self,
+        accepted_ann_age: Optional[int] = 6,
+        use_existing: bool = True,
     ) -> "ProjectResult":
+        """
+        :param accepted_ann_age:
+        :param use_existing: False, will always be recalculated and not stored.
+        :return:
+        """
         if self._ann_results:
             return self._ann_results
         from ls_helper.project_mgmt import ProjectMgmt
@@ -554,6 +565,20 @@ class ProjectData(ProjectCreate):
         )
         logger.info(f"Save tasks to: {dest.as_posix()}")
 
+    def store_temp_tasks(self, tasks: LSTaskList[LSTask]) -> Path:
+        dest = self.path_for(SETTINGS.temp_file_path)
+        dest.write_text(
+            json.dumps(
+                [
+                    t.model_dump(include={"data", "id", "project"})
+                    for t in tasks.root
+                ],
+                indent=2,
+            )
+        )
+        logger.info(f"Save tasks to: {dest.as_posix()}")
+        return dest
+
 
 class ProjectOverview(BaseModel):
     projects: dict[ProjectAccess, ProjectData]
@@ -704,7 +729,10 @@ class ProjectResult(BaseModel):
         return self.project_data.raw_interface_struct
 
     def get_annotation_df(
-        self, debug_task_limit: Optional[int] = None, drop_cancels: bool = True
+        self,
+        debug_task_limit: Optional[int] = None,
+        drop_cancels: bool = True,
+        ignore_groups: bool = False,
     ) -> tuple[DataFrame, DataFrame]:
         """
 
@@ -725,7 +753,7 @@ class ProjectResult(BaseModel):
             return k
 
         extension_keys = set(self.project_data.variable_extensions.extensions)
-        variables = self.project_data.variables()
+        variables = self.project_data.variables(ignore_groups)
 
         q_extens = {
             k: var_method(k, v)
@@ -934,7 +962,7 @@ class ProjectResult(BaseModel):
         # Step 1: Create pivot table with task_id and user_id as index
         pivot_df = df.pivot_table(
             index=[DFCols.T_ID, DFCols.U_ID, DFCols.TS, DFCols.P_ID],
-            columns="category",
+            columns="variable",
             values="value",
             aggfunc="first",
         ).reset_index()

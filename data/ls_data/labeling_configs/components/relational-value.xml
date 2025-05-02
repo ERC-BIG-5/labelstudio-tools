@@ -3,7 +3,7 @@
     <!-- {var,title} -->
     <Header value="Relational values" size="4"/>
     <Text name="rel-value_{{{var}}}_t"
-          value="For the {{{title}}} content: What are the RVs expressed?"/>
+          value="For the {{{title}}} content: What are the RVs expressed? (multiple)"/>
     <Choices name="rel-value_{{{var}}}" toName="title" showInline="true" choice="multiple" required="true">
         <Choice value="Personal identity" alias="personal-identity"/>
         <Choice value="Cultural identity" alias="cultural-identity"/>

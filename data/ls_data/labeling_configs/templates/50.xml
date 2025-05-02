@@ -10,16 +10,36 @@
         <harmful_detail/>
         <language-correct_video/>
     </View>
+    <data_link sourceValue="speed_control_page" text="Speed controllable video"/>
     <Text name="gap2" value=" "/>
     <nature_any/>
     <View if="nature_any" is="Yes">
         <extras/>
-        <nature_text_visual/>
+        <!-- legacy, but other components fail as well -->
+        <View>
+            <View className="text_underline">
+                <Text name="nature_text_t" value="Is there nature in the TEXT content?"
+                      selectionEnabled="false"/>
+                <Choices name="nature_text" toName="title" showInline="true" required="true">
+                    <Choice value="No" selected="true"/>
+                    <Choice value="Yes"/>
+                </Choices>
+            </View>
+
+            <View className="visual_underline">
+                <Text name="nature_visual_t" value="Is there nature in the VISUAL content?"
+                      selectionEnabled="false"/>
+                <Choices name="nature_visual" toName="title" showInline="true" required="true">
+                    <Choice value="No" selected="true"/>
+                    <Choice value="Yes"/>
+                </Choices>
+            </View>
+        </View>
     </View>
 
     <View className="text_part" if="nature_text" is="Yes">
         <Header value="Text Part" size="3"/>
-        <nature_elements title="Text" var="test"/>
+        <nature_elements title="Text" var="text"/>
         <value-expr title="Text" suffix="text" var="text"/>
         <relational-value title="Text" var="text"/>
     </View>

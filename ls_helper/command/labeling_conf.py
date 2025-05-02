@@ -4,6 +4,7 @@ from typing import Annotated, Optional
 import typer
 from deepdiff import DeepDiff
 
+from ls_helper.command.project_setup import download_project_data
 from ls_helper.config_helper import parse_label_config_xml
 from ls_helper.settings import SETTINGS
 from tools.project_logging import get_logger
@@ -22,7 +23,7 @@ labeling_conf_app = typer.Typer(
     short_help="Create labeling config from template",
     help="Uses platform specific template",
 )
-def build_ls_labeling_interface(
+def build(
     id: Annotated[Optional[int], typer.Option()] = None,
     alias: Annotated[Optional[str], typer.Option("--alias", "-a")] = None,
     platform: Annotated[Optional[str], typer.Option()] = None,
@@ -131,4 +132,47 @@ def check_labelling_config(
     print(type(new_config), type(existing_struct))
     diff = DeepDiff(new_config, existing_struct)
     print(diff.to_json(indent=2))
+    pass
+
+
+@labeling_conf_app.command()
+def from_project(
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Option()] = None,
+    language: Annotated[Optional[str], typer.Option()] = None,
+):
+    """
+    Get the labeling conf from a concrete project file and dump it to labeling_configs/project/<id>.xml
+    :param id:
+    :param alias:
+    :param platform:
+    :param language:
+    :return:
+    """
+    download_project_data(id, alias, platform, language)
+    po = get_project(id, alias, platform, language)
+    config_xml = po.project_data.label_config
+    dest_file = (
+        SETTINGS.BASE_DATA_DIR / f"labeling_configs/project/{po.id}.xml"
+    )
+    dest_file.parent.mkdir(exist_ok=True)
+    dest_file.write_text(config_xml)
+    print(dest_file)
+
+
+def patch_from_modyfied_project_xml(
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Option()] = None,
+    language: Annotated[Optional[str], typer.Option()] = None,
+):
+    """
+    get the xml from 'labeling_configs/project/{po.id}.xml'
+    :param id:
+    :param alias:
+    :param platform:
+    :param language:
+    :return:
+    """
     pass
