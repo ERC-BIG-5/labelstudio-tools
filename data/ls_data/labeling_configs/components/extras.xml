@@ -1,5 +1,5 @@
 <View>
-    <Header size="4" value="Optional checks"/>
+    <Header size="4" value="Optional checks (multiple)"/>
     <Choices name="extras" toName="title" showInline="true" choice="multiple">
         <Choice value="Food"/>
         <Choice value="Sport"/>
