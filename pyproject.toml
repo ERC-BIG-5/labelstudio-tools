@@ -1,6 +1,6 @@
 [project]
 name = "labelstudio-tools"
-version = "0.1.0"
+version = "0.5.1"
 description = "Working with Labelstudio"
 readme = "README.md"
 requires-python = ">=3.12"

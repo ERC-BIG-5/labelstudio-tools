@@ -421,7 +421,7 @@ class ProjectData(ProjectCreate):
         ann_results = ProjectResult(project_data=self)
         from_existing, ann_results.raw_annotation_result = (
             ProjectMgmt.get_recent_annotations(
-                ann_results.id, accepted_ann_age
+                ann_results.id, accepted_ann_age, use_existing
             )
         )
         if from_existing:
@@ -436,6 +436,7 @@ class ProjectData(ProjectCreate):
                 # mp.raw_annotation_df['platform_id'] = mp.raw_annotation_df['platform_id'].astype(str)
                 return ann_results
         # new file or there is no raw_dataframe
+        # todo, assign within ann_results
         ann_results.raw_annotation_df, ann_results.assignment_df = (
             ann_results.get_annotation_df()
         )
@@ -552,18 +553,23 @@ class ProjectData(ProjectCreate):
             self.path_for(SETTINGS.tasks_dir).read_text()
         )
 
-    def save_tasks(self, tasks: list[LSTask]):
+    def save_tasks(self, tasks: list[LSTask], include_additional: set[str] = None) -> Path:
+        if not include_additional:
+            include_additional = set()
         dest = self.path_for(SETTINGS.tasks_dir)
         dest.write_text(
             json.dumps(
                 [
-                    t.model_dump(include={"data", "id", "project"})
+                    t.model_dump(
+                        include={"data", "id", "project"} |  include_additional
+                    )
                     for t in tasks
                 ],
                 indent=2,
             )
         )
         logger.info(f"Save tasks to: {dest.as_posix()}")
+        return dest
 
     def store_temp_tasks(self, tasks: LSTaskList[LSTask]) -> Path:
         dest = self.path_for(SETTINGS.temp_file_path)
@@ -727,6 +733,65 @@ class ProjectResult(BaseModel):
     @property
     def interface(self) -> InterfaceData:
         return self.project_data.raw_interface_struct
+
+    def clean_annotation_results(self):
+        logger.info("Building raw annotations dataframe")
+
+        def var_method(k, fix):
+            if fix.deprecated:
+                return None
+            if fix.name_fix:
+                return fix.name_fix
+            return k
+
+        extension_keys = set(self.project_data.variable_extensions.extensions)
+        # variables = self.project_data.variables(False)
+
+        q_extens = {
+            k: var_method(k, v)
+            for k, v in self.project_data.variable_extensions.extensions.items()
+        }
+
+        results = {}
+
+        for task in self.raw_annotation_result.task_results:
+            task_res = {
+                "task_results": []
+            }  # , "platform_id": task.data["platform_id"]}
+            task_results = task_res["task_results"]
+            results[task.data["platform_id"]] = task_results
+            # print(task.id)
+            for ann in task.annotations:
+                ann_result = {}
+                # print(f"{task.id=} {ann.id=}")
+                if ann.was_cancelled:
+                    # print(f"{task.id=} {ann.id=} C")
+                    continue
+                # print(f"{task.id=} {ann.id=} {len(ann.result)=}")
+
+                for q_id, question in enumerate(ann.result):
+                    orig_name = question.from_name
+                    if orig_name not in extension_keys:
+                        raise ValueError(
+                            f"{orig_name} Not found in extensions. Update extension of project {repr(self.project_data)}"
+                        )
+                    new_name = q_extens.get(question.from_name)
+
+                    if not new_name:
+                        print(f"unknown variable... {question.from_name}")
+                        continue
+
+                    value = question.value.direct_value
+                    ann_result[new_name] = value
+                task_results.append(ann_result)
+
+        dest = self.project_data.path_for(
+            SETTINGS.annotations_dir,
+            alternative=f"clean_{self.project_data.id}",
+        )
+        dest.write_text(json.dumps(results))
+        print(f"Clean results written to {dest}")
+        return results
 
     def get_annotation_df(
         self,

@@ -213,6 +213,8 @@ class TaskCreate(BaseModel):
     data: Optional[dict[str, Any]] = None
     predictions: Optional[list] = None
 
+    # model_config = ConfigDict(extra="allow")
+
 
 class Task(TaskCreate):
     id: int

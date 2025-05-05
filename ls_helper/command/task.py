@@ -173,3 +173,13 @@ def get_tasks(
     tasks = ls_client().get_task_list(project=po.id)
     po.save_tasks(tasks)
     return tasks
+
+
+@task_app.command()
+def get_task(
+    id: Annotated[Optional[int], typer.Option()] = None,
+) -> LSTask:
+    resp = ls_client().get_task(id)
+    if resp.status_code != 200:
+        print(resp.status_code, resp.json())
+    return LSTask.model_validate(resp.json())

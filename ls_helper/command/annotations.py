@@ -239,3 +239,18 @@ def add_conflicts_to_tasks(
     )
     # pass
     patch_tasks(temp_file, po.id)
+
+
+@annotations_app.command()
+def clean_results(
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
+) -> Path:
+    res_file = (
+        get_project(id, alias, platform, language)
+        .get_annotations_results(use_existing=True)
+        .clean_annotation_results()
+    )
+    return res_file

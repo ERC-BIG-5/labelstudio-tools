@@ -319,8 +319,14 @@ class LabelStudioBase:
         tasks_data = resp.json()["tasks"]
         return [Task.model_validate(t) for t in tasks_data]
 
-    def delete_task(self, task_id: int):
-        pass
+    def delete_task(self, task_id: int) -> bool:
+        resp = self._client_wrapper.httpx_client.delete(
+            f"/api/tasks/{task_id}"
+        )
+        if resp != 204:
+            print(resp.status_code)
+            return False
+        return True
 
     def patch_task(self, task_id: int, task: Task):
         resp = self._client_wrapper.httpx_client.patch(
@@ -384,6 +390,21 @@ class LabelStudioBase:
             f"/api/dm/views/{view_id}"
         )
         print(resp)
+
+    def create_annotations(self, task_id: int, data: dict) -> dict:
+        "http://localhost:8080/api/tasks/:id/annotations/"
+        resp = self._client_wrapper.httpx_client.post(
+            f"api/tasks/{task_id}/annotations/", json=data
+        )
+        if resp.status_code != 201:
+            print(resp.status_code, resp.json())
+        return resp.json()
+
+    def delete_annotation(self, annotation_id: int) -> dict:
+        resp = self._client_wrapper.httpx_client.delete(
+            f"api/annotations/{annotation_id}/"
+        )
+        return resp
 
 
 _GLOBAL_CLIENT: Optional[LabelStudioBase] = None

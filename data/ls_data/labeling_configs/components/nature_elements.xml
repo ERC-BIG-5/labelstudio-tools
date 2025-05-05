@@ -7,6 +7,7 @@
              choice="multiple">
         <Choice value="Material" alias="material"/>
         <Choice value="Immaterial" alias="immaterial"/>
+        <Choice value="Not codable" alias="not codable"/>
     </Choices>
     <!--<Text name="nep_materiality_expl_{{{var}}}_t" value="Optional comments"/>
     <TextArea name="nep_materiality_expl_{{{var}}}" toName="title"/>-->
@@ -16,6 +17,7 @@
              choice="multiple">
         <Choice value="Biotic" alias="biotic"/>
         <Choice value="Abiotic" alias="abiotic"/>
+        <Choice value="Not codable" alias="not codable"/>
     </Choices>
    <!-- <Text name="nep_biological_expl_{{{var}}}_t" value="Optional comments"/>
     <TextArea name="nep_biological_expl_{{{var}}}" toName="title"/>-->
