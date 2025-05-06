@@ -294,10 +294,20 @@ class TimelineLabelsRange(BaseModel):
     start: int
     end: int
 
+    @property
+    def str_value(self) -> str:
+        return f"({self.start - self.end})"
+
 
 class TimelineLabels(BaseModel):
     ranges: list[TimelineLabelsRange]
     timelinelabels: list[str]
+
+    @property
+    def direct_value(self) -> list[str]:
+        return [
+            '",".join(self.timelinelabels):"".join([r.str_value for r in self.ranges])'
+        ]
 
 
 class AnnotationResult(BaseModel):

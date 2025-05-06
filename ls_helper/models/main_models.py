@@ -275,6 +275,11 @@ class ProjectData(ProjectCreate):
                 group_data["group_variables"] = [orig_name]
                 variables[group_name] = model_class.model_validate(group_data)
             else:
+                if not variables[group_name].group_variables:
+                    raise ValueError(
+                        f"Error, group-name is already taken by non-group variable: {group_name}. fix non-group variable in extension (project: {self.id})"
+                    )
+
                 assert len(variables[group_name].group_variables) > 0, (
                     "group name is already taken by regular variable"
                 )
@@ -553,7 +558,9 @@ class ProjectData(ProjectCreate):
             self.path_for(SETTINGS.tasks_dir).read_text()
         )
 
-    def save_tasks(self, tasks: list[LSTask], include_additional: set[str] = None) -> Path:
+    def save_tasks(
+        self, tasks: list[LSTask], include_additional: set[str] = None
+    ) -> Path:
         if not include_additional:
             include_additional = set()
         dest = self.path_for(SETTINGS.tasks_dir)
@@ -561,7 +568,7 @@ class ProjectData(ProjectCreate):
             json.dumps(
                 [
                     t.model_dump(
-                        include={"data", "id", "project"} |  include_additional
+                        include={"data", "id", "project"} | include_additional
                     )
                     for t in tasks
                 ],
@@ -734,7 +741,15 @@ class ProjectResult(BaseModel):
     def interface(self) -> InterfaceData:
         return self.project_data.raw_interface_struct
 
-    def clean_annotation_results(self):
+    def clean_annotation_results(
+        self, simplify_single: bool = True, variables: set[str] = None
+    ) -> tuple[Path, dict[str, list[dict[str, Any]]]]:
+        """
+
+        :param simplify_single:
+        :param variables:
+        :return: filepath and result-dict: platform_id: [{coder-results}]
+        """
         logger.info("Building raw annotations dataframe")
 
         def var_method(k, fix):
@@ -745,7 +760,7 @@ class ProjectResult(BaseModel):
             return k
 
         extension_keys = set(self.project_data.variable_extensions.extensions)
-        # variables = self.project_data.variables(False)
+        po_variables = self.project_data.variables(False)
 
         q_extens = {
             k: var_method(k, v)
@@ -780,8 +795,18 @@ class ProjectResult(BaseModel):
                     if not new_name:
                         print(f"unknown variable... {question.from_name}")
                         continue
+                    if variables and new_name not in variables:
+                        continue
 
                     value = question.value.direct_value
+                    if (
+                        simplify_single
+                        and isinstance(
+                            po_variables[new_name], ChoiceVariableModel
+                        )
+                        and po_variables[new_name].choice == "single"
+                    ):
+                        value = value[0]
                     ann_result[new_name] = value
                 task_results.append(ann_result)
 
@@ -791,7 +816,7 @@ class ProjectResult(BaseModel):
         )
         dest.write_text(json.dumps(results))
         print(f"Clean results written to {dest}")
-        return results
+        return dest, results
 
     def get_annotation_df(
         self,
@@ -904,7 +929,6 @@ class ProjectResult(BaseModel):
 
     def simplify_single_choices(self, df: DataFrame) -> DataFrame:
         assert df.attrs["format"] == DFFormat.raw_annotation
-
         result_df = df.copy()
 
         # Define a function to extract the single value when type is 'single'

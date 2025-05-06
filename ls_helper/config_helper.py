@@ -12,6 +12,8 @@ from ls_helper.models.interface_models import (
     IText,
     ITextArea,
     ProjectVariableExtensions,
+    ITimelineLabel,
+    ILabel,
 )
 
 # from ls_helper.new_models import ProjectData
@@ -131,6 +133,31 @@ def parse_label_config_xml(xml_string) -> InterfaceData:
                 # keep the $ so we know its a ref to data. done,
                 input_text_fields[name] = value
                 ordered_fields_map[name] = IText()
+        elif el.tag == "TimelineLabels":
+            name = el.get("name")
+            label_list = [
+                ILabel.model_validate(choice.attrib)
+                for choice in el.findall("./Label")
+            ]
+            ordered_fields_map[name] = ITimelineLabel.model_validate(
+                el.attrib | {"labels": label_list}
+            )
+        elif el.tag in [
+            "Choice",
+            "View",
+            "Header",
+            "Panel",
+            "Collapse",
+            "Image",
+            "Style",
+            "Video",
+            "a",
+            "Label",
+            "HyperText",
+        ]:
+            pass
+        else:
+            print(f"parse_label_config_xml: Unknown Element-tag {el.tag}")
 
     return InterfaceData(
         ordered_fields_map=ordered_fields_map, inputs=input_text_fields

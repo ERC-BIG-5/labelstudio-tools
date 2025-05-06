@@ -2,7 +2,7 @@ import json
 import shutil
 import webbrowser
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Any
 
 import typer
 
@@ -247,10 +247,22 @@ def clean_results(
     alias: Annotated[Optional[str], typer.Option("-a")] = None,
     platform: Annotated[Optional[str], typer.Argument()] = None,
     language: Annotated[Optional[str], typer.Argument()] = None,
-) -> Path:
-    res_file = (
+    simplify_single: Annotated[Optional[bool], typer.Option()] = True,
+    variables: Annotated[Optional[set[str]], typer.Argument()] = None,
+) -> tuple[Path, dict[str, list[dict[str, Any]]]]:
+    """
+
+    :param id:
+    :param alias:
+    :param platform:
+    :param language:
+    :param simplify_single:
+    :param variables:
+    :return: filepath and result-dict: platform_id: [{coder-results}]
+    """
+    res_file, results = (
         get_project(id, alias, platform, language)
         .get_annotations_results(use_existing=True)
-        .clean_annotation_results()
+        .clean_annotation_results(simplify_single, variables)
     )
-    return res_file
+    return res_file, results
