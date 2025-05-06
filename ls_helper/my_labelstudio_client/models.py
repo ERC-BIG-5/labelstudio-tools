@@ -192,7 +192,7 @@ class ProjectViewDataModel(BaseModel):
                 )
             ],
         },
-    ) = None
+    ) = Field(default_factory=dict)
     ordering: Optional[list[str]] = None
 
 
@@ -212,6 +212,8 @@ class TaskCreate(BaseModel):
     project: int
     data: Optional[dict[str, Any]] = None
     predictions: Optional[list] = None
+
+    # model_config = ConfigDict(extra="allow")
 
 
 class Task(TaskCreate):

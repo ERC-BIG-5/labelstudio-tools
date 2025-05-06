@@ -1,95 +1,92 @@
 import json
-import shutil
-import webbrowser
 from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
-from deepdiff import DeepDiff
-from deprecated.classic import deprecated
-from ls_helper.models.main_models import (
-    ProjectCreate,
-    get_p_access,
-    get_project,
-    platforms_overview,
-)
 from tqdm import tqdm
 
-from ls_helper.annotation_timing import (
-    annotation_total_over_time,
-    get_annotation_lead_times,
-    plot_cumulative_annotations,
-    plot_date_distribution,
-)
-from ls_helper.command.annotations import annotations_app
+from ls_helper.command.annotations import annotations_app, agreements
 from ls_helper.command.backup import backup_app
+from ls_helper.command.extra import extras_app
 from ls_helper.command.labeling_conf import labeling_conf_app
 from ls_helper.command.pipeline import pipeline_app
+from ls_helper.command.project_setup import project_app
 from ls_helper.command.setup import (
     setup_app,
 )
 from ls_helper.command.task import task_add_predictions, task_app
-from ls_helper.config_helper import check_config_update, parse_label_config_xml
-from ls_helper.exp.build_configs import build_configs
-from ls_helper.funcs import build_view_with_filter_p_ids
-from ls_helper.models.interface_models import IChoices
-from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.my_labelstudio_client.models import (
-    ProjectModel,
-    ProjectViewCreate,
-    ProjectViewDataModel,
-    ProjectViewModel,
+from ls_helper.command.view import view_app
+from ls_helper.config_helper import parse_label_config_xml
+from ls_helper.models.interface_models import IChoices, InterfaceData
+from ls_helper.models.main_models import (
+    get_project,
 )
-from ls_helper.project_mgmt import ProjectMgmt
+from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
+from tools.files import save_yaml
 from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 
 app = typer.Typer(
-    name="Labelstudio helper", pretty_exceptions_show_locals=True
+    name="Labelstudio helper", pretty_exceptions_show_locals=False
 )
 
-app.add_typer(setup_app, name="setup")
-app.add_typer(labeling_conf_app, name="label_conf")
-app.add_typer(pipeline_app, name="pipeline")
-app.add_typer(annotations_app, name="annotations")
-app.add_typer(backup_app, name="backup")
-app.add_typer(task_app, name="task")
-
-
-def open_image_simple(image_path):
-    # Convert to absolute path and URI format
-    file_path = Path(image_path).absolute().as_uri()
-    webbrowser.open(file_path)
+app.add_typer(
+    setup_app,
+    name="setup",
+    short_help="Commands related to initializing the project",
+)
+app.add_typer(
+    project_app,
+    name="project",
+    short_help="Commands related to project setup and maintenance",
+)
+app.add_typer(
+    backup_app,
+    name="backup",
+    short_help="Commands related to bulkbacking up projects and annotations",
+)
+app.add_typer(
+    labeling_conf_app,
+    name="labeling-conf",
+    short_help="Commands related to building, validating and uploading project label configurations",
+)
+app.add_typer(
+    task_app,
+    name="task",
+    short_help="Commands related to downloading, creating and patching project tasks",
+)
+app.add_typer(
+    view_app, name="view", short_help="Commands related to project views"
+)
+app.add_typer(
+    annotations_app,
+    name="annotations",
+    short_help="Commands related to downloading and analyzing annotations",
+)
+app.add_typer(
+    pipeline_app,
+    name="pipeline",
+    short_help="Commands related to interaction with the Pipeline package",
+)
+app.add_typer(
+    extras_app,
+    name="extras",
+    short_help="Some extra commands: [relational-values confusions]",
+)
 
 
 @app.command(
-    short_help="[setup] run build_config function and copy it into 'labeling_configs_dir'. Run 'update_labeling_configs' afterward"
-)
-def generate_labeling_configs(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-):
-    config_files = build_configs()
-    check_config_update(config_files)
-    pass  # TODO
-    # platform_projects.
-    # check_against_fixes(next_conf, )
-
-
-@app.command(
-    short_help="[ls maint] Update tasks. Files must be matching lists of {id: , data:}"
+    name="strict task update",
+    short_help="[ls maint] Update tasks. Files must be matching lists of {id: , data:}",
 )
 # todo: more testing
 def strict_update_project_tasks(
     new_data_file: Path, existing_data_file: Optional[Path] = None
 ):
     raise NotImplementedError("client.patch_task parameters changed")
-    client = ls_client()
     new_data_list = json.loads(new_data_file.read_text(encoding="utf-8"))
     if existing_data_file:
         existing_data_list = json.loads(
@@ -107,11 +104,12 @@ def strict_update_project_tasks(
         return
 
     for t in tqdm(new_data_list):
-        client.patch_task(t["id"], t["data"])
+        ls_client().patch_task(t["id"], t["data"])
 
     print(f"{len(new_data_list)} tasks updated")
 
 
+<<<<<<< HEAD
 @deprecated
 @app.command(
     short_help="[ls fixes] delete the json files from the local storage folder, from tasks that habe been deleted (not crucial)"
@@ -428,6 +426,8 @@ def create_project(
     )
 
 
+=======
+>>>>>>> 881e5f891475142ff5331315bf2408f9d28677a8
 def get_all_variable_names(
     id: Annotated[Optional[int], typer.Option()] = None,
     alias: Annotated[Optional[str], typer.Option("-a")] = None,
@@ -445,128 +445,39 @@ def get_variables_info(
     alias: Annotated[Optional[str], typer.Option("-a")] = None,
     platform: Annotated[Optional[str], typer.Option()] = None,
     language: Annotated[Optional[str], typer.Option()] = None,
+    from_built: Annotated[
+        bool,
+        typer.Option(False, help="Use the built instead of the project-data"),
+    ] = False,
 ):
     po = get_project(id, alias, platform, language)
-    return [
+
+    if from_built:
+        config: InterfaceData = parse_label_config_xml(
+            po.path_for(
+                SETTINGS.built_labeling_configs, ext=".xml"
+            ).read_text()
+        )
+    else:
+        config = po.raw_interface_struct
+
+    interface_data = [
         {
             "name": k,
             "required": v.required,
-            "choice_type": v.choice if isinstance(v, IChoices) else None,
+            "choice_type": str(v.choice)
+            if isinstance(v, IChoices)
+            else "text",
+            "choices": v.raw_options_list() if isinstance(v, IChoices) else "",
         }
-        for k, v in po.raw_interface_struct.ordered_fields_map.items()
+        for k, v in config.ordered_fields_map.items()
     ]
 
-
-@app.command()
-def create_conflict_view(
-    variable: Annotated[str, typer.Option()],
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
-    variable_option: Annotated[Optional[str], typer.Option()] = None,
-):
-    # todo redo with fresh_agreement
-    """
-    po = get_project(id, alias, platform, language)
-    # po.validate_extensions()
-    # mp = po.get_annotations_results()
-
-    # just check existence
-    # if not po.interface.ordered_fields_map.get(variable):
-    #    raise ValueError(f"Variable {variable} has not been defined")
-    # agreement_data = json.loads((SETTINGS.agreements_dir / f"{po.id}.json").read_text())
-
-    agg_metrics = po.get_agreement_data().agreement_metrics
-    if variable.endswith("_visual"):
-        variable = variable + "_0"
-    print(variable)
-    am = agg_metrics.all_variables.get(variable)
-    if not am or not len(am.conflicts):
-        all_c = po.get_agreement_data().conflicts
-
-        dd_t = []
-        for c in all_c:
-            # print(c)
-            if c.variable == variable:
-                dd_t.append(c)
-            task_ids = [c.task_id for c in dd_t][:50]
-    else:
-        # for the broken version, single are strings of task-id and _0
-        if isinstance(am, SingleChoiceAgreement):
-            task_ids = [int(s.split("_")[0]) for s in am.conflicts][:30]
-
-        else:
-            task_ids = [int(str(s.task_id)[:-1]) for s in am.conflicts][:30]
-
-    title = f"conflict:{variable}"
-    view = ProjectMgmt.create_view(ProjectViewCreate.model_validate({"project": po.id, "data": {
-        "title": title,
-        "filters": build_platform_id_filter(task_ids, "task_id")}}))
-    url = f"{SETTINGS.LS_HOSTNAME}/projects/{po.id}/data?tab={view.id}"
-    print(url)
-    return url
-    """
-
-
-@app.command()
-def build_extension_index(
-    take_all_defaults: Annotated[
-        bool, typer.Option(help="take default projects (pl/lang)")
-    ] = True,
-    project_ids: Annotated[Optional[list[int]], typer.Option("-pid")] = None,
-):
-    """
-    Checks
-    :param take_all_defaults:
-    :param project_ids:
-    :return:
-    """
-    from ls_helper.annot_extension import (
-        build_extension_index as _build_extension_index,
+    # yaml.dump(interface_data, po.path_for(SETTINGS.temp_file_path, ext=".yaml").open("w"), indent=True, default_flow_style=False, encoding="utf-8")
+    save_yaml(
+        po.path_for(SETTINGS.temp_file_path, ext=".yaml"), interface_data
     )
-
-    if project_ids:
-        projects = [get_project(id) for id in project_ids]
-    elif take_all_defaults:
-        projects = list(platforms_overview.default_map.values())
-    else:
-        raise ValueError("Unclear parameter for build_extension_index")
-    index = _build_extension_index(projects)
-    dest = (
-        SETTINGS.temp_file_path
-        / f"annot_ext_index_{'_'.join(str(p.id) for p in projects)}.json"
-    )
-    dest.write_text(index.model_dump_json(indent=2))
-    print(f"index saved to {dest}")
-
-
-@app.command()
-def delete_view(view_id: int):
-    ls_client().delete_view(view_id)
-
-
-@app.command()
-def check_labelling_config(
-    build_file_name: str,
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
-):
-    po = get_project(id, alias, platform, language)
-
-    existing_struct = po.raw_interface_struct
-
-    if not build_file_name.endswith(".xml"):
-        build_file_name += ".xml"
-    fp = SETTINGS.built_labeling_configs / build_file_name
-
-    new_config = parse_label_config_xml(fp.read_text())
-    print(type(new_config), type(existing_struct))
-    diff = DeepDiff(new_config, existing_struct)
-    print(diff.to_json(indent=2))
-    pass
+    return interface_data
 
 
 def add_prediction_test():
@@ -597,14 +508,121 @@ def add_prediction_test():
     print(json.dumps(resp.json(), indent=2))
 
 
+@app.command(name="overview", short_help="Overview of all commands")
+def overview():
+    def _print_commands(current_app, prefix="", indent=0):
+        """Recursively print commands and subcommands."""
+        indent_str = "  " * indent
+
+        # Print commands at this level
+        for cmd in current_app.registered_commands:
+            name = cmd.name or cmd.callback.__name__
+            help_text = cmd.short_help or ""
+            print(f"{indent_str}• '{name}' - {help_text}")
+
+        # Find and process all subapps
+        for group in current_app.registered_groups:
+            subapp_name = group.name
+            subapp = group.typer_instance
+            print(f"{indent_str}▼ {prefix}{subapp_name}")
+            _print_commands(subapp, f"{prefix}{subapp_name} ", indent + 1)
+
+    # Start the recursive printing from the main app
+    _print_commands(app)
+
+
 if __name__ == "__main__":
     twitter = "twitter"
     youtube = "youtube"
     en = "en"
-    tw_en = {"platform": twitter, "language": en}
+    es = "es"
+    tw_es = {"platform": twitter, "language": es}
     yt_en4 = {"id": 50}
-    _default = tw_en
+    _default = tw_es
 
     # setup
-    from ls_helper.command import setup
-    setup.add_projects()
+
+    # setup.add_projects()
+
+    # this will work, since there is just one spanish twitter (so it's set to default)
+
+    if False:
+        agreements(
+            **{"alias": "twitter-es-4"},
+            accepted_ann_age=200,
+            # variables=["coding-game"],
+            exclude_variables=[
+                "rel-value_text_conf_aesthetics",
+                "rel-value_text_conf_cultural-identity",
+                "rel-value_text_conf_social-cohesion",
+                "rel-value_text_conf_good-life",
+                "rel-value_text_conf_kinship",
+                "rel-value_text_conf_livelihoods",
+                "rel-value_text_conf_personal-identity",
+                "rel-value_text_conf_reciprocity",
+                "rel-value_text_conf_sense-of-agency",
+                "rel-value_text_conf_sense-of-place",
+                "rel-value_text_conf_social-relations",
+                "rel-value_text_conf_social-responsibility",
+                "rel-value_text_conf_spirituality",
+                "rel-value_text_conf_stewardship-principle",
+                "rel-value_text_conf_well-being",
+                "rel-value_visual_conf_aesthetics",
+                "rel-value_visual_conf_cultural-identity",
+                "rel-value_visual_conf_social-cohesion",
+                "rel-value_visual_conf_good-life",
+                "rel-value_visual_conf_kinship",
+                "rel-value_visual_conf_livelihoods",
+                "rel-value_visual_conf_personal-identity",
+                "rel-value_visual_conf_reciprocity",
+                "rel-value_visual_conf_sense-of-agency",
+                "rel-value_visual_conf_sense-of-place",
+                "rel-value_visual_conf_social-relations",
+                "rel-value_visual_conf_social-responsibility",
+                "rel-value_visual_conf_spirituality",
+                "rel-value_visual_conf_stewardship-principle",
+                "rel-value_visual_conf_well-being",
+            ],
+        )
+
+    # project_setup.generate_variable_extensions_template(id=50)
+    # project_setup.generate_variable_extensions_template(id=51)
+
+    # labeling_conf.build_ls_labeling_interface(id=53)
+
+    # print(get_variables_info(53, from_built=True))
+
+    # labeling_conf.build_extension_index(False,[51,50])
+    # labeling_conf.build_ls_labeling_interface(53)
+    # labeling_conf.update_labeling_config(53)
+    """project_setup.create_project(
+        title="Twitter - ES - protocol.v5",
+        alias="twitter-es-5",
+        platform="twitter",
+        language="en",
+    )"""
+    # project_setup.generate_variable_extensions_template(53)
+    # project_setup.generate_variable_extensions_template(54)
+
+    # create_conflict_view("nature_any",**{"alias": "twitter-es-4"})
+    # get_tasks(**{"alias": "twitter-es-4"})
+    # add_conflicts_to_tasks(**{"alias": "twitter-es-4"})
+
+    """
+    # for creating/testing version 5 of the protocol
+    from ls_helper.command import labeling_conf
+
+    p, valid = labeling_conf.build_ls_labeling_interface(**{"id": 53})
+
+    if valid:
+        labeling_conf.update_labeling_config(**{"id": 53})
+
+    yaml.dump(get_variables_info(id=53), Path("53.yaml").open("w", encoding="utf-8"))
+    """
+    # get_confusions(id=51)
+    # add_conflicts_to_tasks(id=51)
+    # get_confusions(id=51)
+    # update_coding_game(id=51)
+    # pipeline.reformat_for_datapipelines(alias="twitter-es-4", accepted_ann_age=300)
+
+    overview()

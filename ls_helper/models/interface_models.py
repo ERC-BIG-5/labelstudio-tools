@@ -245,6 +245,7 @@ class FieldExtension(BaseModel):
 
 class ProjectVariableExtensions(BaseModel):
     extensions: dict[str, FieldExtension]
+    # todo, try to remove?
     extension_reverse_map: dict[str, str] = Field(
         description="fixes[k].name_fix = fixes[k]",
         default_factory=dict,

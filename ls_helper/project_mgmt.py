@@ -115,7 +115,9 @@ class ProjectMgmt:
 
     @staticmethod
     def get_recent_annotations(
-        project_id: int, accepted_age: int
+        project_id: int,
+        accepted_age: int,
+        use_existing: bool = False,
     ) -> Optional[
         tuple[
             Annotated[bool, "use_local"],
@@ -133,7 +135,10 @@ class ProjectMgmt:
         if latest_file is not None:
             file_dt = datetime.strptime(latest_file.stem, "%Y%m%d_%H%M")
             # print(file_dt, datetime.now(), datetime.now() - file_dt)
-            if datetime.now() - file_dt < timedelta(hours=accepted_age):
+            if (
+                datetime.now() - file_dt < timedelta(hours=accepted_age)
+                or use_existing
+            ):
                 ls_logger.info(
                     f"Get recent, gets latest annotation: {file_dt:%m%d_%H%M}"
                 )

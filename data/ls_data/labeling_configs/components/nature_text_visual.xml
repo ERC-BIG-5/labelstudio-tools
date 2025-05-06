@@ -11,7 +11,7 @@
     <View className="visual_underline">
         <Text name="nature_visual_t" value="Is there nature in the VISUAL content?"
               selectionEnabled="false"/>
-        <Choices name="nature_visual" toName="title" showInline="true" required="true">
+        <Choices name="nature_visual_any" toName="title" showInline="true" required="true">
             <Choice value="No" selected="true"/>
             <Choice value="Yes"/>
         </Choices>

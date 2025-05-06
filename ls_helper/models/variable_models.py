@@ -22,6 +22,9 @@ class VariableModel(BaseModel):
     name: str
     type: VariableType
     required: bool = False
+    group_variables: Optional[list[str]] = None
+    group_name: Optional[str] = None
+    group_index: Optional[int] = None
 
 
 class ChoiceVariableModel(VariableModel):

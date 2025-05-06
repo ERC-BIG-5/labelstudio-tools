@@ -5,7 +5,9 @@ from typing import Annotated, Optional
 import typer
 from tools.project_logging import get_logger
 
-from ls_helper.models.main_models import ProjectAnnotationResultsModel, get_project
+from ls_helper.models.main_models import (
+    get_project,
+)
 from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 
@@ -54,11 +56,9 @@ def reformat_for_datapipelines(
         po.id, accepted_ann_age
     )
     # print(results)
-    am: ProjectAnnotationResultsModel = ProjectAnnotationResultsModel(
-        task_results=results
-    )
-    print(am.stats())
-    am = am.drop_cancellations()
+
+    print(results.stats())
+    am = results.drop_cancellations()
     # print(am.stats())
     res = {}
     # print(am.completed())
