@@ -188,7 +188,7 @@ def clean_project_task_files(
 
 @app.command(short_help="[maint]")
 def download_project_data(
-    id: Annotated[Optional[int], typer.Option()] = None,
+    id: Annotated[Optional[int], typer.Option(help="project id")] = None,
     alias: Annotated[Optional[str], typer.Argument()] = None,
     platform: Annotated[Optional[str], typer.Argument()] = None,
     language: Annotated[Optional[str], typer.Argument()] = None,
