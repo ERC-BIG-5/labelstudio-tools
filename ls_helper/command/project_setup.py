@@ -113,16 +113,6 @@ def generate_variable_extensions_template(
 
     res_template = get_variable_extensions(po.raw_interface_struct)
 
-    # universal_extensions = read_data(SETTINGS.unifix_extensions_file_path)
-
-    # filtered_ext = []
-    """
-    for k in res_template.extensions:
-        if k in universal_extensions:
-            logger.info(f"taking {k} from universal extensions")
-            continue
-        filtered_ext.append(k)
-    """
     if add_if_not_exists:
         # todo: validate the build with the xml in the project_data
         po.save_extensions(res_template)

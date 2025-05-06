@@ -335,32 +335,23 @@ class ProjectData(ProjectCreate):
     def variable_extensions(self) -> ProjectVariableExtensions:
         if self._variable_extensions:
             return self._variable_extensions
-        if (fi := SETTINGS.var_extensions_dir / "unifixes.json").exists():
-            extensions = ProjectVariableExtensions.model_validate(
-                json.load(fi.open())
-            )
-        else:
-            print(
-                f"no unifixes.json file yet in {SETTINGS.var_extensions_dir / 'unifix.json'}"
-            )
-            extensions = {}
+
         if (
             p_fixes_file := SETTINGS.var_extensions_dir / f"{self.id}.json"
         ).exists():
-            p_fixes = ProjectVariableExtensions.model_validate_json(
+            extensions = ProjectVariableExtensions.model_validate_json(
                 p_fixes_file.read_text(encoding="utf-8")
             )
 
-            extensions.extensions.update(p_fixes.extensions)
             extensions.extension_reverse_map.update(
-                p_fixes.extension_reverse_map
+                extensions.extension_reverse_map
             )
+            return extensions
         else:
-            logger.error(
+            raise ValueError(
                 f"{repr(self)} has no 'variable_extensions' file. Call: 'generate_variable_extensions_template'"
             )
 
-        return extensions
 
     def get_views(self) -> Optional[list[ProjectViewModel]]:
         view_file = self.path_for(SETTINGS.view_dir)
