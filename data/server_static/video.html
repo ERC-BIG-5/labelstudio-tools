@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="favicon.png">
+    <title>Video Player with Speed Controls</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .video-container {
+            margin: 20px 0;
+        }
+
+        video {
+            width: 100%;
+            max-width: 720px;
+            max-height: 430px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .frame-info {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .frame-info p {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+
+        .frame-info span {
+            font-weight: bold;
+            color: #2E7D32;
+        }
+
+        .speed-controls {
+            margin: 20px 0;
+        }
+
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            margin: 0 5px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button.active {
+            background-color: #2E7D32;
+            font-weight: bold;
+        }
+
+        .filtered {
+            filter: blur(3px) grayscale(1);
+        }
+    </style>
+</head>
+<body>
+<div class="video-container">
+    <video id="myVideo" controls>
+        <!-- Video source will be set via JavaScript -->
+        Your browser does not support the video tag.
+    </video>
+</div>
+
+<div class="frame-info">
+    <p>Current Time: <span id="currentTime">0.00</span> seconds</p>
+    <p>Current Frame: <span id="currentFrame">0</span> (at 30fps)</p>
+</div>
+
+<div class="speed-controls">
+    <button onclick="changeSpeed(1)" class="active">1x</button>
+    <button onclick="changeSpeed(1.25)">1.25x</button>
+    <button onclick="changeSpeed(1.5)">1.5x</button>
+    <button onclick="changeSpeed(2.5)">2.5x</button>
+</div>
+
+<div class="filter-control">
+    <label>
+        <input type="checkbox" id="filterCheckbox" checked> Apply filter
+    </label>
+</div>
+
+<script>
+    const video = document.getElementById('myVideo');
+    const buttons = document.querySelectorAll('.speed-controls button');
+    const currentTimeElement = document.getElementById('currentTime');
+    const currentFrameElement = document.getElementById('currentFrame');
+    const FPS = 30; // Assuming 30 frames per second
+
+    function changeSpeed(speed) {
+        // Set the playback rate
+        video.playbackRate = speed;
+
+        // Update active button styling
+        buttons.forEach(button => {
+            if (button.textContent === speed + 'x') {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        });
+    }
+
+    // Update time and frame information
+    video.addEventListener('timeupdate', function () {
+        // Update current time (rounded to 2 decimal places)
+        currentTimeElement.textContent = video.currentTime.toFixed(2);
+        currentFrameElement.textContent = Math.round(video.currentTime * FPS);
+    });
+
+    // Initialize with 1x speed
+    video.onloadedmetadata = function () {
+        changeSpeed(1);
+    };
+
+    function getVideoSource() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoPath = urlParams.get('vid');
+
+        if (videoPath) {
+            // Get the hostname (including protocol)
+            const hostname = window.location.protocol + '//' + window.location.host;
+
+            // Create the full URL by combining hostname and videoPath
+            const fullVideoUrl = hostname + '/' + videoPath.replace(/^\//, '');
+
+            console.log("Loading video from:", fullVideoUrl);
+
+            // Create a source element and set its attributes
+            const sourceElement = document.createElement('source');
+            sourceElement.src = fullVideoUrl;
+            sourceElement.type = 'video/mp4';
+
+            // Add the source element to the video
+            video.appendChild(sourceElement);
+
+            // Load the video
+            video.load();
+        }
+    }
+
+    // Add filter toggle functionality
+    const filterCheckbox = document.getElementById('filterCheckbox');
+
+    // Apply filter initially since checkbox is checked by default
+    video.classList.add('filtered');
+
+    // Toggle filter when checkbox changes
+    filterCheckbox.addEventListener('change', function () {
+        if (this.checked) {
+            video.classList.add('filtered');
+        } else {
+            video.classList.remove('filtered');
+        }
+    });
+
+    window.addEventListener('DOMContentLoaded', function () {
+        console.log("DOM fully loaded");
+        getVideoSource();
+
+        // Set initial speed after metadata is loaded
+        video.addEventListener('loadedmetadata', function () {
+            console.log("Video metadata loaded");
+            changeSpeed(1);
+        });
+    });
+</script>
+</body>
+</html>

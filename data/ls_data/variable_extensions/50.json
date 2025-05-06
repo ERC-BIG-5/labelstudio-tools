@@ -12,7 +12,19 @@
       "default": null,
       "deprecated": null
     },
-    "language_correct": {
+    "text_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "language": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "video-frames": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -24,7 +36,19 @@
       "default": null,
       "deprecated": null
     },
-    "harmful_visual": {
+    "harmful_detail": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "language_correct": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "language_video_same": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -54,49 +78,49 @@
       "default": null,
       "deprecated": null
     },
-    "nep_materiality_text": {
+    "nep_materiality_test": {
       "name_fix": null,
       "description": null,
       "default": null,
       "deprecated": null
     },
-    "nep_materiality_expl_text": {
+    "nep_materiality_expl_test": {
       "name_fix": null,
       "description": null,
       "default": null,
       "deprecated": null
     },
-    "nep_biological_text": {
+    "nep_biological_test": {
       "name_fix": null,
       "description": null,
       "default": null,
       "deprecated": null
     },
-    "nep_biological_expl_text": {
+    "nep_biological_expl_test": {
       "name_fix": null,
       "description": null,
       "default": null,
       "deprecated": null
     },
-    "landscape-type_text": {
+    "landscape-type_test": {
       "name_fix": null,
       "description": null,
       "default": null,
       "deprecated": null
     },
-    "landscape-type_other_text": {
+    "landscape-type_other_test": {
       "name_fix": null,
       "description": null,
       "default": null,
       "deprecated": null
     },
-    "landcover-type_text": {
+    "landcover-type_test": {
       "name_fix": null,
       "description": null,
       "default": null,
       "deprecated": null
     },
-    "landscape-type_expl_text": {
+    "landscape-type_expl_test": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -234,7 +258,7 @@
       "default": null,
       "deprecated": null
     },
-    "visual_same_0": {
+    "nep_name_visual_0": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -420,7 +444,7 @@
       "default": null,
       "deprecated": null
     },
-    "visual_same_1": {
+    "nep_name_visual_1": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -606,7 +630,7 @@
       "default": null,
       "deprecated": null
     },
-    "visual_same_2": {
+    "nep_name_visual_2": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -792,7 +816,7 @@
       "default": null,
       "deprecated": null
     },
-    "visual_same_3": {
+    "nep_name_visual_3": {
       "name_fix": null,
       "description": null,
       "default": null,

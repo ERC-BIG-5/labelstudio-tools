@@ -88,6 +88,15 @@ class IText(IField):
     value: Optional[str] = None
 
 
+class ILabel(BaseModel):
+    value: str
+    background: Optional[str] = None
+
+
+class ITimelineLabel(AField):
+    labels: Optional[list[ILabel]] = Field(default_factory=list)
+
+
 class InterfaceData(BaseModel):
     ordered_fields_map: dict[str, IField] = Field(default_factory=dict)
 
@@ -210,6 +219,8 @@ class InterfaceData(BaseModel):
             return VariableType.text
         elif isinstance(field, ITextArea):
             return VariableType.text
+        elif isinstance(field, ITimelineLabel):
+            return VariableType.range
         else:
             # if "$" in q:
             #     q = q.replace("$", "0")
@@ -245,6 +256,7 @@ class FieldExtension(BaseModel):
 
 class ProjectVariableExtensions(BaseModel):
     extensions: dict[str, FieldExtension]
+    # todo, try to remove?
     extension_reverse_map: dict[str, str] = Field(
         description="fixes[k].name_fix = fixes[k]",
         default_factory=dict,

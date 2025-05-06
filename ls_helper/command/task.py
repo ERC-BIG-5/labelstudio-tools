@@ -149,6 +149,7 @@ def patch_tasks(
     tasks = po.get_tasks()
     platform_id_map = task_platform_id_map(tasks)
 
+    # TODO,  can we do this async in order to speed things up?
     for p_id, update_task in tqdm(update_map.items()):
         ls_task = platform_id_map.get(p_id)
         if not ls_task:
@@ -171,3 +172,14 @@ def get_tasks(
     po: ProjectData = get_project(id, alias, platform, language)
     tasks = ls_client().get_task_list(project=po.id)
     po.save_tasks(tasks)
+    return tasks
+
+
+@task_app.command()
+def get_task(
+    id: Annotated[Optional[int], typer.Option()] = None,
+) -> LSTask:
+    resp = ls_client().get_task(id)
+    if resp.status_code != 200:
+        print(resp.status_code, resp.json())
+    return LSTask.model_validate(resp.json())

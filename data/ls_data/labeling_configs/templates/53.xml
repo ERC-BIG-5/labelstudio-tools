@@ -1,0 +1,41 @@
+<View>
+    <base_style/>
+    <input_platform_id/>
+    <title/>
+    <twitter_data_view/>
+    <harmful_any/>
+    <harmful_visual_data_option variable="$image_options"/>
+    <nature_any/>
+
+    <View if="nature_any" is="Yes">
+        <extras/>
+        <nature_text_visual/>
+        <View className="text_part" if="nature_text" is="Yes">
+            <Header value="Text Part" size="3"/>
+            <nature_elements title="Text" var="text"/>
+            <value-expr title="Text" suffix="text" var="text"/>
+            <relational-value title="Text" var="text"/>
+            <interactions_disturbances title="Text" var="text"/>
+        </View>
+        <View if="nature_visual_any" is="Yes" className="visual_part">
+            <Header value="Visual Part"/>
+            <Collapse>
+                <panel_v5i title="Image 1" var="visual_0" index="0">
+                    <visual_same_labels index="0"/>
+                </panel_v5i>
+                <panel_v5i title="Image 2" var="visual_1" index="1">
+                    <visual_same_labels index="1"/>
+                </panel_v5i>
+                <panel_v5i title="Image 3" var="visual_2" index="2">
+                    <visual_same_labels index="2"/>
+                </panel_v5i>
+                <panel_v5i title="Image 4" var="visual_3" index="3">
+                    <visual_same_labels index="3"/>
+                </panel_v5i>
+            </Collapse>
+        </View>
+        <compounds/>
+    </View>
+    <coding-game/>
+
+</View>

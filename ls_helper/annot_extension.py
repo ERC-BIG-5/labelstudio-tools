@@ -52,6 +52,23 @@ def build_extension_index(projects: list[ProjectData]) -> DataExtensionIndex:
                         f"({p.id:>5}): {v.model_dump()}\n"
                         f"(index): {variables[k].model_dump(exclude={'projects'})}"
                     )
+
+    print(compare_variables(projects))
     return DataExtensionIndex(
         projects=[p.id for p in projects], variables=variables
     )
+
+
+def compare_variables(projects: list[ProjectData]):
+    variables: dict[str, list[int]] = {}
+    for p in projects:
+        # annot_results[p.id] = create_annotations_results(p, False)
+        ext = p.variable_extensions
+        for idx, (k, var_ext) in enumerate(ext.extensions.items()):
+            name = var_ext.name_fix or k
+            variables.setdefault(name, []).append(p.id)
+
+    for v, ps in variables.items():
+        if len(ps) != len(projects):
+            print(f"{v}: {ps}")
+    return variables

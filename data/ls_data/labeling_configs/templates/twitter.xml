@@ -15,11 +15,9 @@
         <relational-value title="Text" var="text"/>
     </View>
 
-
     <harmful_visual_data_option variable="$image_options"/>
 
-
-    <View if="nature_visual" is="Yes" className="visual_part">
+    <View if="nature_visual_any" is="Yes" className="visual_part">
         <Header value="Visual Part"/>
         <Collapse>
             <panel_nep_val-expr_rel-value title="Image 1" var="visual_0">

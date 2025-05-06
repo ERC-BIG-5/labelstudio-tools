@@ -12,12 +12,6 @@
       "default": null,
       "deprecated": null
     },
-    "language_correct": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
     "harmful_any": {
       "name_fix": null,
       "description": null,
@@ -48,8 +42,8 @@
       "default": null,
       "deprecated": null
     },
-    "nature_visual": {
-      "name_fix": "nature_visual_any",
+    "nature_visual_any": {
+      "name_fix": null,
       "description": null,
       "default": null,
       "deprecated": null
@@ -60,19 +54,7 @@
       "default": null,
       "deprecated": null
     },
-    "nep_materiality_expl_text": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
     "nep_biological_text": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
-    "nep_biological_expl_text": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -96,12 +78,6 @@
       "default": null,
       "deprecated": null
     },
-    "landscape-type_expl_text": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
     "val-expr_text": {
       "name_fix": null,
       "description": null,
@@ -109,12 +85,6 @@
       "deprecated": null
     },
     "rel-value_text": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
-    "rel-value_text_expl": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -228,7 +198,43 @@
       "default": null,
       "deprecated": null
     },
+    "basic-interaction_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "stewardship_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "stewardship_text_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "disturbance_text": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "disturbance_text_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
     "nature_visual_0": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "visual_same_q_0": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -246,19 +252,7 @@
       "default": null,
       "deprecated": null
     },
-    "nep_materiality_expl_visual_0": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
     "nep_biological_visual_0": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
-    "nep_biological_expl_visual_0": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -282,12 +276,6 @@
       "default": null,
       "deprecated": null
     },
-    "landscape-type_expl_visual_0": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
     "val-expr_visual_0": {
       "name_fix": null,
       "description": null,
@@ -295,12 +283,6 @@
       "deprecated": null
     },
     "rel-value_visual_0": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
-    "rel-value_visual_0_expl": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -414,7 +396,43 @@
       "default": null,
       "deprecated": null
     },
+    "basic-interaction_visual_0": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "stewardship_visual_0": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "stewardship_visual_0_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "disturbance_visual_0": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "disturbance_visual_0_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
     "nature_visual_1": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "visual_same_q_1": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -432,19 +450,7 @@
       "default": null,
       "deprecated": null
     },
-    "nep_materiality_expl_visual_1": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
     "nep_biological_visual_1": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
-    "nep_biological_expl_visual_1": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -468,12 +474,6 @@
       "default": null,
       "deprecated": null
     },
-    "landscape-type_expl_visual_1": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
     "val-expr_visual_1": {
       "name_fix": null,
       "description": null,
@@ -481,12 +481,6 @@
       "deprecated": null
     },
     "rel-value_visual_1": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
-    "rel-value_visual_1_expl": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -600,7 +594,43 @@
       "default": null,
       "deprecated": null
     },
+    "basic-interaction_visual_1": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "stewardship_visual_1": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "stewardship_visual_1_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "disturbance_visual_1": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "disturbance_visual_1_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
     "nature_visual_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "visual_same_q_2": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -618,19 +648,7 @@
       "default": null,
       "deprecated": null
     },
-    "nep_materiality_expl_visual_2": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
     "nep_biological_visual_2": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
-    "nep_biological_expl_visual_2": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -654,12 +672,6 @@
       "default": null,
       "deprecated": null
     },
-    "landscape-type_expl_visual_2": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
     "val-expr_visual_2": {
       "name_fix": null,
       "description": null,
@@ -667,12 +679,6 @@
       "deprecated": null
     },
     "rel-value_visual_2": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
-    "rel-value_visual_2_expl": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -786,7 +792,43 @@
       "default": null,
       "deprecated": null
     },
+    "basic-interaction_visual_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "stewardship_visual_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "stewardship_visual_2_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "disturbance_visual_2": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "disturbance_visual_2_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
     "nature_visual_3": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "visual_same_q_3": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -804,19 +846,7 @@
       "default": null,
       "deprecated": null
     },
-    "nep_materiality_expl_visual_3": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
     "nep_biological_visual_3": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
-    "nep_biological_expl_visual_3": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -840,12 +870,6 @@
       "default": null,
       "deprecated": null
     },
-    "landscape-type_expl_visual_3": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
     "val-expr_visual_3": {
       "name_fix": null,
       "description": null,
@@ -853,12 +877,6 @@
       "deprecated": null
     },
     "rel-value_visual_3": {
-      "name_fix": null,
-      "description": null,
-      "default": null,
-      "deprecated": null
-    },
-    "rel-value_visual_3_expl": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -967,6 +985,252 @@
       "deprecated": null
     },
     "rel-value_visual_3_conf_kinship": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "basic-interaction_visual_3": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "stewardship_visual_3": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "stewardship_visual_3_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "disturbance_visual_3": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "disturbance_visual_3_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "has_compound": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "compound_which_visual": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_materiality_compound": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "nep_biological_compound": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_compound": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landscape-type_other_compound": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "landcover-type_compound": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "val-expr_compound": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_personal-identity": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_cultural-identity": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_social-responsibility": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_social-cohesion": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_social-memory": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_social-relations": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_sense-of-place": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_sense-of-agency": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_spirituality": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_stewardship-principle": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_stewardship-eudaimonia": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_literacy": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_livelihoods": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_well-being": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_aesthetics": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_reciprocity": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_good-life": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "rel-value_compound_conf_kinship": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "basic-interaction_compound": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "stewardship_compound": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "stewardship_compound_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "disturbance_compound": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "disturbance_compound_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "emotion_compound": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "emotion_compound_other": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "framing_compound": {
+      "name_fix": null,
+      "description": null,
+      "default": null,
+      "deprecated": null
+    },
+    "framing_compound_other": {
       "name_fix": null,
       "description": null,
       "default": null,

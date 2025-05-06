@@ -12,6 +12,8 @@ from ls_helper.models.interface_models import (
     IText,
     ITextArea,
     ProjectVariableExtensions,
+    ITimelineLabel,
+    ILabel,
 )
 
 # from ls_helper.new_models import ProjectData
@@ -131,6 +133,31 @@ def parse_label_config_xml(xml_string) -> InterfaceData:
                 # keep the $ so we know its a ref to data. done,
                 input_text_fields[name] = value
                 ordered_fields_map[name] = IText()
+        elif el.tag == "TimelineLabels":
+            name = el.get("name")
+            label_list = [
+                ILabel.model_validate(choice.attrib)
+                for choice in el.findall("./Label")
+            ]
+            ordered_fields_map[name] = ITimelineLabel.model_validate(
+                el.attrib | {"labels": label_list}
+            )
+        elif el.tag in [
+            "Choice",
+            "View",
+            "Header",
+            "Panel",
+            "Collapse",
+            "Image",
+            "Style",
+            "Video",
+            "a",
+            "Label",
+            "HyperText",
+        ]:
+            pass
+        else:
+            print(f"parse_label_config_xml: Unknown Element-tag {el.tag}")
 
     return InterfaceData(
         ordered_fields_map=ordered_fields_map, inputs=input_text_fields
@@ -172,33 +199,3 @@ def check_against_fixes(
 
 if __name__ == "__main__":
     pass
-    # p_info = ProjectOverview.projects().get_project(("twitter", "en"))
-    # check_against_fixes(p_info)
-    """ not sure, what was done here...
-    project_p = os.getcwd()
-    step1_t = Path("/home/rsoleyma/projects/MyLabelstudioHelper/data/configs/step1/output/gen_twitter.xml")
-    # step1_t = Path(f"{project_p}/data//home/rsoleyma/projects/MyLabelstudioHelper/data/configs/step1/output/gen_twitter.xml")
-    duplicates = find_duplicates(step1_t)
-    print(f"{duplicates=}")
-    # complete_config((Path("/home/rsoleyma/projects/platforms-clients/data/labelstudio_configs/final1_t/config.xml")))
-
-    # tree = ET.parse(Path("/home/rsoleyma/projects/platforms-clients/data/labelstudio_configs/test_session_1_2025.xml"))
-    tree = ET.parse(step1_t)
-    root = tree.getroot()
-
-    check_references(root)
-
-    all_names = find_all_names(get_tree_n_root(step1_t)[1])
-    all_names = list(all_names.keys())
-    all_names_s = [s.split("_") for s in all_names]
-    # print(json.dumps(list(zip(all_names,all_names_s)), indent=2))
-    """
-
-    # print(all_names_s)
-    # fout = Path(f"{project_p}/data/extra/name_checker.csv")
-    # writer = csv.writer(fout.open("w", encoding="utf-8"))
-    # for s in all_names_s:
-    #     # print(",".join(s))
-    #     writer.writerow(s)
-    #
-    # print(f"-> {fout}")

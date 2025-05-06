@@ -192,7 +192,7 @@ class ProjectViewDataModel(BaseModel):
                 )
             ],
         },
-    ) = None
+    ) = Field(default_factory=dict)
     ordering: Optional[list[str]] = None
 
 
@@ -212,6 +212,8 @@ class TaskCreate(BaseModel):
     project: int
     data: Optional[dict[str, Any]] = None
     predictions: Optional[list] = None
+
+    # model_config = ConfigDict(extra="allow")
 
 
 class Task(TaskCreate):
@@ -292,10 +294,20 @@ class TimelineLabelsRange(BaseModel):
     start: int
     end: int
 
+    @property
+    def str_value(self) -> str:
+        return f"({self.start - self.end})"
+
 
 class TimelineLabels(BaseModel):
     ranges: list[TimelineLabelsRange]
     timelinelabels: list[str]
+
+    @property
+    def direct_value(self) -> list[str]:
+        return [
+            '",".join(self.timelinelabels):"".join([r.str_value for r in self.ranges])'
+        ]
 
 
 class AnnotationResult(BaseModel):

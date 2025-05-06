@@ -1,0 +1,12 @@
+<View>
+    <input_platform_id/>
+    <base_style/>
+    <title/>
+    <View>
+        <text_input index="2" title="Video description"/>
+        <youtube_video/>
+        <harmful_any/>
+        <harmful_detail/>
+        <language-correct_video/>
+    </View>
+</View>
