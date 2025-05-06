@@ -60,9 +60,7 @@ def annotations(
         ProjectMgmt.get_recent_annotations(ann_results.id, accepted_ann_age)
     )
     # todo: should be stored in that object, directly
-    ann_results.raw_annotation_df, _ = ann_results.get_annotation_df(
-        ignore_groups=True
-    )
+    raw_annotation_df, _ = ann_results.get_annotation_df(ignore_groups=True)
 
     # mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol

@@ -10,22 +10,22 @@ from lxml.etree import ElementTree
 from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from tools.files import save_json
-from tools.project_logging import get_logger
-from tools.pydantic_annotated_types import SerializableDatetime
-
+from ls_helper.agreements_calculation import AgreementResult
 from ls_helper.config_helper import parse_label_config_xml
 from ls_helper.exp.build_configs import (
     LabelingInterfaceBuildConfig,
     build_from_template,
 )
-from ls_helper.agreements_calculation import AgreementResult
 from ls_helper.models.interface_models import (
     IChoices,
     InterfaceData,
     ProjectVariableExtensions,
 )
-from ls_helper.models.variable_models import VariableModel, ChoiceVariableModel
+from ls_helper.models.variable_models import (
+    VariableModel,
+    ChoiceVariableModel,
+    VariableType,
+)
 from ls_helper.my_labelstudio_client.models import (
     ProjectModel as LSProjectModel,
 )
@@ -40,6 +40,9 @@ from ls_helper.my_labelstudio_client.models import (
     TaskList as LSTaskList,
 )
 from ls_helper.settings import SETTINGS, DFCols, DFFormat
+from tools.files import save_json
+from tools.project_logging import get_logger
+from tools.pydantic_annotated_types import SerializableDatetime
 
 if TYPE_CHECKING:
     from ls_helper.agreements_calculation import Agreements
@@ -352,7 +355,6 @@ class ProjectData(ProjectCreate):
                 f"{repr(self)} has no 'variable_extensions' file. Call: 'generate_variable_extensions_template'"
             )
 
-
     def get_views(self) -> Optional[list[ProjectViewModel]]:
         view_file = self.path_for(SETTINGS.view_dir)
         if not view_file.exists():
@@ -403,7 +405,7 @@ class ProjectData(ProjectCreate):
     def get_annotations_results(
         self,
         accepted_ann_age: Optional[int] = 6,
-        use_existing: bool = True,
+        use_existing: bool = False,
     ) -> "ProjectResult":
         """
         :param accepted_ann_age:
@@ -809,11 +811,57 @@ class ProjectResult(BaseModel):
         print(f"Clean results written to {dest}")
         return dest, results
 
+    def add_default(
+        self, variable_def: VariableModel, v_df: DataFrame
+    ) -> DataFrame:
+        # ass_df["date"] = pd.to_datetime(ass_df["ts"]).dt.date
+
+        # Create a new dataframe with only the necessary columns from df2
+        df2_subset = self.assignment_df[["task_id", "ann_id", "ts"]]
+
+        # Perform an outer merge on task_id and user_id
+        merged_df = pd.merge(
+            v_df,
+            df2_subset,
+            on=["task_id", "ann_id"],
+            how="outer",
+            suffixes=("", "_y"),
+        )
+
+        type_ = variable_def.type
+        fillNa = ""
+        if type_ == VariableType.choice:
+            choice_var = cast(ChoiceVariableModel, variable_def)
+            type_ = choice_var.choice
+            if type_ == "multiple":
+                fillNa = choice_var.default or "[]"
+        # For rows that exist only in df2, fill in default values
+        # todo. instead of 0, we need to fill in the proper length (or 0-4)
+        merged_df["idx"] = merged_df["idx"].fillna(0)
+        merged_df["type"] = merged_df["type"].fillna(type_)
+        merged_df["value"] = merged_df["value"].fillna(fillNa)
+
+        # Use timestamps from df1 where available, otherwise from df2
+        merged_df["ts"] = merged_df["ts"].combine_first(merged_df["ts_y"])
+        # merged_df["date"] = merged_df["date"].combine_first(
+        #     merged_df["date_y"]
+        # )
+
+        # Drop the extra columns
+        merged_df = merged_df.drop(columns=["ts_y"])
+
+        # Sort by task_id and user_id
+        merged_df = merged_df.sort_values(["task_id", "ann_id"])
+        merged_df = merged_df.set_index(["task_id", "ann_id"])
+        return merged_df
+
     def get_annotation_df(
         self,
-        debug_task_limit: Optional[int] = None,
         drop_cancels: bool = True,
+        fill_defaults: bool = True,
         ignore_groups: bool = False,
+        debug_task_limit: Optional[int] = None,
+        test_rebuild: bool = False,
     ) -> tuple[DataFrame, DataFrame]:
         """
 
@@ -821,6 +869,8 @@ class ProjectResult(BaseModel):
         :param drop_cancels:
         :return: the value df, the assignment df
         """
+        if self.raw_annotation_df is not None and not test_rebuild:
+            return self.raw_annotation_df, self.raw_annotation_df
         # todo the value-df still has too many cols, drop them, since we have the assignment df
         logger.info("Building raw annotations dataframe")
         assignment_df_rows = []
@@ -844,13 +894,9 @@ class ProjectResult(BaseModel):
         debug_mode = debug_task_limit is not None
 
         for task in self.raw_annotation_result.task_results:
-            # print(task.id)
             for ann in task.annotations:
-                # print(f"{task.id=} {ann.id=}")
                 if drop_cancels and ann.was_cancelled:
-                    # print(f"{task.id=} {ann.id=} C")
                     continue
-                # print(f"{task.id=} {ann.id=} {len(ann.result)=}")
 
                 for q_id, question in enumerate(ann.result):
                     orig_name = question.from_name
@@ -908,6 +954,10 @@ class ProjectResult(BaseModel):
                     break
 
         df = DataFrame(rows)
+        if fill_defaults:
+            df.groupby(["variable"]).apply(
+                lambda v_df: self.add_default(variables[v_df.name], v_df)
+            )
         # todo, shall we still use this metadata thingy??
         df.attrs["format"] = DFFormat.raw_annotation
         assignment_df = DataFrame(assignment_df_rows)
@@ -916,6 +966,8 @@ class ProjectResult(BaseModel):
             {"task_id": "int32", "ann_id": "int32", 'user_id': "category", "value_idx": "int32",
              'type': "category", 'question': "category", 'value': "string"})
         """
+        self.raw_annotation_df = df
+        self.assignment_df = assignment_df
         return df, assignment_df
 
     def simplify_single_choices(self, df: DataFrame) -> DataFrame:
