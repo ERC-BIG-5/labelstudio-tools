@@ -1,7 +1,8 @@
 from enum import Enum, auto
-from typing import Optional
+from typing import Optional, Literal
 
 from pydantic import BaseModel, model_validator
+
 from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
@@ -31,7 +32,7 @@ class ChoiceVariableModel(VariableModel):
     orig_options: list[str]
     _all_options: Optional[list[str]] = None
     default: Optional[str]
-    choice: str  # single, multiple
+    choice: Literal["single", "multiple"]  # single, multiple
 
     # todo, a way to hand in inputs.
     @model_validator(mode="after")

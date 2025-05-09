@@ -208,7 +208,7 @@ class ProjectData(ProjectCreate):
     def group_index_variable(self, variable_name: str) -> tuple[str, int]:
         """
         returns the group-name, index
-        :param variable:
+        :param variable_name:
         :return:
         """
         pattern = re.compile(r"^(.+)_(\d+)(?:_(.*))?$")
@@ -306,7 +306,6 @@ class ProjectData(ProjectCreate):
     def raw_interface_struct(self) -> InterfaceData:
         """
         caches the structure.
-        :param include_text:
         :return:
         """
         if self._interface_data:
@@ -502,7 +501,7 @@ class ProjectData(ProjectCreate):
                         agreement_type,
                         agreement_value,
                     ) in var_agreement.single_overall.items():
-                        row_data[agreement_type] = agreement_value
+                        row_data[agreement_type] = agreement_value or "NaN"
                     writer.writerow(row_data)
 
                 for (
@@ -711,7 +710,7 @@ def get_project(
     language: Optional[str] = None,
 ) -> ProjectData:
     po = platforms_overview.get_project((id, alias, platform, language))
-    logger.info(repr(po))
+    logger.debug(repr(po))
     return po
 
 
@@ -797,7 +796,10 @@ class ProjectResult(BaseModel):
                         and isinstance(
                             po_variables[new_name], ChoiceVariableModel
                         )
-                        and po_variables[new_name].choice == "single"
+                        and cast(
+                            ChoiceVariableModel, po_variables[new_name]
+                        ).choice
+                        == "single"
                     ):
                         value = value[0]
                     ann_result[new_name] = value
@@ -817,7 +819,9 @@ class ProjectResult(BaseModel):
         # ass_df["date"] = pd.to_datetime(ass_df["ts"]).dt.date
 
         # Create a new dataframe with only the necessary columns from df2
-        df2_subset = self.assignment_df[["task_id", "ann_id", "ts"]]
+        df2_subset = self.assignment_df[
+            ["task_id", "ann_id", "ts", "platform_id", "user_id"]
+        ]
 
         # Perform an outer merge on task_id and user_id
         merged_df = pd.merge(
@@ -837,36 +841,44 @@ class ProjectResult(BaseModel):
                 fillNa = choice_var.default or "[]"
         # For rows that exist only in df2, fill in default values
         # todo. instead of 0, we need to fill in the proper length (or 0-4)
+        merged_df["variable"] = v_df.name
         merged_df["idx"] = merged_df["idx"].fillna(0)
         merged_df["type"] = merged_df["type"].fillna(type_)
         merged_df["value"] = merged_df["value"].fillna(fillNa)
 
         # Use timestamps from df1 where available, otherwise from df2
-        merged_df["ts"] = merged_df["ts"].combine_first(merged_df["ts_y"])
+        for col in ["ts", "user_id", "platform_id"]:
+            merged_df[col] = merged_df[col].combine_first(
+                merged_df[f"{col}_y"]
+            )
+            merged_df = merged_df.drop(columns=[f"{col}_y"])
         # merged_df["date"] = merged_df["date"].combine_first(
         #     merged_df["date_y"]
         # )
 
         # Drop the extra columns
-        merged_df = merged_df.drop(columns=["ts_y"])
-
+        # todo, check landscape-type_text
         # Sort by task_id and user_id
         merged_df = merged_df.sort_values(["task_id", "ann_id"])
-        merged_df = merged_df.set_index(["task_id", "ann_id"])
-        return merged_df
+        # merged_df = merged_df.set_index(["task_id", "ann_id"])
+        return merged_df.reset_index()
 
     def get_annotation_df(
         self,
         drop_cancels: bool = True,
         fill_defaults: bool = True,
         ignore_groups: bool = False,
+        debug_tasks: Optional[list[int]] = None,
         debug_task_limit: Optional[int] = None,
         test_rebuild: bool = False,
     ) -> tuple[DataFrame, DataFrame]:
         """
 
-        :param debug_task_limit:
         :param drop_cancels:
+        :param fill_defaults:
+        :param ignore_groups:
+        :param debug_task_limit:
+        :param test_rebuild:
         :return: the value df, the assignment df
         """
         if self.raw_annotation_df is not None and not test_rebuild:
@@ -894,6 +906,9 @@ class ProjectResult(BaseModel):
         debug_mode = debug_task_limit is not None
 
         for task in self.raw_annotation_result.task_results:
+            if debug_tasks:
+                if task.id not in debug_tasks:
+                    continue
             for ann in task.annotations:
                 if drop_cancels and ann.was_cancelled:
                     continue
@@ -954,21 +969,25 @@ class ProjectResult(BaseModel):
                     break
 
         df = DataFrame(rows)
+        self.assignment_df = DataFrame(assignment_df_rows)
         if fill_defaults:
-            df.groupby(["variable"]).apply(
-                lambda v_df: self.add_default(variables[v_df.name], v_df)
+            df = (
+                df.groupby(["variable"], as_index=False)
+                .apply(
+                    lambda v_df: self.add_default(variables[v_df.name], v_df)
+                )
+                .reset_index(drop=True)
             )
         # todo, shall we still use this metadata thingy??
         df.attrs["format"] = DFFormat.raw_annotation
-        assignment_df = DataFrame(assignment_df_rows)
+
         """
         raw_annotation_df = df.astype(
             {"task_id": "int32", "ann_id": "int32", 'user_id': "category", "value_idx": "int32",
              'type': "category", 'question': "category", 'value': "string"})
         """
         self.raw_annotation_df = df
-        self.assignment_df = assignment_df
-        return df, assignment_df
+        return df, self.assignment_df
 
     def simplify_single_choices(self, df: DataFrame) -> DataFrame:
         assert df.attrs["format"] == DFFormat.raw_annotation
@@ -1033,49 +1052,6 @@ class ProjectResult(BaseModel):
                 )
         formatted_result.attrs["format"] = DFFormat.flat_csv_ready
         return formatted_result
-
-    def basic_flatten_results(
-        self,
-        min_coders: Optional[int] = 2,
-        column_order: Optional[list[str]] = None,
-    ) -> DataFrame:
-        df = self.raw_annotation_df.copy()
-
-        # Count coders per task and filter to tasks with sufficient coders
-        coder_counts = df.groupby("task_id")["user_id"].nunique()
-        valid_tasks = coder_counts[coder_counts >= min_coders].index.tolist()
-        df = df[df["task_id"].isin(valid_tasks)]
-
-        # Create pivot table with one row per task_id, user_id combination
-        # and columns for each category
-        flattened_df = df.pivot_table(
-            index=["task_id", "user_id", "ts", "platform_id"],
-            columns="category",
-            values="value",
-            aggfunc="first",
-        ).reset_index()
-
-        # Reorder columns if specified
-        if column_order:
-            # Ensure required columns are included
-            required_cols = ["task_id", "user_id", "ts", "platform_id"]
-            ordered_cols = required_cols + [
-                col for col in column_order if col not in required_cols
-            ]
-
-            # Add any remaining columns not specified in column_order
-            all_cols = flattened_df.columns.tolist()
-            final_cols = ordered_cols + [
-                col for col in all_cols if col not in ordered_cols
-            ]
-
-            # Apply column ordering, keeping only existing columns
-            existing_cols = [
-                col for col in final_cols if col in flattened_df.columns
-            ]
-            flattened_df = flattened_df[existing_cols]
-
-        return flattened_df
 
     def flatten_annotation_results(
         self, min_coders: int = 2, column_order: Optional[list[str]] = None

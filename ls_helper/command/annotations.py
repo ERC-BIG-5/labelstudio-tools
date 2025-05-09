@@ -97,19 +97,6 @@ def status(
         open_image_simple(temp_file.name)
         temp_file.close()
 
-    """ experiment. redo nicer. getting count per user
-    po = get_project(id, alias, platform, language)
-    po.validate_extensions()
-    mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
-    # todo, this is not nice lookin ... lol
-    _ = mp.basic_flatten_results(1)
-    # just for checking...
-    #client = ls_client()
-    #users = client.get_users()
-    #fix_users(res, {u.id: u.username for u in users})
-    #print(res["user_id"].value_counts())
-    """
-
 
 @annotations_app.command(
     short_help="[plot] Plot the total completed tasks over day"
@@ -174,7 +161,7 @@ def agreements(
     max_num_coders: Annotated[int, typer.Option()] = 2,
     variables: Annotated[Optional[list[str]], typer.Argument()] = None,
     exclude_variables: Annotated[Optional[list[str]], typer.Argument()] = None,
-) -> tuple[Path, Agreements]:
+) -> tuple[list[Path], Agreements]:
     """
 
     :param id:
@@ -246,7 +233,7 @@ def clean_results(
     platform: Annotated[Optional[str], typer.Argument()] = None,
     language: Annotated[Optional[str], typer.Argument()] = None,
     simplify_single: Annotated[Optional[bool], typer.Option()] = True,
-    variables: Annotated[Optional[set[str]], typer.Argument()] = None,
+    variables: Annotated[Optional[list[str]], typer.Argument()] = None,
 ) -> tuple[Path, dict[str, list[dict[str, Any]]]]:
     """
 
