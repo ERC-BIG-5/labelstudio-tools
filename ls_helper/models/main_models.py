@@ -1,9 +1,10 @@
 import json
 import re
 from csv import DictWriter
+from datetime import datetime, timedelta
 from enum import Enum, auto
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional, cast, Annotated
 
 import pandas as pd
 from lxml.etree import ElementTree
@@ -16,6 +17,7 @@ from ls_helper.exp.build_configs import (
     LabelingInterfaceBuildConfig,
     build_from_template,
 )
+from ls_helper.funcs import get_latest_annotation_file
 from ls_helper.models.interface_models import (
     IChoices,
     InterfaceData,
@@ -26,8 +28,9 @@ from ls_helper.models.variable_models import (
     ChoiceVariableModel,
     VariableType,
 )
+from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import (
-    ProjectModel as LSProjectModel,
+    ProjectModel as LSProjectModel, ProjectModel, ProjectViewCreate,
 )
 from ls_helper.my_labelstudio_client.models import (
     ProjectViewModel,
@@ -39,8 +42,8 @@ from ls_helper.my_labelstudio_client.models import (
 from ls_helper.my_labelstudio_client.models import (
     TaskList as LSTaskList,
 )
-from ls_helper.settings import SETTINGS, DFCols, DFFormat
-from tools.files import save_json
+from ls_helper.settings import SETTINGS, DFCols, DFFormat, ls_logger, TIMESTAMP_FORMAT
+from tools.files import save_json, read_data
 from tools.project_logging import get_logger
 from tools.pydantic_annotated_types import SerializableDatetime
 
@@ -49,20 +52,20 @@ if TYPE_CHECKING:
 
 PlLang = tuple[str, str]
 ProjectAccess = (
-    int
-    | str
-    | PlLang
-    | tuple[Optional[int], Optional[str], Optional[str], Optional[str]]
+        int
+        | str
+        | PlLang
+        | tuple[Optional[int], Optional[str], Optional[str], Optional[str]]
 )
 
 logger = get_logger(__file__)
 
 
 def get_p_access(
-    id: Optional[int] = None,
-    alias: Optional[str] = None,
-    platform: Optional[str] = None,
-    language: Optional[str] = None,
+        id: Optional[int] = None,
+        alias: Optional[str] = None,
+        platform: Optional[str] = None,
+        language: Optional[str] = None,
 ) -> ProjectAccess:
     if alias:
         return alias
@@ -105,9 +108,6 @@ class ProjectCreate(BaseModel):
     def pl_lang(self) -> PlLang:
         return self.platform, self.language
 
-    def save(self):
-        platforms_overview.create(self)
-
 
 class ItemType(str, Enum):
     project_data = auto()
@@ -125,10 +125,10 @@ class ProjectData(ProjectCreate):
     # views, predictions, results
 
     def path_for(
-        self,
-        base_p: Path,
-        alternative: Optional[str] = None,
-        ext: Optional[str] = ".json",
+            self,
+            base_p: Path,
+            alternative: Optional[str] = None,
+            ext: Optional[str] = ".json",
     ) -> Path:
         if not ext:
             ext = ".json"
@@ -163,7 +163,7 @@ class ProjectData(ProjectCreate):
         print(f"project-data saved for {repr(self)}: -> {dest}")
 
     def build_ls_labeling_config(
-        self, alternative_template: Optional[str] = None
+            self, alternative_template: Optional[str] = None
     ) -> tuple[Path, ElementTree, bool]:
         """
 
@@ -194,7 +194,7 @@ class ProjectData(ProjectCreate):
         )
 
     def read_labeling_config(
-        self, alternative_build: Optional[str] = None
+            self, alternative_build: Optional[str] = None
     ) -> str:
         """
         reads the built labeling config file
@@ -231,14 +231,14 @@ class ProjectData(ProjectCreate):
         return "_".join(var_strings), index_string[0]
 
     def variables(
-        self, ignore_groups: bool = False
+            self, ignore_groups: bool = False
     ) -> dict[str, VariableModel]:
         variables = {}
 
         # initial basics
         for (
-            orig_name,
-            field,
+                orig_name,
+                field,
         ) in self.raw_interface_struct.ordered_fields_map.items():
             field_extension = self.variable_extensions.extensions[orig_name]
             name = self.variable_extensions.name_fixes[orig_name]
@@ -316,20 +316,20 @@ class ProjectData(ProjectCreate):
         return self._interface_data
 
     def save_and_log(
-        self,
-        path_dir: Path,
-        data: InterfaceData | ProjectVariableExtensions | Any,
-        alternative: Optional[str] = None,
-        extension: Optional[str] = None,
+            self,
+            path_dir: Path,
+            data: InterfaceData | ProjectVariableExtensions | Any,
+            alternative: Optional[str] = None,
+            extension: Optional[str] = None,
     ):
         p = self.path_for(path_dir, alternative, extension)
         p.write_text(data.model_dump_json())
         logger.info(f"Save {type(data).__name__} to: {p}")
 
     def save_extensions(
-        self,
-        raw_interf: ProjectVariableExtensions,
-        alternative: Optional[str] = None,
+            self,
+            raw_interf: ProjectVariableExtensions,
+            alternative: Optional[str] = None,
     ) -> None:
         self.save_and_log(SETTINGS.var_extensions_dir, raw_interf, alternative)
 
@@ -339,7 +339,7 @@ class ProjectData(ProjectCreate):
             return self._variable_extensions
 
         if (
-            p_fixes_file := SETTINGS.var_extensions_dir / f"{self.id}.json"
+                p_fixes_file := SETTINGS.var_extensions_dir / f"{self.id}.json"
         ).exists():
             extensions = ProjectVariableExtensions.model_validate_json(
                 p_fixes_file.read_text(encoding="utf-8")
@@ -361,9 +361,81 @@ class ProjectData(ProjectCreate):
         data = json.load(view_file.open())
         return [ProjectViewModel.model_validate(v) for v in data]
 
-    @property
-    def view_file(self) -> Optional[Path]:
-        return SETTINGS.view_dir / f"{self.id}.json"
+    def create_view(self,
+                    create: ProjectViewCreate,
+                    default_hidden_columns: bool = True) -> ProjectViewModel:
+        if not create.data.hiddenColumns:
+            create.data.hiddenColumns = read_data(
+                SETTINGS.BASE_DATA_DIR / "default/ls_project_view_hiddenColumns.json"
+            )
+        return ls_client().create_view(create)
+
+    def refresh_views(self) -> list[ProjectViewModel]:
+        views = ls_client().get_project_views(self.id)
+        self.path_for(SETTINGS.view_dir).write_text(json.dumps([v.model_dump() for v in views]))
+        return views
+
+    def get_recent_annotations(
+            self,
+            accepted_age: int,
+            use_existing: bool = False,
+    ) -> Optional[
+        tuple[
+            Annotated[bool, "use_local"],
+            Optional["ProjectAnnotationResultsModel"],
+        ]
+    ]:
+        """
+
+        :param project_id:
+        :param accepted_age:
+        :return: true, list of anns; True if existing file
+        """
+        # todo change the list back to another model in order to pack some functions like dropping cancelations...
+        latest_file = get_latest_annotation_file(self.id)
+        if latest_file is not None:
+            file_dt = datetime.strptime(latest_file.stem, "%Y%m%d_%H%M")
+            # print(file_dt, datetime.now(), datetime.now() - file_dt)
+            if (
+                    datetime.now() - file_dt < timedelta(hours=accepted_age)
+                    or use_existing
+            ):
+                ls_logger.info(
+                    f"Get recent, gets latest annotation: {file_dt:%m%d_%H%M}"
+                )
+
+                annotation_file = get_latest_annotation_file(self.id)
+                if not annotation_file:
+                    ls_logger.warning("No annotation file?!")
+                    return None
+                task_results = [
+                    TaskResultModel.model_validate(t)
+                    for t in json.load(annotation_file.open(encoding="utf-8"))
+                ]
+
+                return True, ProjectAnnotationResultsModel(
+                    task_results=task_results, timestamp=file_dt
+                )
+
+        # todo this stuff is old. needs refactoring love. move to ProjectData model
+        print("downloading annotations")
+        result = ls_client().get_project_annotations(self.id)
+        if not result:
+            return False, None
+        ts = datetime.now()
+        res_path = (
+                SETTINGS.annotations_dir
+                / str(self.id)
+                / f"{ts.strftime(TIMESTAMP_FORMAT)}.json"
+        )
+        res_path.parent.mkdir(parents=True, exist_ok=True)
+        print(f"dumping project annotations to {res_path}")
+        pa = ProjectAnnotationResultsModel(task_results=result, timestamp=ts)
+        json.dump(
+            [r.model_dump() for r in result],
+            res_path.open("w", encoding="utf-8"),
+        )
+        return False, pa
 
     def validate_extensions(self) -> list[str]:
         """
@@ -379,32 +451,28 @@ class ProjectData(ProjectCreate):
         return redundant_extensions
 
     def get_raw_annotations_results(
-        self, accepted_ann_age: Optional[int] = 6
+            self, accepted_ann_age: Optional[int] = 6
     ) -> "ProjectAnnotationResultsModel":
         # project_data = p_info.project_data()
         data_extensions = self.variable_extensions
         # todo should happen inside that function or when post_init
         self.raw_interface_struct.apply_extension(data_extensions)
-        from ls_helper.project_mgmt import ProjectMgmt
 
-        _, raw_annotation_result = ProjectMgmt.get_recent_annotations(
-            self.id, accepted_ann_age
+        _, raw_annotation_result = self.get_recent_annotations(
+            accepted_ann_age
         )
         return raw_annotation_result
 
     def fetch_annotations(self) -> "ProjectAnnotationResultsModel":
-        from ls_helper.project_mgmt import ProjectMgmt
 
         mp = ProjectResult(project_data=self)
-        _, mp.raw_annotation_result = ProjectMgmt.get_recent_annotations(
-            mp.id, 0
-        )
+        _, mp.raw_annotation_result = self.get_recent_annotations(0)
         return mp.raw_annotation_result
 
     def get_annotations_results(
-        self,
-        accepted_ann_age: Optional[int] = 6,
-        use_existing: bool = False,
+            self,
+            accepted_ann_age: Optional[int] = 6,
+            use_existing: bool = False,
     ) -> "ProjectResult":
         """
         :param accepted_ann_age:
@@ -413,13 +481,11 @@ class ProjectData(ProjectCreate):
         """
         if self._ann_results:
             return self._ann_results
-        from ls_helper.project_mgmt import ProjectMgmt
 
         ann_results = ProjectResult(project_data=self)
         from_existing, ann_results.raw_annotation_result = (
-            ProjectMgmt.get_recent_annotations(
-                ann_results.id, accepted_ann_age, use_existing
-            )
+            self.get_recent_annotations(accepted_ann_age, use_existing
+                                        )
         )
         if from_existing:
             raw_df_file = SETTINGS.annotations_dir / f"raw_{self.id}.pickle"
@@ -458,7 +524,7 @@ class ProjectData(ProjectCreate):
             return UserInfo.model_validate(json.load(pp.open()))
 
     def store_agreement_report(
-        self, agreement_report: "Agreements", gen_csv_tables: bool = True
+            self, agreement_report: "Agreements", gen_csv_tables: bool = True
     ) -> list[Path]:
         raw_dest = self.path_for(SETTINGS.agreements_dir)
         paths = [raw_dest]
@@ -498,20 +564,20 @@ class ProjectData(ProjectCreate):
                 if _choice_type == "single":
                     row_data = var_data | {"option": "VARIABLE_LEVEL"}
                     for (
-                        agreement_type,
-                        agreement_value,
+                            agreement_type,
+                            agreement_value,
                     ) in var_agreement.single_overall.items():
                         row_data[agreement_type] = agreement_value or "NaN"
                     writer.writerow(row_data)
 
                 for (
-                    option,
-                    option_agreements,
+                        option,
+                        option_agreements,
                 ) in var_agreement.options_agreements.items():
                     row_data = var_data | {"option": option}
                     for (
-                        agreement_type,
-                        agreement_value,
+                            agreement_type,
+                            agreement_value,
                     ) in option_agreements.items():
                         row_data[agreement_type] = agreement_value
                     writer.writerow(row_data)
@@ -519,8 +585,8 @@ class ProjectData(ProjectCreate):
                     if _choice_type == "multiple":
                         row_data = var_data | {"option": f"{option}-SEL"}
                         for (
-                            agreement_type,
-                            agreement_value,
+                                agreement_type,
+                                agreement_value,
                         ) in var_agreement.multi_select_inclusion_agreement[
                             option
                         ].items():
@@ -529,7 +595,7 @@ class ProjectData(ProjectCreate):
 
         conflicts_dest = self.path_for(SETTINGS.agreements_dir)
         conflicts_dest = (
-            conflicts_dest.parent / f"{conflicts_dest.stem}_conflicts.json"
+                conflicts_dest.parent / f"{conflicts_dest.stem}_conflicts.json"
         )
         paths.append(conflicts_dest)
         save_json(conflicts_dest, agreement_report.option_tasks)
@@ -551,7 +617,7 @@ class ProjectData(ProjectCreate):
         )
 
     def save_tasks(
-        self, tasks: list[LSTask], include_additional: set[str] = None
+            self, tasks: list[LSTask], include_additional: set[str] = None
     ) -> Path:
         if not include_additional:
             include_additional = set()
@@ -645,7 +711,7 @@ class ProjectOverview(BaseModel):
         elif isinstance(p_access, str):
             return self.alias_map[p_access]
         elif (is_t := isinstance(p_access, tuple)) and (
-            length := len(p_access)
+                length := len(p_access)
         ) == 2:
             return self.default_map[p_access]
         elif is_t and length == 4:
@@ -661,8 +727,9 @@ class ProjectOverview(BaseModel):
             )
         raise ValueError(f"unknown project access: {p_access}")
 
-    def create(self, p: ProjectCreate, save: bool = True) -> ProjectData:
-        from ls_helper.project_mgmt import ProjectMgmt
+    def create(self, p: ProjectCreate,
+               add_coding_game_view: Optional[bool] = True,
+               maximum_annotations: Optional[int] = 2) -> ProjectData:
 
         if p.alias in self.alias_map:
             raise ValueError(f"alias {p.alias} already exists")
@@ -671,16 +738,29 @@ class ProjectOverview(BaseModel):
                 if default_.default:
                     raise ValueError(f"default {p.pl_lang} already exists")
 
-        project_model, view_model = ProjectMgmt.create_project(p)
-
+        params = {
+            "color": "#617ada",
+            "maximum_annotations": maximum_annotations,
+            "sampling": "Uniform sampling",
+            "show_collab_predictions": True,
+        }
+        model = ProjectModel(
+            title=p.title,
+            description=p.full_description,
+            **params,
+        )
+        project_model = ls_client().create_project(model)
         p_i = ProjectData(id=project_model.id, **p.model_dump())
+        if add_coding_game_view:
+            p_i.create_view(ProjectViewCreate.model_validate(
+                {"project": project_model.id, "data": {}}
+            ))
 
         self.projects[p_i.id] = p_i
         if p_i.default:
             self.default_map[p.pl_lang] = p_i
         self.alias_map[p.alias] = p_i
-        if save:
-            self.save()
+        self.save()
 
         print(f"project created and saved: {repr(p_i)}")
         dest = p_i.path_for(SETTINGS.labeling_templates, ext=".xml")
@@ -704,10 +784,10 @@ platforms_overview: ProjectOverview = ProjectOverview.load()
 
 
 def get_project(
-    id: Optional[int] = None,
-    alias: Optional[str] = None,
-    platform: Optional[str] = None,
-    language: Optional[str] = None,
+        id: Optional[int] = None,
+        alias: Optional[str] = None,
+        platform: Optional[str] = None,
+        language: Optional[str] = None,
 ) -> ProjectData:
     po = platforms_overview.get_project((id, alias, platform, language))
     logger.debug(repr(po))
@@ -734,7 +814,7 @@ class ProjectResult(BaseModel):
         return self.project_data.raw_interface_struct
 
     def clean_annotation_results(
-        self, simplify_single: bool = True, variables: set[str] = None
+            self, simplify_single: bool = True, variables: set[str] = None
     ) -> tuple[Path, dict[str, list[dict[str, Any]]]]:
         """
 
@@ -792,14 +872,14 @@ class ProjectResult(BaseModel):
 
                     value = question.value.direct_value
                     if (
-                        simplify_single
-                        and isinstance(
-                            po_variables[new_name], ChoiceVariableModel
-                        )
-                        and cast(
-                            ChoiceVariableModel, po_variables[new_name]
-                        ).choice
-                        == "single"
+                            simplify_single
+                            and isinstance(
+                        po_variables[new_name], ChoiceVariableModel
+                    )
+                            and cast(
+                        ChoiceVariableModel, po_variables[new_name]
+                    ).choice
+                            == "single"
                     ):
                         value = value[0]
                     ann_result[new_name] = value
@@ -814,7 +894,7 @@ class ProjectResult(BaseModel):
         return dest, results
 
     def add_default(
-        self, variable_def: VariableModel, v_df: DataFrame
+            self, variable_def: VariableModel, v_df: DataFrame
     ) -> DataFrame:
         # ass_df["date"] = pd.to_datetime(ass_df["ts"]).dt.date
 
@@ -864,13 +944,13 @@ class ProjectResult(BaseModel):
         return merged_df.reset_index()
 
     def get_annotation_df(
-        self,
-        drop_cancels: bool = True,
-        fill_defaults: bool = True,
-        ignore_groups: bool = False,
-        debug_tasks: Optional[list[int]] = None,
-        debug_task_limit: Optional[int] = None,
-        test_rebuild: bool = False,
+            self,
+            drop_cancels: bool = True,
+            fill_defaults: bool = True,
+            ignore_groups: bool = False,
+            debug_tasks: Optional[list[int]] = None,
+            debug_task_limit: Optional[int] = None,
+            test_rebuild: bool = False,
     ) -> tuple[DataFrame, DataFrame]:
         """
 
@@ -1020,7 +1100,7 @@ class ProjectResult(BaseModel):
                     try:
                         # Check if it's a NaN value using Python's direct check
                         if (
-                            item != item
+                                item != item
                         ):  # NaN is the only value that doesn't equal itself
                             formatted.append("")
                         else:
@@ -1054,7 +1134,7 @@ class ProjectResult(BaseModel):
         return formatted_result
 
     def flatten_annotation_results(
-        self, min_coders: int = 2, column_order: Optional[list[str]] = None
+            self, min_coders: int = 2, column_order: Optional[list[str]] = None
     ) -> DataFrame:
         df = self.raw_annotation_df.copy()
 
@@ -1088,12 +1168,12 @@ class ProjectResult(BaseModel):
                             col: g[col].dropna().tolist()
                             for col in g.columns
                             if col
-                            not in [
-                                DFCols.T_ID,
-                                DFCols.U_ID,
-                                DFCols.TS,
-                                DFCols.P_ID,
-                            ]
+                               not in [
+                                   DFCols.T_ID,
+                                   DFCols.U_ID,
+                                   DFCols.TS,
+                                   DFCols.P_ID,
+                               ]
                         },
                     }
                 )
@@ -1119,11 +1199,11 @@ class ProjectResult(BaseModel):
         return result
 
     def get_coder_agreements(
-        self,
-        max_num_coders: int = 2,
-        variables: Optional[list[str]] = None,
-        exclude_variables: Optional[list[str]] = None,
-        gen_csv_tables: bool = True,
+            self,
+            max_num_coders: int = 2,
+            variables: Optional[list[str]] = None,
+            exclude_variables: Optional[list[str]] = None,
+            gen_csv_tables: bool = True,
     ) -> tuple[list[Path], "Agreements"]:
         from ls_helper.agreements_calculation import Agreements
 

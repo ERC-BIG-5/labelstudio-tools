@@ -5,7 +5,7 @@ from typing import Annotated, Optional
 import typer
 from tqdm import tqdm
 
-from ls_helper.command.annotations import annotations_app, annotations
+from ls_helper.command.annotations import annotations_app
 from ls_helper.command.backup import backup_app
 from ls_helper.command.extra import extras_app
 from ls_helper.command.labeling_conf import labeling_conf_app
@@ -84,7 +84,7 @@ app.add_typer(
 )
 # todo: more testing
 def strict_update_project_tasks(
-    new_data_file: Path, existing_data_file: Optional[Path] = None
+        new_data_file: Path, existing_data_file: Optional[Path] = None
 ):
     raise NotImplementedError("client.patch_task parameters changed")
     new_data_list = json.loads(new_data_file.read_text(encoding="utf-8"))
@@ -110,10 +110,10 @@ def strict_update_project_tasks(
 
 
 def get_all_variable_names(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
     # todo redo and test...
@@ -122,14 +122,14 @@ def get_all_variable_names(
 
 
 def get_variables_info(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
-    from_built: Annotated[
-        bool,
-        typer.Option(False, help="Use the built instead of the project-data"),
-    ] = False,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
+        from_built: Annotated[
+            bool,
+            typer.Option(False, help="Use the built instead of the project-data"),
+        ] = False,
 ):
     po = get_project(id, alias, platform, language)
 
@@ -268,13 +268,14 @@ if __name__ == "__main__":
 
     # reconfigure twitter-en/es pv.5
 
-    from ls_helper.command import labeling_conf, project_setup
-
     # redo, label configs for # p 5
-    # for i in [53,54]:
-    #     labeling_conf.build(i)
-    #     labeling_conf.update_labeling_config(i)
-    #     project_setup.generate_variable_extensions_template(id=i)
+
+    from ls_helper.command import project_setup
+
+    for i in [54]:
+        # labeling_conf.build(i)
+        # labeling_conf.update_labeling_config(i)
+        project_setup.generate_variable_extensions_template(id=i, overwrite_if_exists=False)
 
     # labeling_conf.build_ls_labeling_interface(id=53)
 
@@ -319,16 +320,25 @@ if __name__ == "__main__":
     # project_setup.generate_variable_extensions_template(43)
     # from ls_helper.command import annotations
 
-    from ls_helper.command import annotations, project_setup
-
     """ extras, food, health
     project_setup.download_project_data(50)
     # project_setup.generate_variable_extensions_template(id=50)
     for i in [43, 50, 51]:  # tw-en,yt-en, tw-es,
         annotations.clean_results(i, variables={"extras"})
     """
-    for i in [43,51]:  # tw-en,yt-en, tw-es,
-        annotations.clean_results(i, variables={"nature_any","nature_text","nature_visual_any"})
+    # for i in [43,51]:  # tw-en,yt-en, tw-es,
+    #     annotations.clean_results(i, variables={"nature_any","nature_text","nature_visual_any"})
 
     # task.get_tasks(id=54)
     # annotations(**{"id": 54, "accepted_ann_age": 0})
+
+    # po = get_project(id=51)
+    # res = po.get_annotations_results()
+    # # df = res.flatten_annotation_results()
+    # raw_df, _ = res.get_annotation_df(
+    #     debug_tasks=[33000], debug_task_limit=10, test_rebuild=True
+    # )
+    # df = res.flatten_annotation_results()
+    # pass
+
+    # aggregate.check_projects([51, 53, 54])

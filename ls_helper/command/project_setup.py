@@ -1,6 +1,7 @@
 from typing import Annotated, Optional
 
 import typer
+from deepdiff import DeepDiff
 
 from ls_helper.models.interface_models import (
     InterfaceData,
@@ -15,9 +16,7 @@ from ls_helper.models.main_models import (
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import (
     ProjectModel,
-    ProjectViewCreate,
 )
-from ls_helper.project_mgmt import ProjectMgmt
 from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
@@ -29,12 +28,12 @@ project_app = typer.Typer(
 
 @project_app.command(short_help="Create a new project in LS", help="xxxx")
 def create_project(
-    title: Annotated[str, typer.Option()],
-    alias: Annotated[str, typer.Option()],
-    platform: Annotated[str, typer.Option()],
-    language: Annotated[str, typer.Option()],
-    maximum_annotations: Annotated[int, typer.Option()] = 2,
-    create_coding_game_view: Annotated[bool, typer.Option()] = True,
+        title: Annotated[str, typer.Option()],
+        alias: Annotated[str, typer.Option()],
+        platform: Annotated[str, typer.Option()],
+        language: Annotated[str, typer.Option()],
+        maximum_annotations: Annotated[int, typer.Option()] = 2,
+        create_coding_game_view: Annotated[bool, typer.Option()] = True,
 ):
     po = platforms_overview.create(
         ProjectCreate(
@@ -43,64 +42,27 @@ def create_project(
             language=language,
             alias=alias,
             default=False,
-        )
+        ),
+        create_coding_game_view,
+        maximum_annotations
     )
-
-    values = ProjectMgmt.default_project_values()
-    if maximum_annotations:
-        values["maximum_annotations"] = maximum_annotations
-
-    res = ls_client().patch_project(po.id, values)
-    po.save_project_data(res)
-
-    if create_coding_game_view:
-        view = ProjectMgmt.create_view(
-            ProjectViewCreate.model_validate(
-                {"project": po.id, "data": {"title": "Coding Game"}}
-            )
-        )
-        view_id = view.id
-        po.coding_game_view_id = view_id
-        # todo. save again.
-
-
-@project_app.command(
-    short_help="[setup] Just needs to be run once, for each new LS project"
-)
-def setup_project_settings(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    maximum_annotations: Annotated[int, typer.Option()] = 2,
-):
-    po = get_project(id, alias, platform, language)
-    values = ProjectMgmt.default_project_values()
-    if maximum_annotations:
-        values["maximum_annotations"] = maximum_annotations
-    # del values["color"]
-    # print(values)
-    res = ls_client().patch_project(po.id, values)
-    po.save_project_data(res)
-    if not res:
-        print("error updating project settings")
 
 
 @project_app.command(
     short_help="[setup] Required for annotation result processing. needs project-data"
 )
 def generate_variable_extensions_template(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    add_if_not_exists: Annotated[bool, typer.Option()] = True,
-    overwrite_if_exists: Annotated[bool, typer.Option()] = False,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        add_if_not_exists: Annotated[bool, typer.Option()] = True,
+        overwrite_if_exists: Annotated[bool, typer.Option()] = False,
 ):
     po = get_project(id, alias, platform, language)
 
     def get_variable_extensions(
-        annotation_struct: InterfaceData,
+            annotation_struct: InterfaceData,
     ) -> ProjectVariableExtensions:
         data: dict[str, FieldExtension] = {}
 
@@ -113,19 +75,40 @@ def generate_variable_extensions_template(
 
     res_template = get_variable_extensions(po.raw_interface_struct)
 
-    if add_if_not_exists:
+    try:
+        existing = po.variable_extensions.model_dump(include={"extensions"})
+        if overwrite_if_exists:
+            logger.info("overwriting existing variable extensions")
+            po.save_extensions(res_template)
+        else:
+            # TODO there should be a merge/update strategy
+            compare_res_template = res_template.model_dump(include={"extensions"})
+            diff = DeepDiff(existing, compare_res_template, view="tree")
+            all_parts = ["dictionary_item_added", "dictionary_item_removed", "values_changed", "type_changes"]
+            for part in all_parts:
+                print(part)
+                for change in diff.get(part, []):
+                    # print(change.__dict__)
+                    change_path = change.path(output_format="list")
+                    print(change_path)
+                    if part == "type_changes":
+                        print(f"existing: '{change.t1}', new value: '{change.t2}'")
+
+    except ValueError:  # no existing...
+        if add_if_not_exists:
+            po.save_extensions(res_template)
+        else:
+            po.save_extensions(res_template, "alt")
+
         # todo: validate the build with the xml in the project_data
-        po.save_extensions(res_template)
-    else:
-        po.save_extensions(res_template, "alt")
 
 
 @project_app.command(short_help="[maint]")
 def download_project_data(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Argument()] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Argument()] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
 ) -> ProjectModel:
     po = get_project(id, alias, platform, language)
     project_data = ls_client().get_project(po.id)

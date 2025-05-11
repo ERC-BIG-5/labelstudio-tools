@@ -9,7 +9,6 @@ from ls_helper.funcs import (
     build_view_with_filter_p_ids,
     build_platform_id_filter,
 )
-
 from ls_helper.models.main_models import get_project
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import (
@@ -17,7 +16,6 @@ from ls_helper.my_labelstudio_client.models import (
     ProjectViewDataModel,
     ProjectViewModel,
 )
-from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from tools.files import read_data
 from tools.project_logging import get_logger
@@ -31,12 +29,12 @@ view_app = typer.Typer(
 
 @view_app.command(short_help="[ls func]")
 def update_coding_game(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    accepted_ann_age: Annotated[int, typer.Option("-age")] = 6,
-    refresh_views: Annotated[bool, typer.Option("-r")] = False,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        accepted_ann_age: Annotated[int, typer.Option("-age")] = 6,
+        refresh_views: Annotated[bool, typer.Option("-r")] = False,
 ) -> Optional[tuple[int, int]]:
     """
     if successful sends back project_id, view_id
@@ -47,15 +45,13 @@ def update_coding_game(
     view_id = po.coding_game_view_id
     if not view_id:
         print("No views found for coding game")
-        view = ProjectMgmt.create_view(
-            ProjectViewCreate.model_validate(
-                {"project": po.id, "data": {"title": "Coding Game"}}
-            )
-        )
+        view = po.create_view(ProjectViewCreate.model_validate(
+            {"project": po.id, "data": {"title": "Coding Game"}}
+        ))
         view_id = view.id
 
     if refresh_views:
-        ProjectMgmt.refresh_views(po)
+        po.refresh_views()
     views = po.get_views()
     if not views:
         download_project_views(id, alias, platform, language)
@@ -87,15 +83,15 @@ def update_coding_game(
 
 @view_app.command(short_help="[ls func]")
 def set_view_items(
-    view_title: Annotated[
-        str, typer.Option(help="search for view with this name")
-    ],
-    platform_ids_file: Annotated[Path, typer.Option()],
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    create_view: Annotated[Optional[bool], typer.Option()] = True,
+        view_title: Annotated[
+            str, typer.Option(help="search for view with this name")
+        ],
+        platform_ids_file: Annotated[Path, typer.Option()],
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        create_view: Annotated[Optional[bool], typer.Option()] = True,
 ):
     po = get_project(id, alias, platform, language)
     views = po.get_views()
@@ -116,7 +112,7 @@ def set_view_items(
             return
         else:  # create the view
             # todo, use utils func with id, title, adding in the defautl columns.
-            ProjectMgmt.create_view(
+            po.create_view(
                 ProjectViewCreate(
                     project=po.id, data=ProjectViewDataModel(title=view_title)
                 )
@@ -139,26 +135,26 @@ def delete_view(view_id: int):
 
 @view_app.command(short_help="Download the views of a project")
 def download_project_views(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
 ) -> list[ProjectViewModel]:
     po = get_project(id, alias, platform, language)
-    views = ProjectMgmt.refresh_views(po)
-    logger.debug(f"view file -> {po.view_file}")
+    views = po.refresh_views()
+    logger.debug(f"view file -> {po.path_for(SETTINGS.view_dir)}")
     return views
 
 
 @deprecated(reason="we can use annotation.add_conflicts_to_tasks instead")
 @view_app.command(short_help="create or update a view for variable conflict")
 def create_conflict_view(
-    variable: Annotated[str, typer.Option()],
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
-    variable_option: Annotated[Optional[str], typer.Option()] = None,
+        variable: Annotated[str, typer.Option()],
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
+        variable_option: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
     conflicts = read_data(
@@ -182,7 +178,7 @@ def create_conflict_view(
     conflict_task_ids = conflict_task_ids[:30]
 
     title = f"conflict:{variable}"
-    view = ProjectMgmt.create_view(
+    view = po.create_view(
         ProjectViewCreate.model_validate(
             {
                 "project": po.id,

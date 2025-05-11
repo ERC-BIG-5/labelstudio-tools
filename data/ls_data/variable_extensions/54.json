@@ -1,12 +1,12 @@
 {
   "extensions": {
-    "platform_id": {
+    "title": {
       "name_fix": null,
       "description": null,
       "default": null,
       "deprecated": null
     },
-    "title": {
+    "title2": {
       "name_fix": null,
       "description": null,
       "default": null,
@@ -236,7 +236,7 @@
     },
     "visual_same_q_0": {
       "name_fix": null,
-      "description": null,
+      "description": "check if this visual is the same as another",
       "default": null,
       "deprecated": null
     },

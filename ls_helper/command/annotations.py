@@ -21,7 +21,6 @@ from ls_helper.models.main_models import (
     ProjectAnnotationResultsModel,
     ProjectResult,
 )
-from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from tools.files import read_data
 from tools.project_logging import get_logger
@@ -43,21 +42,21 @@ def open_image_simple(image_path):
 
 @annotations_app.command(short_help="[stats] Annotation basic results")
 def annotations(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    accepted_ann_age: Annotated[
-        int, typer.Option(help="Download annotations if older than x hours")
-    ] = 6,
-    min_coders: Annotated[int, typer.Option()] = 2,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")
+        ] = 6,
+        min_coders: Annotated[int, typer.Option()] = 2,
 ) -> tuple[Path, str]:
     po = get_project(id, alias, platform, language)
     po.validate_extensions()
 
     ann_results = ProjectResult(project_data=po)
     use_local, ann_results.raw_annotation_result = (
-        ProjectMgmt.get_recent_annotations(ann_results.id, accepted_ann_age)
+        po.get_recent_annotations(accepted_ann_age)
     )
     # todo: should be stored in that object, directly
     raw_annotation_df, _ = ann_results.get_annotation_df(ignore_groups=True)
@@ -78,17 +77,17 @@ def annotations(
     short_help="[plot] Plot the completed tasks over time"
 )
 def status(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    accepted_ann_age: Annotated[
-        int, typer.Option(help="Download annotations if older than x hours")
-    ] = 6,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")
+        ] = 6,
 ):
     po = get_project(id, alias, platform, language)
-    _, project_annotations = ProjectMgmt.get_recent_annotations(
-        po.id, accepted_ann_age
+    _, project_annotations = po.get_recent_annotations(
+        accepted_ann_age
     )
     pa: Optional[ProjectAnnotationResultsModel] = project_annotations
     if project_annotations:
@@ -102,17 +101,17 @@ def status(
     short_help="[plot] Plot the total completed tasks over day"
 )
 def total_over_time(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    accepted_ann_age: Annotated[
-        int, typer.Option(help="Download annotations if older than x hours")
-    ] = 6,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")
+        ] = 6,
 ):
     print(get_p_access(id, alias, platform, language))
     po = get_project(id, alias, platform, language)
-    annotations = ProjectMgmt.get_recent_annotations(po.id, accepted_ann_age)
+    _, annotations = po.get_recent_annotations(accepted_ann_age)
     df = annotation_total_over_time(annotations)
     temp_file = plot_cumulative_annotations(
         df, f"{po.platform}/{po.language}: Cumulative Annotations Over Time"
@@ -127,17 +126,17 @@ def total_over_time(
     short_help="[plot] Plot the total completed tasks over day"
 )
 def annotation_lead_times(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    accepted_ann_age: Annotated[
-        int, typer.Option(help="Download annotations if older than x hours")
-    ] = 6,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")
+        ] = 6,
 ):
     po = get_project(id, alias, platform, language)
-    project_annotations = ProjectMgmt.get_recent_annotations(
-        po.id, accepted_ann_age
+    project_annotations = po.get_recent_annotations(
+        accepted_ann_age
     )
 
     df = get_annotation_lead_times(project_annotations)
@@ -151,16 +150,16 @@ def annotation_lead_times(
     short_help="[stats] calculate general agreements stats"
 )
 def agreements(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    accepted_ann_age: Annotated[
-        int, typer.Option(help="Download annotations if older than x hours")
-    ] = 6,
-    max_num_coders: Annotated[int, typer.Option()] = 2,
-    variables: Annotated[Optional[list[str]], typer.Argument()] = None,
-    exclude_variables: Annotated[Optional[list[str]], typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")
+        ] = 6,
+        max_num_coders: Annotated[int, typer.Option()] = 2,
+        variables: Annotated[Optional[list[str]], typer.Argument()] = None,
+        exclude_variables: Annotated[Optional[list[str]], typer.Argument()] = None,
 ) -> tuple[list[Path], Agreements]:
     """
 
@@ -187,10 +186,10 @@ def agreements(
 
 @annotations_app.command(short_help="Add conflicts to tasks data")
 def add_conflicts_to_tasks(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
 ):
     po = get_project(id, alias, platform, language)
     # get conflicts and create the strings that are added to the tasks data
@@ -228,12 +227,12 @@ def add_conflicts_to_tasks(
 
 @annotations_app.command()
 def clean_results(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    simplify_single: Annotated[Optional[bool], typer.Option()] = True,
-    variables: Annotated[Optional[list[str]], typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        simplify_single: Annotated[Optional[bool], typer.Option()] = True,
+        variables: Annotated[Optional[list[str]], typer.Argument()] = None,
 ) -> tuple[Path, dict[str, list[dict[str, Any]]]]:
     """
 
