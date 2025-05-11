@@ -1,12 +1,12 @@
 {
   "extensions": {
-    "title": {
+    "platform_id": {
       "name_fix": null,
       "description": null,
       "default": null,
       "deprecated": null
     },
-    "title2": {
+    "title": {
       "name_fix": null,
       "description": null,
       "default": null,
