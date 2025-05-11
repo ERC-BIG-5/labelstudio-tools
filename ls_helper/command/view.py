@@ -29,12 +29,12 @@ view_app = typer.Typer(
 
 @view_app.command(short_help="[ls func]")
 def update_coding_game(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None,
-        accepted_ann_age: Annotated[int, typer.Option("-age")] = 6,
-        refresh_views: Annotated[bool, typer.Option("-r")] = False,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
+    accepted_ann_age: Annotated[int, typer.Option("-age")] = 6,
+    refresh_views: Annotated[bool, typer.Option("-r")] = False,
 ) -> Optional[tuple[int, int]]:
     """
     if successful sends back project_id, view_id
@@ -45,9 +45,11 @@ def update_coding_game(
     view_id = po.coding_game_view_id
     if not view_id:
         print("No views found for coding game")
-        view = po.create_view(ProjectViewCreate.model_validate(
-            {"project": po.id, "data": {"title": "Coding Game"}}
-        ))
+        view = po.create_view(
+            ProjectViewCreate.model_validate(
+                {"project": po.id, "data": {"title": "Coding Game"}}
+            )
+        )
         view_id = view.id
 
     if refresh_views:
@@ -83,15 +85,15 @@ def update_coding_game(
 
 @view_app.command(short_help="[ls func]")
 def set_view_items(
-        view_title: Annotated[
-            str, typer.Option(help="search for view with this name")
-        ],
-        platform_ids_file: Annotated[Path, typer.Option()],
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None,
-        create_view: Annotated[Optional[bool], typer.Option()] = True,
+    view_title: Annotated[
+        str, typer.Option(help="search for view with this name")
+    ],
+    platform_ids_file: Annotated[Path, typer.Option()],
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Argument()] = None,
+    language: Annotated[Optional[str], typer.Argument()] = None,
+    create_view: Annotated[Optional[bool], typer.Option()] = True,
 ):
     po = get_project(id, alias, platform, language)
     views = po.get_views()
@@ -135,10 +137,10 @@ def delete_view(view_id: int):
 
 @view_app.command(short_help="Download the views of a project")
 def download_project_views(
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Option()] = None,
-        language: Annotated[Optional[str], typer.Option()] = None,
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Option()] = None,
+    language: Annotated[Optional[str], typer.Option()] = None,
 ) -> list[ProjectViewModel]:
     po = get_project(id, alias, platform, language)
     views = po.refresh_views()
@@ -149,12 +151,12 @@ def download_project_views(
 @deprecated(reason="we can use annotation.add_conflicts_to_tasks instead")
 @view_app.command(short_help="create or update a view for variable conflict")
 def create_conflict_view(
-        variable: Annotated[str, typer.Option()],
-        id: Annotated[Optional[int], typer.Option()] = None,
-        alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Option()] = None,
-        language: Annotated[Optional[str], typer.Option()] = None,
-        variable_option: Annotated[Optional[str], typer.Option()] = None,
+    variable: Annotated[str, typer.Option()],
+    id: Annotated[Optional[int], typer.Option()] = None,
+    alias: Annotated[Optional[str], typer.Option("-a")] = None,
+    platform: Annotated[Optional[str], typer.Option()] = None,
+    language: Annotated[Optional[str], typer.Option()] = None,
+    variable_option: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
     conflicts = read_data(
