@@ -9,7 +9,6 @@ from ls_helper.funcs import (
     build_view_with_filter_p_ids,
     build_platform_id_filter,
 )
-
 from ls_helper.models.main_models import get_project
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import (
@@ -17,7 +16,6 @@ from ls_helper.my_labelstudio_client.models import (
     ProjectViewDataModel,
     ProjectViewModel,
 )
-from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from tools.files import read_data
 from tools.project_logging import get_logger
@@ -47,7 +45,7 @@ def update_coding_game(
     view_id = po.coding_game_view_id
     if not view_id:
         print("No views found for coding game")
-        view = ProjectMgmt.create_view(
+        view = po.create_view(
             ProjectViewCreate.model_validate(
                 {"project": po.id, "data": {"title": "Coding Game"}}
             )
@@ -55,7 +53,7 @@ def update_coding_game(
         view_id = view.id
 
     if refresh_views:
-        ProjectMgmt.refresh_views(po)
+        po.refresh_views()
     views = po.get_views()
     if not views:
         download_project_views(id, alias, platform, language)
@@ -71,7 +69,6 @@ def update_coding_game(
         return None
     view_ = view_[0]
 
-    po = get_project(id, alias, platform, language)
     # project_annotations = _get_recent_annotations(po.id, accepted_ann_age)
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # project_annotations = _get_recent_annotations(po.id, 0)
@@ -80,7 +77,7 @@ def update_coding_game(
     ann = ann[ann["variable"] == "coding-game"]
     ann = mp.simplify_single_choices(ann)
     platform_ids = ann[ann["single_value"] == "Yes"]["platform_id"].tolist()
-    build_view_with_filter_p_ids(SETTINGS.client, view_, platform_ids)
+    build_view_with_filter_p_ids(ls_client(), view_, platform_ids)
     logger.info(f"Set {len(platform_ids)} to the coding game of {po.alias}")
     return po.id, view_id
 
@@ -116,7 +113,7 @@ def set_view_items(
             return
         else:  # create the view
             # todo, use utils func with id, title, adding in the defautl columns.
-            ProjectMgmt.create_view(
+            po.create_view(
                 ProjectViewCreate(
                     project=po.id, data=ProjectViewDataModel(title=view_title)
                 )
@@ -145,8 +142,8 @@ def download_project_views(
     language: Annotated[Optional[str], typer.Option()] = None,
 ) -> list[ProjectViewModel]:
     po = get_project(id, alias, platform, language)
-    views = ProjectMgmt.refresh_views(po)
-    logger.debug(f"view file -> {po.view_file}")
+    views = po.refresh_views()
+    logger.debug(f"view file -> {po.path_for(SETTINGS.view_dir)}")
     return views
 
 
@@ -182,7 +179,7 @@ def create_conflict_view(
     conflict_task_ids = conflict_task_ids[:30]
 
     title = f"conflict:{variable}"
-    view = ProjectMgmt.create_view(
+    view = po.create_view(
         ProjectViewCreate.model_validate(
             {
                 "project": po.id,

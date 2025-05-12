@@ -26,7 +26,6 @@ def build_extension_index(projects: list[ProjectData]) -> DataExtensionIndex:
     Goes through all projects fixes and build an index:
     key -> fix +  projects (which is a list of project ids)
     Currently just a simple print warning, if there is an issue.
-    # todo, consider, it takes the fixes, which includes the unifixes
     :param projects:
     :return:
     """

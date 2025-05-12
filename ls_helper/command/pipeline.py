@@ -3,13 +3,12 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
-from tools.project_logging import get_logger
 
 from ls_helper.models.main_models import (
     get_project,
 )
-from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
+from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 
@@ -52,9 +51,7 @@ def reformat_for_datapipelines(
     """
     # does extra calculation but ok.
     po = get_project(id, alias, platform, language)
-    local, results = ProjectMgmt.get_recent_annotations(
-        po.id, accepted_ann_age
-    )
+    local, results = po.get_recent_annotations(accepted_ann_age)
     # print(results)
 
     print(results.stats())

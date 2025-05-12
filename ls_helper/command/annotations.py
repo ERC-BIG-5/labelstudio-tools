@@ -2,7 +2,7 @@ import json
 import shutil
 import webbrowser
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Any
 
 import typer
 
@@ -17,11 +17,9 @@ from ls_helper.annotation_timing import (
 from ls_helper.command.task import patch_tasks
 from ls_helper.models.main_models import (
     get_project,
-    get_p_access,
     ProjectAnnotationResultsModel,
     ProjectResult,
 )
-from ls_helper.project_mgmt import ProjectMgmt
 from ls_helper.settings import SETTINGS
 from tools.files import read_data
 from tools.project_logging import get_logger
@@ -56,13 +54,11 @@ def annotations(
     po.validate_extensions()
 
     ann_results = ProjectResult(project_data=po)
-    use_local, ann_results.raw_annotation_result = (
-        ProjectMgmt.get_recent_annotations(ann_results.id, accepted_ann_age)
+    use_local, ann_results.raw_annotation_result = po.get_recent_annotations(
+        accepted_ann_age
     )
     # todo: should be stored in that object, directly
-    ann_results.raw_annotation_df, _ = ann_results.get_annotation_df(
-        ignore_groups=True
-    )
+    raw_annotation_df, _ = ann_results.get_annotation_df(ignore_groups=True)
 
     # mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     # todo, this is not nice lookin ... lol
@@ -89,28 +85,13 @@ def status(
     ] = 6,
 ):
     po = get_project(id, alias, platform, language)
-    _, project_annotations = ProjectMgmt.get_recent_annotations(
-        po.id, accepted_ann_age
-    )
+    _, project_annotations = po.get_recent_annotations(accepted_ann_age)
     pa: Optional[ProjectAnnotationResultsModel] = project_annotations
     if project_annotations:
         df = annotation_timing(pa, po.project_data.maximum_annotations)
         temp_file = plot_date_distribution(df)
         open_image_simple(temp_file.name)
         temp_file.close()
-
-    """ experiment. redo nicer. getting count per user
-    po = get_project(id, alias, platform, language)
-    po.validate_extensions()
-    mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
-    # todo, this is not nice lookin ... lol
-    _ = mp.basic_flatten_results(1)
-    # just for checking...
-    #client = ls_client()
-    #users = client.get_users()
-    #fix_users(res, {u.id: u.username for u in users})
-    #print(res["user_id"].value_counts())
-    """
 
 
 @annotations_app.command(
@@ -125,9 +106,8 @@ def total_over_time(
         int, typer.Option(help="Download annotations if older than x hours")
     ] = 6,
 ):
-    print(get_p_access(id, alias, platform, language))
     po = get_project(id, alias, platform, language)
-    annotations = ProjectMgmt.get_recent_annotations(po.id, accepted_ann_age)
+    _, annotations = po.get_recent_annotations(accepted_ann_age)
     df = annotation_total_over_time(annotations)
     temp_file = plot_cumulative_annotations(
         df, f"{po.platform}/{po.language}: Cumulative Annotations Over Time"
@@ -151,9 +131,7 @@ def annotation_lead_times(
     ] = 6,
 ):
     po = get_project(id, alias, platform, language)
-    project_annotations = ProjectMgmt.get_recent_annotations(
-        po.id, accepted_ann_age
-    )
+    project_annotations = po.get_recent_annotations(accepted_ann_age)
 
     df = get_annotation_lead_times(project_annotations)
     temp_file = plot_date_distribution(df, y_col="lead_time")
@@ -176,7 +154,7 @@ def agreements(
     max_num_coders: Annotated[int, typer.Option()] = 2,
     variables: Annotated[Optional[list[str]], typer.Argument()] = None,
     exclude_variables: Annotated[Optional[list[str]], typer.Argument()] = None,
-) -> tuple[Path, Agreements]:
+) -> tuple[list[Path], Agreements]:
     """
 
     :param id:
@@ -247,10 +225,22 @@ def clean_results(
     alias: Annotated[Optional[str], typer.Option("-a")] = None,
     platform: Annotated[Optional[str], typer.Argument()] = None,
     language: Annotated[Optional[str], typer.Argument()] = None,
-) -> Path:
-    res_file = (
+    simplify_single: Annotated[Optional[bool], typer.Option()] = True,
+    variables: Annotated[Optional[set[str]], typer.Argument()] = None,
+) -> tuple[Path, dict[str, list[dict[str, Any]]]]:
+    """
+
+    :param id:
+    :param alias:
+    :param platform:
+    :param language:
+    :param simplify_single:
+    :param variables:
+    :return: filepath and result-dict: platform_id: [{coder-results}]
+    """
+    res_file, results = (
         get_project(id, alias, platform, language)
         .get_annotations_results(use_existing=True)
-        .clean_annotation_results()
+        .clean_annotation_results(simplify_single, variables)
     )
-    return res_file
+    return res_file, results

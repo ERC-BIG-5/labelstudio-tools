@@ -3,16 +3,15 @@ from typing import Any, Optional
 
 import pystache
 from lxml import etree
-from lxml.etree import _Comment
+from lxml.etree import _Comment, Element
 from pydantic import BaseModel, Field
 from pystache.parsed import ParsedTemplate
 from pystache.parser import _LiteralNode
-from tools.files import levenhstein_get_similar_filenames
-from tools.pydantic_annotated_types import SerializablePath
 
-from ls_helper.config_helper import find_all_names, find_tag_name_refs
 from ls_helper.exp.configs import find_duplicate_names
 from ls_helper.settings import SETTINGS
+from tools.files import levenhstein_get_similar_filenames
+from tools.pydantic_annotated_types import SerializablePath
 
 SRC_COMPONENT = "src-component"
 
@@ -285,3 +284,48 @@ def build_from_template(
     print(f"duplicate name: {dupl_names}")
 
     return _tree, broken_refs, dupl_names
+
+
+def find_all_names(root):
+    unique_names = {}
+
+    def find_name(element, current_path):
+        # Print current element's path
+        path = f"{current_path}/{element.tag}"
+        # print(path, element.get("name"))
+        if _name := element.get("name"):
+            unique_names.setdefault(_name, []).append(path)
+
+        # Recurse through all children
+        for child in element:
+            find_name(child, path)
+
+    # Start from root
+    find_name(root, "")
+
+    return unique_names
+
+
+def find_tag_name_refs(root) -> dict[str, list[Element]]:
+    """
+    checks which elements depend on all variables
+    :param root:
+    :return: dict: variable: [depending_0, depending_1, ...]
+    """
+    refs: dict[str, list[str]] = {}
+
+    def find_name(element, current_path):
+        # Print current element's path
+        path = f"{current_path}/{element.tag}"
+        # print(path, element.get("name"))
+        if _name := element.get("whenTagName"):
+            refs.setdefault(_name, []).append(element)
+
+        # Recurse through all children
+        for child in element:
+            find_name(child, path)
+
+    # Start from root
+    find_name(root, "")
+
+    return refs
