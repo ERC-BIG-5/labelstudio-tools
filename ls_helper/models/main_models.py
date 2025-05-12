@@ -362,8 +362,9 @@ class ProjectData(ProjectCreate):
     def refresh_views(self) -> list[ProjectViewModel]:
         views = ls_client().get_project_views(self.id)
         self.path_for(SETTINGS.view_dir).write_text(
-            json.dumps([v.model_dump() for v in views])
+            json.dumps([v.model_dump() for v in views], indent=2)
         )
+        logger.info(f"refresh views: {views}")
         return views
 
     def get_recent_annotations(
@@ -1008,8 +1009,9 @@ class ProjectResult(BaseModel):
                         ).choice
                     elif question.type == "textarea":
                         type_ = "text"
+                    # todo we need to add ranges, from timeline-labels...
                     else:
-                        print("unknown question type")
+                        print(f"unknown question type: {q_id},{question}")
                         type_ = "x"
                     rows.append(
                         {

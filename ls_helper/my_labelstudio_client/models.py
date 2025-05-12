@@ -1,9 +1,10 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Any, Literal, Optional, TypedDict
+from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, RootModel
+
 from tools.pydantic_annotated_types import SerializableDatetimeAlways
 
 
@@ -163,36 +164,32 @@ class HiddenColumns(BaseModel):
     labeling: Optional[list["str"]] = Field(default_factory=list)
 
 
+class ViewFilterItem(BaseModel):
+    filter: str
+    operator: str
+    type: str
+    value: str | int | float | list[str] | list[int] | list[float]
+
+
+class ViewFilter(BaseModel):
+    conjunction: Literal["and", "or"] = Field(default="and")
+    items: list[ViewFilterItem] = Field(default_factory=list)
+
+
 # from LS
 class ProjectViewDataModel(BaseModel):
-    type: Optional[str] = None
-    title: Optional[str] = None
-    target: Optional[str] = None
-    gridWidth: Optional[int] = None
-    columnWidth: Optional[int] = None
+    title: str = None
     hiddenColumns: Optional[HiddenColumns] = Field(
         default_factory=HiddenColumns
     )
+    type: Optional[str] = None
+    target: Optional[str] = None
+    gridWidth: Optional[int] = None
+    columnWidth: Optional[int] = None
 
     semantic_search: Optional[list] = None
     columnsDisplay: Optional[dict] = None
-    filters: TypedDict(
-        "filters",
-        {
-            "conjunction": Literal["and", "or"],
-            "items": list[
-                TypedDict(
-                    "items",
-                    {
-                        "filter": str,
-                        "operator": str,
-                        "type": str,
-                        "value": str | int,
-                    },
-                )
-            ],
-        },
-    ) = Field(default_factory=dict)
+    filters: Optional[ViewFilter] = Field(default_factory=ViewFilter)
     ordering: Optional[list[str]] = None
 
 

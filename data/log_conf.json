@@ -157,7 +157,7 @@
       "propagate": false
     },
     "ls_helper.models.main_models": {
-      "level": "DEBUG",
+      "level": "INFO",
       "handlers": [
         "console",
         "file_handler",
@@ -211,6 +211,15 @@
       "propagate": false
     },
     "ls_helper.command.aggregate": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.agreements_calculation": {
       "level": "DEBUG",
       "handlers": [
         "console",

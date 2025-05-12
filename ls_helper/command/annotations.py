@@ -226,7 +226,7 @@ def clean_results(
         platform: Annotated[Optional[str], typer.Argument()] = None,
         language: Annotated[Optional[str], typer.Argument()] = None,
         simplify_single: Annotated[Optional[bool], typer.Option()] = True,
-        variables: Annotated[Optional[list[str]], typer.Argument()] = None,
+        variables: Annotated[Optional[set[str]], typer.Argument()] = None,
 ) -> tuple[Path, dict[str, list[dict[str, Any]]]]:
     """
 
