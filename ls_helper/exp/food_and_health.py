@@ -15,11 +15,11 @@ if __name__ == "__main__":
         )
         writer[d].writeheader()
 
-    for i in [43, 50, 51]:  # tw-en,yt-en, tw-es,
+    for i in [43, 51]:  # [50]:  # [43, 50, 51]:  # tw-en,yt-en, tw-es,
         po = get_project(i)
-        print(po)
         f, res = annotations.clean_results(i, variables={"extras"})
         # print(f)
+        p_ids = []
         for p_id, coder_res in res.items():
             found_extra = []
             for res in coder_res:
@@ -33,4 +33,9 @@ if __name__ == "__main__":
                                 "platform_id": p_id,
                             }
                         )
+                        p_ids.append(p_id)
                         found_extra.append(d)
+        # view = po.create_view(ProjectViewCreate.model_validate({"project": po.id,
+        #                                                         "data": {"title": "food"}}))
+        #
+        # build_view_with_filter_p_ids(ls_client(), view, [p_id for p_id in p_ids])
