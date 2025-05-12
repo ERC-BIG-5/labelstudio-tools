@@ -41,7 +41,7 @@ def create_choice_elem(option: str, alias: Optional[str] = None) -> str:
 
 
 def create_choice_elements(
-        options: list[str], aliases: Optional[list[str]] = None
+    options: list[str], aliases: Optional[list[str]] = None
 ) -> str:
     if aliases:
         res = []
@@ -112,7 +112,7 @@ def check_references(root) -> dict[str, list[str]]:
 
 
 def validate_variables_against_mustache_template(
-        template: ParsedTemplate, variables: dict[str, Any]
+    template: ParsedTemplate, variables: dict[str, Any]
 ) -> tuple[set[str], list[str]]:
     """
     check if all variables in a mustache template are covered by the given variables.
@@ -135,7 +135,7 @@ def validate_variables_against_mustache_template(
 
 
 def build_from_template(
-        config: LabelingInterfaceBuildConfig,
+    config: LabelingInterfaceBuildConfig,
 ) -> tuple[etree.ElementTree, dict[str, list[str]], dict[str, int]]:
     """
 
@@ -144,7 +144,7 @@ def build_from_template(
     """
 
     def read_pystache2lxml_tree(
-            fp: Path, attrib: dict[str, Any]
+        fp: Path, attrib: dict[str, Any]
     ) -> etree.ElementTree:  # tree
         raw_text = fp.read_text(encoding="utf-8")
         template: ParsedTemplate = pystache.parse(raw_text)
@@ -166,9 +166,9 @@ def build_from_template(
     components_dir = SETTINGS.labeling_configs_dir / "components"
 
     def parse_tree(
-            sub_tree: etree.ElementTree,
-            parent_attrib: Optional[dict] = None,
-            parent_slot_fillers: Optional[list[etree.Element]] = (),
+        sub_tree: etree.ElementTree,
+        parent_attrib: Optional[dict] = None,
+        parent_slot_fillers: Optional[list[etree.Element]] = (),
     ) -> etree.Element:
         """
 
@@ -207,7 +207,7 @@ def build_from_template(
 
             if node.tag == "View":
                 if (_if := node.attrib.get("if")) and (
-                        _is := node.attrib.get("is")
+                    _is := node.attrib.get("is")
                 ):
                     del node.attrib["if"]
                     del node.attrib["is"]

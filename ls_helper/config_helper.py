@@ -14,6 +14,7 @@ from ls_helper.models.interface_models import (
     ITimelineLabel,
     ILabel,
 )
+
 # from ls_helper.new_models import ProjectData
 from ls_helper.settings import SETTINGS
 
@@ -127,7 +128,7 @@ def check_config_update(platform_configs: dict[str, Path]):
 
 
 def check_against_fixes(
-        label_config: str | InterfaceData, fixes: ProjectVariableExtensions
+    label_config: str | InterfaceData, fixes: ProjectVariableExtensions
 ):
     """
     Do

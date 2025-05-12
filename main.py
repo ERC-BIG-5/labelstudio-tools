@@ -84,7 +84,7 @@ app.add_typer(
 )
 # todo: more testing
 def strict_update_project_tasks(
-    new_data_file: Path, existing_data_file: Optional[Path] = None
+        new_data_file: Path, existing_data_file: Optional[Path] = None
 ):
     raise NotImplementedError("client.patch_task parameters changed")
     new_data_list = json.loads(new_data_file.read_text(encoding="utf-8"))
@@ -110,10 +110,10 @@ def strict_update_project_tasks(
 
 
 def get_all_variable_names(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
     # todo redo and test...
@@ -122,14 +122,14 @@ def get_all_variable_names(
 
 
 def get_variables_info(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
-    from_built: Annotated[
-        bool,
-        typer.Option(False, help="Use the built instead of the project-data"),
-    ] = False,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
+        from_built: Annotated[
+            bool,
+            typer.Option(False, help="Use the built instead of the project-data"),
+        ] = False,
 ):
     po = get_project(id, alias, platform, language)
 
@@ -228,6 +228,8 @@ if __name__ == "__main__":
     # this will work, since there is just one spanish twitter (so it's set to default)
 
     if False:
+        from ls_helper.command.annotations import agreements
+
         agreements(
             **{"alias": "twitter-es-4"},
             accepted_ann_age=200,
@@ -270,14 +272,12 @@ if __name__ == "__main__":
 
     # redo, label configs for # p 5
 
-    from ls_helper.command import project_setup
-
-    for i in [54]:
-        # labeling_conf.build(i)
-        # labeling_conf.update_labeling_config(i)
-        project_setup.generate_variable_extensions_template(
-            id=i, overwrite_if_exists=False
-        )
+    # for i in [54]:
+    #     # labeling_conf.build(i)
+    #     # labeling_conf.update_labeling_config(i)
+    #     project_setup.generate_variable_extensions_template(
+    #         id=i, overwrite_if_exists=False
+    #     )
 
     # labeling_conf.build_ls_labeling_interface(id=53)
 
@@ -318,7 +318,6 @@ if __name__ == "__main__":
 
     # overview()
 
-    # from ls_helper.command import labeling_conf, project_setup
     # project_setup.generate_variable_extensions_template(43)
     # from ls_helper.command import annotations
 
@@ -344,3 +343,12 @@ if __name__ == "__main__":
     # pass
 
     # aggregate.check_projects([51, 53, 54])
+    # get_project(54).refresh_views()
+
+    from ls_helper.command import view, annotations
+
+    view.download_project_views(id=53)
+    # annotations.agreements(id=54)
+    # task.get_tasks(id=53)
+    # view.update_coding_game(id=53)
+    annotations.add_conflicts_to_tasks(id=54)
