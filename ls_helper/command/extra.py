@@ -18,61 +18,69 @@ extras_app = typer.Typer(
 
 @extras_app.command(short_help="[stats] Annotation basic results")
 def get_confusions(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    accepted_ann_age: Annotated[
-        int, typer.Option(help="Download annotations if older than x hours")
-    ] = 6,
-    min_coders: Annotated[int, typer.Option()] = 2,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        accepted_ann_age: Annotated[
+            int, typer.Option(help="Download annotations if older than x hours")
+        ] = 6,
+        min_coders: Annotated[int, typer.Option()] = 2,
 ) -> Path:
     po = get_project(id, alias, platform, language)
     # po.validate_extensions()
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
     df, _ = mp.get_annotation_df()
-    
+
     ##############################
     # mp.flatten_annotation_results().to_csv("testing.csv")
     # df.to_csv("whatisthis3.csv")
     ##############################
 
-    all_values = ['aesthetics',\
-                'cultural-identity',\
-                'good-life',\
-                'kinship',\
-                'literacy',\
-                'livelihoods',\
-                'personal-identity',\
-                'reciprocity',\
-                'sense-of-agency',\
-                'sense-of-place',\
-                'social-cohesion',\
-                'social-memory',\
-                'social-relations',\
-                'social-responsibility',\
-                'spirituality',\
-                'stewardship-principle',\
-                'stewardship-eudaimonia',\
-                'well-being']
+    all_values = ['aesthetics',
+                  'cultural-identity',
+                  'good-life',
+                  'kinship',
+                  'literacy',
+                  'livelihoods',
+                  'personal-identity',
+                  'reciprocity',
+                  'sense-of-agency',
+                  'sense-of-place',
+                  'social-cohesion',
+                  'social-memory',
+                  'social-relations',
+                  'social-responsibility',
+                  'spirituality',
+                  'stewardship-principle',
+                  'stewardship-eudaimonia',
+                  'well-being']
+
+    # todo use something like this instead:
+    # rel_value_option: ChoiceVariableModel = po.variables()["rel-value_text"]
+    # all_values = rel_value_option.options
+
     # Helper functions
-    def find_drv (data, item):
+    def find_drv(data, item):
         if item in data:
             return True
         else:
             return False
-    def clean_list_like (text):
+
+    def clean_list_like(text):
         text = text[2:-2]
         if ", " in text:
             return text.split(", ")
         else:
             return [text]
-    def get_proportion (clean, conf):
+
+    def get_proportion(clean, conf):
         if clean + conf == 0:
             return 0.00
         else:
             return round(conf / (clean + conf), 2)
-    def transform_matrix (matrix):
+
+    def transform_matrix(matrix):
         matrix_add = np.add(matrix, np.transpose(matrix))
         ind, matrix_end = 0, []
         for item in matrix_add:
@@ -86,6 +94,7 @@ def get_confusions(
             matrix_end.append(row)
             ind += 1
         return np.transpose(matrix_end)
+
     # Prepare the output dataframes
     conf_all = pd.DataFrame(all_values, columns=["drv"])
     conf_text = conf_all.copy()
@@ -107,7 +116,7 @@ def get_confusions(
     count_drv_all = [count_drv_text[ind] + count_drv_visual[ind] for ind in range(conf_all.shape[0])]
     conf_all["count_annot"] = count_drv_all
     # Get the count & type of confusions for each DRV
-    for drv in all_values:     
+    for drv in all_values:
         # text confusions
         df_sub_t = df[df["variable"] == f'rel-value_text_conf_{drv}']
         found_values, found_dict = list(df_sub_t["value"]), {}
@@ -128,7 +137,7 @@ def get_confusions(
                     found_dict[value] = 1
                 else:
                     found_dict[value] += 1
-        conf_visual_count = [found_dict[key] if key in found_dict.keys() else 0 for key in all_values]           
+        conf_visual_count = [found_dict[key] if key in found_dict.keys() else 0 for key in all_values]
         conf_visual[drv] = conf_visual_count
         # all confusions
         conf_all[drv] = [conf_text_count[ind] + conf_visual_count[ind] for ind in range(len(all_values))]
@@ -173,13 +182,13 @@ def get_confusions(
         conf_visual[drv] = matrix_visual_new[pos]
         conf_all[drv] = matrix_all_new[pos]
     # Save results as Excel file
-    #### TO DO: CURRENTLY DUMPED TO THE MAIN DIR, SHOULD IMPROVE THIS #### 
+    #### TODO: CURRENTLY DUMPED TO THE MAIN DIR, SHOULD IMPROVE THIS ####
+    # po.path_for(SETTINGS.annotations_dir,alternative=f"confusion_{po.id}", ext="xlsx")
     with pd.ExcelWriter("confusions.xlsx") as writer:
         conf_all.to_excel(writer, sheet_name="all", index=False)
         conf_text.to_excel(writer, sheet_name="text", index=False)
         conf_visual.to_excel(writer, sheet_name="visual", index=False)
-    
-    
+
     return
 
     # standard shape
