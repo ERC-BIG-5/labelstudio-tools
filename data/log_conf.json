@@ -146,8 +146,7 @@
         "error_file_handler"
       ],
       "propagate": false
-<<<<<<< HEAD
-=======
+
     },
     "ls_helper.models.main_models": {
       "level": "DEBUG",
@@ -202,7 +201,7 @@
         "error_file_handler"
       ],
       "propagate": false
->>>>>>> 881e5f891475142ff5331315bf2408f9d28677a8
+
     }
   },
   "root": {
