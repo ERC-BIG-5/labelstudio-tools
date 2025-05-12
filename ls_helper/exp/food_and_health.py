@@ -17,6 +17,7 @@ if __name__ == "__main__":
 
     for i in [43, 50, 51]:  # tw-en,yt-en, tw-es,
         po = get_project(i)
+        print(po)
         f, res = annotations.clean_results(i, variables={"extras"})
         # print(f)
         for p_id, coder_res in res.items():

@@ -2,7 +2,6 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from deepdiff import DeepDiff
-from lxml.etree import Element
 
 from ls_helper.models.interface_models import (
     IChoice,
@@ -15,60 +14,8 @@ from ls_helper.models.interface_models import (
     ITimelineLabel,
     ILabel,
 )
-
 # from ls_helper.new_models import ProjectData
 from ls_helper.settings import SETTINGS
-
-
-def get_tree_n_root(xml_file: Path) -> tuple:
-    tree = ET.parse(xml_file)
-    root = tree.getroot()
-    return tree, root
-
-
-def find_all_names(root):
-    unique_names = {}
-
-    def find_name(element, current_path):
-        # Print current element's path
-        path = f"{current_path}/{element.tag}"
-        # print(path, element.get("name"))
-        if _name := element.get("name"):
-            unique_names.setdefault(_name, []).append(path)
-
-        # Recurse through all children
-        for child in element:
-            find_name(child, path)
-
-    # Start from root
-    find_name(root, "")
-
-    return unique_names
-
-
-def find_tag_name_refs(root) -> dict[str, list[Element]]:
-    """
-    checks which elements depend on all variables
-    :param root:
-    :return: dict: variable: [depending_0, depending_1, ...]
-    """
-    refs: dict[str, list[str]] = {}
-
-    def find_name(element, current_path):
-        # Print current element's path
-        path = f"{current_path}/{element.tag}"
-        # print(path, element.get("name"))
-        if _name := element.get("whenTagName"):
-            refs.setdefault(_name, []).append(element)
-
-        # Recurse through all children
-        for child in element:
-            find_name(child, path)
-
-    # Start from root
-    find_name(root, "")
-
-    return refs
 
 
 def find_duplicates(xml_file):
@@ -180,7 +127,7 @@ def check_config_update(platform_configs: dict[str, Path]):
 
 
 def check_against_fixes(
-    label_config: str | InterfaceData, fixes: ProjectVariableExtensions
+        label_config: str | InterfaceData, fixes: ProjectVariableExtensions
 ):
     """
     Do
