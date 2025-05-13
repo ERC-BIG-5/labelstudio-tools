@@ -5,6 +5,7 @@ from typing import Annotated, Optional
 import typer
 from tqdm import tqdm
 
+from ls_helper.command.aggregate import aggregate_app
 from ls_helper.command.annotations import annotations_app
 from ls_helper.command.backup import backup_app
 from ls_helper.command.extra import extras_app
@@ -75,6 +76,12 @@ app.add_typer(
     extras_app,
     name="extras",
     short_help="Some extra commands: [relational-values confusions]",
+)
+
+app.add_typer(
+    aggregate_app,
+    name="aggregate",
+    short_help="Sommands that run over multiple projects",
 )
 
 
