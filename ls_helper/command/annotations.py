@@ -149,8 +149,8 @@ def agreements(
             int, typer.Option(help="Download annotations if older than x hours")
         ] = 6,
         max_num_coders: Annotated[int, typer.Option()] = 2,
-        variables: Annotated[Optional[list[str]], typer.Argument()] = None,
-        exclude_variables: Annotated[Optional[list[str]], typer.Argument()] = None,
+        variables: Annotated[Optional[list[str]], typer.Option()] = None,
+        exclude_variables: Annotated[Optional[list[str]], typer.Option()] = None,
 ) -> tuple[list[Path], Agreements]:
     """
 
@@ -220,10 +220,10 @@ def add_conflicts_to_tasks(
 def clean_results(
         id: Annotated[Optional[int], typer.Option()] = None,
         alias: Annotated[Optional[str], typer.Option("-a")] = None,
-        platform: Annotated[Optional[str], typer.Argument()] = None,
-        language: Annotated[Optional[str], typer.Argument()] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
         simplify_single: Annotated[Optional[bool], typer.Option()] = True,
-        variables: Annotated[Optional[set[str]], typer.Argument()] = None,
+        variables: Annotated[Optional[list[str]], typer.Option()] = None,
 ) -> tuple[Path, dict[str, list[dict[str, Any]]]]:
     """
 
