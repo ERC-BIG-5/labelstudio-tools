@@ -5,7 +5,7 @@ from typing import Literal, Optional
 
 import jsonpath_ng
 
-from ls_helper.my_labelstudio_client.client import LabelStudioBase
+from ls_helper.my_labelstudio_client.client import LabelStudioBase, ls_client
 from ls_helper.my_labelstudio_client.models import (
     ProjectViewModel,
     TaskResultModel,
@@ -15,7 +15,7 @@ from ls_helper.settings import SETTINGS
 
 
 def test_update_other_coding_game(
-    annotations: list[TaskResultModel], project_id: int
+        annotations: list[TaskResultModel], project_id: int
 ) -> tuple[dict[str, list[str]], list[str]]:
     """
     TODO THIS FUNC NEEDS TO GO
@@ -122,11 +122,11 @@ def pick_and_flatten(results):
 
 
 def update_coding_game(
-    client: LabelStudioBase,
-    project_id: int,
-    use_stored_data_if_available: bool,
-    view_id: int,
-    platform_ids: list[str] = (),
+        client: LabelStudioBase,
+        project_id: int,
+        use_stored_data_if_available: bool,
+        view_id: int,
+        platform_ids: list[str] = (),
 ):
     # TODO @deprecated, use func below
     viwes = client.get_project_views(project_id)
@@ -169,8 +169,8 @@ def update_coding_game(
 
 
 def build_platform_id_filter(
-    platform_ids: list[str | int],
-    ls_main_field: Literal["platform_id", "task_id"],
+        platform_ids: list[str | int],
+        ls_main_field: Literal["platform_id", "task_id"],
 ):
     """
     should be simpler. this is only that complicated, cuz of the bad conflict models.
@@ -199,9 +199,8 @@ def build_platform_id_filter(
     return new_filters
 
 
-def build_view_with_filter_p_ids(
-    client: LabelStudioBase, view: ProjectViewModel, platform_ids: list[str]
-):
+def build_view_with_filter_p_ids(view: ProjectViewModel, platform_ids: list[str]
+                                 ):
     new_filters = build_platform_id_filter(
         platform_ids, ls_main_field="platform_id"
     )
@@ -215,7 +214,7 @@ def build_view_with_filter_p_ids(
     }
 
     # print(res)
-    resp = client.patch_view(view.id, res)
+    resp = ls_client().patch_view(view.id, res)
     if resp.status_code != 200:
         print(f"error updating view for coding game: {resp.status_code}")
         print(resp.json())

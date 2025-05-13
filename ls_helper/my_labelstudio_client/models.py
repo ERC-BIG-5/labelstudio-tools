@@ -293,7 +293,7 @@ class TimelineLabelsRange(BaseModel):
 
     @property
     def str_value(self) -> str:
-        return f"({self.start - self.end})"
+        return f"{self.start}-{self.end}"
 
 
 class TimelineLabels(BaseModel):
@@ -303,7 +303,7 @@ class TimelineLabels(BaseModel):
     @property
     def direct_value(self) -> list[str]:
         return [
-            '",".join(self.timelinelabels):"".join([r.str_value for r in self.ranges])'
+            f'{",".join(self.timelinelabels)}:{"".join([r.str_value for r in self.ranges])}'
         ]
 
 
