@@ -20,7 +20,7 @@ from ls_helper.models.main_models import (
     ProjectAnnotationResultsModel,
     ProjectResult,
 )
-from ls_helper.settings import SETTINGS
+from ls_helper.settings import SETTINGS, ls_logger
 from tools.files import read_data
 from tools.project_logging import get_logger
 
@@ -57,18 +57,15 @@ def annotations(
     use_local, ann_results.raw_annotation_result = po.get_recent_annotations(
         accepted_ann_age
     )
-    # todo: should be stored in that object, directly
     raw_annotation_df, _ = ann_results.get_annotation_df(ignore_groups=True)
 
-    # mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
-    # todo, this is not nice looking ... lol
     res = ann_results.flatten_annotation_results(
         min_coders, ann_results.interface.ordered_fields
     )
     res = ann_results.format_df_for_csv(res)
     dest = SETTINGS.annotations_results_dir / f"{ann_results.id}.csv"
     res.to_csv(dest, index=False)
-    print(f"annotation results -> {dest}")
+    ls_logger.info(f"annotation results -> {dest}")
     return dest
 
 

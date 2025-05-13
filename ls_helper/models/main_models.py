@@ -53,7 +53,7 @@ from ls_helper.settings import (
     TIMESTAMP_FORMAT,
 )
 from tools.files import save_json, read_data
-from tools.project_logging import get_logger
+from tools.project_logging import get_model_logger
 from tools.pydantic_annotated_types import SerializableDatetime
 
 if TYPE_CHECKING:
@@ -67,7 +67,8 @@ ProjectAccess = (
         | tuple[Optional[int], Optional[str], Optional[str], Optional[str]]
 )
 
-logger = get_logger(__file__)
+
+# logger = get_logger(__file__)
 
 
 class UserInfo(BaseModel):
@@ -113,6 +114,10 @@ class ProjectData(ProjectCreate):
     _interface_data: Optional[InterfaceData] = None
     _variable_extensions: Optional[ProjectVariableExtensions] = None
     _ann_results: Optional["ProjectResult"] = None
+    _logger: Optional[Logger] = None
+
+    def model_post_init(self, context: Any) -> None:
+        self._logger = get_model_logger(self)
 
     # views, predictions, results
 
@@ -152,7 +157,7 @@ class ProjectData(ProjectCreate):
                 exclude={"control_weights", "parsed_label_config"}
             )
         )
-        print(f"project-data saved for {repr(self)}: -> {dest}")
+        self._logger.info(f"project-data saved for {repr(self)}: -> {dest}")
 
     def build_ls_labeling_config(
             self, alternative_template: Optional[str] = None
@@ -175,7 +180,7 @@ class ProjectData(ProjectCreate):
         build_config = LabelingInterfaceBuildConfig(template=template_path)
         built_tree, broken_refs, duplicates = build_from_template(build_config)
         built_tree.write(destination_path, encoding="utf-8", pretty_print=True)
-        print(
+        self._logger.info(
             f"labelstudio xml labeling config written to file://{destination_path.absolute()}"
         )
         valid = not broken_refs and not duplicates
@@ -316,7 +321,7 @@ class ProjectData(ProjectCreate):
     ):
         p = self.path_for(path_dir, alternative, extension)
         p.write_text(data.model_dump_json())
-        logger.info(f"Save {type(data).__name__} to: {p}")
+        self._logger.info(f"Save {type(data).__name__} to: {p}")
 
     def save_extensions(
             self,
@@ -368,7 +373,7 @@ class ProjectData(ProjectCreate):
         self.path_for(SETTINGS.view_dir).write_text(
             json.dumps([v.model_dump() for v in views], indent=2)
         )
-        logger.info(f"refresh views: {views}")
+        self._logger.info(f"refresh views: {views}")
         return views
 
     def get_recent_annotations(
@@ -396,13 +401,13 @@ class ProjectData(ProjectCreate):
                     datetime.now() - file_dt < timedelta(hours=accepted_age)
                     or use_existing
             ):
-                ls_logger.info(
+                self._logger.info(
                     f"Get recent, gets latest annotation: {file_dt:%m%d_%H%M}"
                 )
 
                 annotation_file = get_latest_annotation_file(self.id)
                 if not annotation_file:
-                    ls_logger.warning("No annotation file?!")
+                    self._logger.warning("No annotation file?!")
                     return None
                 task_results = [
                     TaskResultModel.model_validate(t)
@@ -414,23 +419,29 @@ class ProjectData(ProjectCreate):
                 )
 
         # todo this stuff is old. needs refactoring love. move to ProjectData model
-        print("downloading annotations")
+        self._logger.info("downloading annotations")
         result = ls_client().get_project_annotations(self.id)
         if not result:
             return False, None
         ts = datetime.now()
+        base_path = SETTINGS.annotations_dir / str(self.id)
         res_path = (
-                SETTINGS.annotations_dir
-                / str(self.id)
+                base_path
                 / f"{ts.strftime(TIMESTAMP_FORMAT)}.json"
         )
+
         res_path.parent.mkdir(parents=True, exist_ok=True)
-        print(f"dumping project annotations to {res_path}")
+        self._logger.info(f"dumping project annotations to {res_path}")
         pa = ProjectAnnotationResultsModel(task_results=result, timestamp=ts)
         json.dump(
             [r.model_dump() for r in result],
             res_path.open("w", encoding="utf-8"),
         )
+        # remove old annotation files:
+        all_files = list(sorted(base_path.glob("*.json"), reverse=True))
+        for old_files in all_files[SETTINGS.ANNOTATIONS_HISTORY_LENGTH:]:
+            self._logger.debug(f"Removing old annotation file: {old_files}")
+            old_files.unlink()
         return False, pa
 
     def validate_extensions(self) -> list[str]:
@@ -443,7 +454,7 @@ class ProjectData(ProjectCreate):
         for var in self.variable_extensions.extensions:
             if var not in interface:
                 redundant_extensions.append(var)
-                logger.info(f"variable from extensions is redundant {var}")
+                self._logger.info(f"variable from extensions is redundant {var}")
         return redundant_extensions
 
     def get_raw_annotations_results(
@@ -470,6 +481,8 @@ class ProjectData(ProjectCreate):
             use_existing: bool = False,
     ) -> "ProjectResult":
         """
+        get the raw annotation results (in form of the two fundamental dataframes)
+        will store those dataframes for a project as 'raw_<id>' and 'ass_<id>' pickle files.
         :param accepted_ann_age:
         :param use_existing: False, will always be recalculated and not stored.
         :return:
@@ -627,7 +640,7 @@ class ProjectData(ProjectCreate):
                 indent=2,
             )
         )
-        logger.info(f"Save tasks to: {dest.as_posix()}")
+        self._logger.info(f"Save tasks to: {dest.as_posix()}")
         return dest
 
     def store_temp_tasks(self, tasks: LSTaskList[LSTask]) -> Path:
@@ -641,7 +654,7 @@ class ProjectData(ProjectCreate):
                 indent=2,
             )
         )
-        logger.info(f"Save tasks to: {dest.as_posix()}")
+        self._logger.info(f"Save tasks to: {dest.as_posix()}")
         return dest
 
 
@@ -668,7 +681,7 @@ class ProjectOverview(BaseModel):
         for project in self.projects.values():
             # print(project.id, project.name)
             if project.alias in self.alias_map:
-                print(f"warning: alias {project.alias} already exists")
+                self._logger.warning(f"alias {project.alias} already exists")
                 continue
             self.alias_map[project.alias] = project
             pl_l = (project.platform, project.language)
@@ -678,8 +691,8 @@ class ProjectOverview(BaseModel):
                 # check if the already set default, actually has the flat
                 if set_default := self.default_map.get(pl_l, None):
                     if set_default.default:
-                        print(
-                            f"warning: default {pl_l} already exists. Not setting {project.title} as default"
+                        self._logger.warning(
+                            f"default {pl_l} already exists. Not setting {project.title} as default"
                         )
                         continue
                 self.default_map[pl_l] = project
@@ -691,9 +704,7 @@ class ProjectOverview(BaseModel):
     def load() -> "ProjectOverview":
         pp = SETTINGS.projects_main_file
         if not pp.exists():
-            print("projects file missing")
-        # print(pp.read_text())
-        # print(ProjectOverView2.model_validate_json(pp.read_text()))
+            ls_logger.warning("projects file missing")
         return ProjectOverview.model_validate(
             {"projects": json.loads(pp.read_text())}
         )
@@ -760,7 +771,7 @@ class ProjectOverview(BaseModel):
         self.alias_map[p.alias] = p_i
         self.save()
 
-        print(f"project created and saved: {repr(p_i)}")
+        self._logger.info(f"project created and saved: {repr(p_i)}")
         dest = p_i.path_for(SETTINGS.labeling_templates, ext=".xml")
         dest.write_text(project_model.label_config)
 
@@ -788,7 +799,7 @@ def get_project(
         language: Optional[str] = None,
 ) -> ProjectData:
     po = platforms_overview.get_project((id, alias, platform, language))
-    logger.debug(repr(po))
+    ls_logger.debug(repr(po))
     return po
 
 
@@ -805,7 +816,7 @@ class ProjectResult(BaseModel):
     _logger: Optional[Logger] = None
 
     def model_post_init(self, context: Any, /) -> None:
-        self._logger = get_logger(f"{self.__module__}.{self.__class__.__name__}")
+        self._logger = get_model_logger(self)
 
     @property
     def id(self) -> int:
@@ -824,7 +835,7 @@ class ProjectResult(BaseModel):
         :param variables:
         :return: filepath and result-dict: platform_id: [{coder-results}]
         """
-        logger.info("Building raw annotations dataframe")
+        self._logger.info("Building raw annotations dataframe")
 
         def var_method(k, fix):
             if fix.deprecated:
@@ -849,14 +860,10 @@ class ProjectResult(BaseModel):
             }  # , "platform_id": task.data["platform_id"]}
             task_results = task_res["task_results"]
             results[task.data["platform_id"]] = task_results
-            # print(task.id)
             for ann in task.annotations:
                 ann_result = {}
-                # print(f"{task.id=} {ann.id=}")
                 if ann.was_cancelled:
-                    # print(f"{task.id=} {ann.id=} C")
                     continue
-                # print(f"{task.id=} {ann.id=} {len(ann.result)=}")
 
                 for q_id, question in enumerate(ann.result):
                     orig_name = question.from_name
@@ -867,7 +874,7 @@ class ProjectResult(BaseModel):
                     new_name = q_extens.get(question.from_name)
 
                     if not new_name:
-                        print(f"unknown variable... {question.from_name}")
+                        self._logger.warning(f"unknown variable... {question.from_name}")
                         continue
                     if variables and new_name not in variables:
                         continue
@@ -892,7 +899,7 @@ class ProjectResult(BaseModel):
             alternative=f"clean_{self.project_data.id}",
         )
         dest.write_text(json.dumps(results))
-        print(f"Clean results written to {dest}")
+        self._logger.info(f"Clean results written to {dest}")
         return dest, results
 
     def add_default(
@@ -966,7 +973,7 @@ class ProjectResult(BaseModel):
         if self.raw_annotation_df is not None and not test_rebuild:
             return self.raw_annotation_df, self.raw_annotation_df
         # todo the value-df still has too many cols, drop them, since we have the assignment df
-        logger.info("Building raw annotations dataframe")
+        self._logger.info("Building raw annotations dataframe")
         assignment_df_rows = []
         rows = []
 
@@ -1003,14 +1010,13 @@ class ProjectResult(BaseModel):
                         )
                     new_name = q_extens.get(question.from_name)
                     if not new_name:
-                        print(f"unknown variable... {question.from_name}")
+                        self._logger.warning(f"unknown variable... {question.from_name}")
                         continue
                     var_def = variables[new_name]
                     idx = 0
                     if var_def.group_name:
                         new_name = var_def.group_name
                         idx = var_def.group_index
-                    # print(question)
                     if question.type == "choices":
                         type_ = cast(
                             ChoiceVariableModel, variables[new_name]
@@ -1021,7 +1027,7 @@ class ProjectResult(BaseModel):
                     elif question.type == "timelinelabels":
                         type_ = "range-labels"
                     else:
-                        print(f"unknown question type: {q_id},{question}")
+                        self._logger.warning(f"unknown question type: {q_id},{question}")
                         type_ = "x"
                     rows.append(
                         {
@@ -1233,7 +1239,7 @@ class ProjectResult(BaseModel):
         dest_files = self.project_data.store_agreement_report(
             ag, gen_csv_tables
         )
-        logger.info(
+        self._logger.info(
             f"agreement-results: {[dest.as_posix() for dest in dest_files]}"
         )
         return dest_files, ag
