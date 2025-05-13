@@ -846,7 +846,9 @@ class ProjectResult(BaseModel):
 
         extension_keys = set(self.project_data.variable_extensions.extensions)
         po_variables = self.project_data.variables(False)
-
+        for var in variables:
+            if var not in po_variables:
+                raise ValueError(f"{var} not found in project {repr(self.project_data)}")
         q_extens = {
             k: var_method(k, v)
             for k, v in self.project_data.variable_extensions.extensions.items()

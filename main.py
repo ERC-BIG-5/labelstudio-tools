@@ -11,6 +11,7 @@ from ls_helper.command.backup import backup_app
 from ls_helper.command.extra import extras_app
 from ls_helper.command.labeling_conf import labeling_conf_app
 from ls_helper.command.pipeline import pipeline_app
+from ls_helper.command.plot import plot_app
 from ls_helper.command.project_setup import project_app
 from ls_helper.command.setup import (
     setup_app,
@@ -81,8 +82,11 @@ app.add_typer(
 app.add_typer(
     aggregate_app,
     name="aggregate",
-    short_help="Sommands that run over multiple projects",
+    short_help="Commands that run over multiple projects",
 )
+app.add_typer(plot_app,
+              name="plot",
+              short_help="Commands for plotting data")
 
 
 @app.command(
