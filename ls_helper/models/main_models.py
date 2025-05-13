@@ -3,6 +3,7 @@ import re
 from csv import DictWriter
 from datetime import datetime, timedelta
 from enum import Enum, auto
+from logging import Logger
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, cast, Annotated
 
@@ -801,6 +802,10 @@ class ProjectResult(BaseModel):
     assignment_df: Optional[pd.DataFrame] = None
 
     _extension_applied: Optional[bool] = False
+    _logger: Optional[Logger] = None
+
+    def model_post_init(self, context: Any, /) -> None:
+        self._logger = get_logger(f"{self.__module__}.{self.__class__.__name__}")
 
     @property
     def id(self) -> int:
@@ -950,7 +955,6 @@ class ProjectResult(BaseModel):
             test_rebuild: bool = False,
     ) -> tuple[DataFrame, DataFrame]:
         """
-        todo. type 'range-labels', should be merged into one row, with list items
 
         :param drop_cancels:
         :param fill_defaults:
@@ -1050,6 +1054,19 @@ class ProjectResult(BaseModel):
                     break
 
         df = DataFrame(rows)
+
+        # pack 'range-labels' which are multiple rows, into one row with lists
+        def merge_range_labels(df_) -> DataFrame:
+
+            df_range_labels = df_[df_["type"] == "range-labels"]
+            if len(df_range_labels) > 0:
+                merge_value = df_range_labels["value"].to_list()
+                df_.at[df_range_labels.index[0], "value"] = merge_value
+                df_ = df_.drop(df_range_labels.index[1:])
+            return df_
+
+        df = df.groupby(["task_id", "ann_id"], as_index=False).apply(merge_range_labels)
+
         self.assignment_df = DataFrame(assignment_df_rows)
         if fill_defaults:
             df = (
