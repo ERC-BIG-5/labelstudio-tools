@@ -23,7 +23,7 @@
       "class": "logging.handlers.RotatingFileHandler",
       "level": "DEBUG",
       "formatter": "detailed",
-      "filename": "/home/rsoleyma/projects/big5/labelstudio-tools/data/logs/app.log",
+      "filename": "data/logs/app.log",
       "maxBytes": 10485760,
       "backupCount": 5,
       "encoding": "utf8"
@@ -32,7 +32,7 @@
       "class": "logging.handlers.RotatingFileHandler",
       "level": "ERROR",
       "formatter": "detailed",
-      "filename": "/home/rsoleyma/projects/big5/labelstudio-tools/data/logs/error.log",
+      "filename": "data/logs/error.log",
       "maxBytes": 10485760,
       "backupCount": 5,
       "encoding": "utf8"
@@ -57,15 +57,6 @@
       ],
       "propagate": false
     },
-    "ls_helper.agreements": {
-      "level": "DEBUG",
-      "handlers": [
-        "console",
-        "file_handler",
-        "error_file_handler"
-      ],
-      "propagate": false
-    },
     "ls_helper.models.interface_models": {
       "level": "DEBUG",
       "handlers": [
@@ -75,8 +66,8 @@
       ],
       "propagate": false
     },
-    "ls_helper.new_models": {
-      "level": "DEBUG",
+    "ls_helper.models.main_models": {
+      "level": "INFO",
       "handlers": [
         "console",
         "file_handler",
@@ -155,15 +146,7 @@
         "error_file_handler"
       ],
       "propagate": false
-    },
-    "ls_helper.models.main_models": {
-      "level": "INFO",
-      "handlers": [
-        "console",
-        "file_handler",
-        "error_file_handler"
-      ],
-      "propagate": false
+
     },
     "ls_helper.fresh_agreements": {
       "level": "DEBUG",
@@ -227,6 +210,7 @@
         "error_file_handler"
       ],
       "propagate": false
+
     }
   },
   "root": {
