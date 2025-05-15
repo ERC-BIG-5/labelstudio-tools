@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Optional, cast, Annotated
 import pandas as pd
 from lxml.etree import ElementTree
 from pandas import DataFrame
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator, PrivateAttr
 
 from ls_helper.agreements_calculation import AgreementResult
 from ls_helper.build_configs import (
@@ -33,7 +33,7 @@ from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import (
     ProjectModel as LSProjectModel,
     ProjectModel,
-    ProjectViewCreate,
+    ProjectViewCreate, TaskList,
 )
 from ls_helper.my_labelstudio_client.models import (
     ProjectViewModel,
@@ -108,6 +108,48 @@ class ItemType(str, Enum):
     xml_template = auto()
 
 
+class ProjectTasks:
+
+    def __init__(self, project_data: "ProjectData") -> None:
+        self._pd = project_data
+
+    def download_tasks(self, save: bool = True) -> LSTaskList:
+        tasks = TaskList.model_validate(ls_client().get_task_list(project=self._pd.id))
+        if save:
+            self.save(tasks)
+        return tasks
+
+    def get(self, download_when_missing: bool = True, download: bool = False) -> LSTaskList:
+        f = self._pd.path_for(SETTINGS.tasks_dir)
+        missing = not f.exists()
+        if download or (missing and download_when_missing):
+            tasks = self.download_tasks(save=True)
+            return tasks
+        if missing:
+            raise FileNotFoundError(f"No tasks file found: {f}")
+        return LSTaskList.model_validate_json(
+            self._pd.path_for(SETTINGS.tasks_dir).read_text()
+        )
+
+    def save(self, tasks: LSTaskList, include_additional_fields: Optional[set[str]] = None) -> Path:
+        if not include_additional_fields:
+            include_additional_fields = set()
+        dest = self._pd.path_for(SETTINGS.tasks_dir)
+        dest.write_text(
+            json.dumps(
+                [
+                    t.model_dump(
+                        include={"data", "id", "project"} | include_additional_fields
+                    )
+                    for t in tasks.root
+                ],
+                indent=2,
+            )
+        )
+        self._pd._logger.info(f"Save tasks to: {dest.as_posix()}")
+        return dest
+
+
 class ProjectData(ProjectCreate):
     id: int
     _project_data: Optional[LSProjectModel] = None
@@ -115,11 +157,19 @@ class ProjectData(ProjectCreate):
     _variable_extensions: Optional[ProjectVariableExtensions] = None
     _ann_results: Optional["ProjectResult"] = None
     _logger: Optional[Logger] = None
+    _tasks: ProjectTasks = PrivateAttr()
+
+    model_config = ConfigDict()
 
     def model_post_init(self, context: Any) -> None:
         self._logger = get_model_logger(self)
+        self._tasks = ProjectTasks(self)
 
     # views, predictions, results
+
+    @property
+    def tasks(self) -> ProjectTasks:
+        return self._tasks
 
     def path_for(
             self,
@@ -619,29 +669,12 @@ class ProjectData(ProjectCreate):
         }
 
     def get_tasks(self) -> LSTaskList:
-        return LSTaskList.model_validate_json(
-            self.path_for(SETTINGS.tasks_dir).read_text()
-        )
+        return self._tasks.get(download_when_missing=True, download=False)
 
     def save_tasks(
             self, tasks: list[LSTask], include_additional: set[str] = None
     ) -> Path:
-        if not include_additional:
-            include_additional = set()
-        dest = self.path_for(SETTINGS.tasks_dir)
-        dest.write_text(
-            json.dumps(
-                [
-                    t.model_dump(
-                        include={"data", "id", "project"} | include_additional
-                    )
-                    for t in tasks
-                ],
-                indent=2,
-            )
-        )
-        self._logger.info(f"Save tasks to: {dest.as_posix()}")
-        return dest
+        return self._tasks.save_tasks(tasks, include_additional)
 
     def store_temp_tasks(self, tasks: LSTaskList[LSTask]) -> Path:
         dest = self.path_for(SETTINGS.temp_file_path)

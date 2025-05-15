@@ -35,58 +35,23 @@ app = typer.Typer(
     name="Labelstudio helper", pretty_exceptions_show_locals=False
 )
 
-app.add_typer(
-    setup_app,
-    name="setup",
-    short_help="Commands related to initializing the project",
-)
-app.add_typer(
-    project_app,
-    name="project",
-    short_help="Commands related to project setup and maintenance",
-)
-app.add_typer(
-    backup_app,
-    name="backup",
-    short_help="Commands related to bulkbacking up projects and annotations",
-)
-app.add_typer(
-    labeling_conf_app,
-    name="labeling-conf",
-    short_help="Commands related to building, validating and uploading project label configurations",
-)
-app.add_typer(
-    task_app,
-    name="task",
-    short_help="Commands related to downloading, creating and patching project tasks",
-)
-app.add_typer(
-    view_app, name="view", short_help="Commands related to project views"
-)
-app.add_typer(
-    annotations_app,
-    name="annotations",
-    short_help="Commands related to downloading and analyzing annotations",
-)
-app.add_typer(
-    pipeline_app,
-    name="pipeline",
-    short_help="Commands related to interaction with the Pipeline package",
-)
-app.add_typer(
-    extras_app,
-    name="extras",
-    short_help="Some extra commands: [relational-values confusions]",
-)
+sub_apps = [
+    (setup_app, "setup", "Commands related to initializing the project"),
+    (project_app, "project", "Commands related to project setup and maintenance"),
+    (backup_app, "backup", "Commands related to backing up projects and annotations in bulk"),
+    (labeling_conf_app, "labeling-conf",
+     "Commands related to building, validating and uploading project label configurations"),
+    (task_app, "task", "Commands related to downloading, creating and patching project tasks"),
+    (view_app, "view", "Commands related to project views"),
+    (annotations_app, "annotations", "Commands related to downloading and analyzing annotations"),
+    (pipeline_app, "pipeline", "Commands related to interaction with the Pipeline package"),
+    (extras_app, "extras", "Some extra commands: [relational-values confusions]"),
+    (aggregate_app, "aggregate", "Commands that run over multiple projects"),
+    (plot_app, "plot", "Commands for plotting data")
+]
 
-app.add_typer(
-    aggregate_app,
-    name="aggregate",
-    short_help="Commands that run over multiple projects",
-)
-app.add_typer(plot_app,
-              name="plot",
-              short_help="Commands for plotting data")
+for sub_app, name, help_text in sub_apps:
+    app.add_typer(sub_app, name=name, help=help_text)
 
 
 @app.command(
@@ -330,7 +295,6 @@ if __name__ == "__main__":
     # overview()
 
     # project_setup.generate_variable_extensions_template(43)
-    # from ls_helper.command import annotations
 
     """ extras, food, health
     project_setup.download_project_data(50)
@@ -338,8 +302,9 @@ if __name__ == "__main__":
     for i in [43, 50, 51]:  # tw-en,yt-en, tw-es,
         annotations.clean_results(i, variables={"extras"})
     """
-    # for i in [43,51]:  # tw-en,yt-en, tw-es,
-    #     annotations.clean_results(i, variables={"nature_any","nature_text","nature_visual_any"})
+
+    # for i in [43]:  # tw-en,yt-en, tw-es,
+    #     annotations.clean_results(i, variables=["nature_any", "nature_text", "nature_visual_any"])
 
     # task.get_tasks(id=54)
     # annotations(**{"id": 54, "accepted_ann_age": 0})
@@ -356,10 +321,11 @@ if __name__ == "__main__":
     # aggregate.check_projects([51, 53, 54])
     # get_project(54).refresh_views()
 
-    from ls_helper.command import view, annotations
-
-    view.download_project_views(id=53)
+    # annotations.annotations(id=50, accepted_ann_age=0, min_coders=1)
+    # view.download_project_views(id=53)
     # annotations.agreements(id=54)
     # task.get_tasks(id=53)
     # view.update_coding_game(id=53)
-    annotations.add_conflicts_to_tasks(id=54)
+    # annotations.add_conflicts_to_tasks(id=54)
+
+    # plot.basic_agreements(id=51, show=False)

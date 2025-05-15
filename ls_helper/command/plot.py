@@ -18,7 +18,8 @@ plot_app = typer.Typer(
 )
 
 
-def basic_agreements(
+@plot_app.command(short_help="3 basic plots of annotation results (nature questions)")
+def basic(
         id: Annotated[Optional[int], typer.Option()] = None,
         alias: Annotated[Optional[str], typer.Option("-a")] = None,
         show: Annotated[bool, typer.Option()] = True

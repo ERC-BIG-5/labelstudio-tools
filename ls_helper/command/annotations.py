@@ -1,6 +1,6 @@
 import json
 import shutil
-import webbrowser
+import subprocess
 from pathlib import Path
 from typing import Annotated, Optional, Any
 
@@ -36,7 +36,8 @@ annotations_app = typer.Typer(
 def open_image_simple(image_path):
     # Convert to absolute path and URI format
     file_path = Path(image_path).absolute().as_uri()
-    webbrowser.open(file_path)
+    # webbrowser.open(file_path)
+    subprocess.run(["open", file_path])
 
 
 @annotations_app.command(short_help="[stats] Annotation basic results")
@@ -88,7 +89,7 @@ def status(
         df = annotation_timing(pa, po.project_data.maximum_annotations)
         temp_file = plot_date_distribution(df)
         open_image_simple(temp_file.name)
-        temp_file.close()
+        # temp_file.close()
 
 
 @annotations_app.command(
@@ -223,7 +224,7 @@ def clean_results(
         platform: Annotated[Optional[str], typer.Option()] = None,
         language: Annotated[Optional[str], typer.Option()] = None,
         simplify_single: Annotated[Optional[bool], typer.Option()] = True,
-        variables: Annotated[Optional[list[str]], typer.Option()] = None,
+        variables: Annotated[list[str], typer.Argument()] = None,
 ) -> tuple[Path, dict[str, list[dict[str, Any]]]]:
     """
 
