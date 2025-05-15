@@ -17,9 +17,8 @@ from ls_helper.annotation_timing import (
 from ls_helper.command.task import patch_tasks
 from ls_helper.models.main_models import (
     get_project,
-    ProjectAnnotationResultsModel,
-    ProjectResult,
 )
+from ls_helper.models.result_models import ProjectResult, ProjectAnnotationResultsModel
 from ls_helper.settings import SETTINGS, ls_logger
 from tools.files import read_data
 from tools.project_logging import get_logger

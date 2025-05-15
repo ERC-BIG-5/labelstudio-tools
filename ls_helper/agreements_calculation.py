@@ -14,7 +14,7 @@ from ls_helper.models.variable_models import ChoiceVariableModel
 from tools.project_logging import get_logger
 
 if TYPE_CHECKING:
-    from ls_helper.models.main_models import ProjectResult
+    from ls_helper.models.result_models import ProjectResult
 
 
 # experimental...
@@ -42,9 +42,9 @@ class AgreementResult(BaseModel):
 
 class Agreements:
     def __init__(
-        self,
-        res: "ProjectResult",
-        agreement_types: Agreement_types = ("gwet", "ratio", "abs"),
+            self,
+            res: "ProjectResult",
+            agreement_types: Agreement_types = ("gwet", "ratio", "abs"),
     ) -> None:
         self.po_results = res
         self.po = res.project_data
@@ -92,7 +92,7 @@ class Agreements:
             return df.set_index(["task_id", "user_id"])
 
     def select_variables(
-        self, variables: list[str], always_as_dict: bool = True
+            self, variables: list[str], always_as_dict: bool = True
     ) -> dict[str, DataFrame] | DataFrame:
         df = self.get_init_df()
 
@@ -154,7 +154,7 @@ class Agreements:
         return valid_df
 
     def _calc_agreements(
-        self, df: DataFrame, agreement_types: Agreement_types
+            self, df: DataFrame, agreement_types: Agreement_types
     ) -> AgreementsCol:
         if len(df) == 0:
             res = {_: None for _ in agreement_types}
@@ -217,8 +217,8 @@ class Agreements:
 
         def keep_first_k_coders(group):
             first_k_coders = group.index.get_level_values(1).unique()[
-                : self.max_coders
-            ]
+                             : self.max_coders
+                             ]
             return group[group.index.get_level_values(1).isin(first_k_coders)]
 
         return df.groupby(level=0, group_keys=False).apply(keep_first_k_coders)
@@ -278,17 +278,17 @@ class Agreements:
 
     @staticmethod
     def time_move(
-        df_: DataFrame,
+            df_: DataFrame,
     ) -> Generator[tuple[date, DataFrame], None, None]:
         for day in sorted(df_.date.unique()):
             yield day, df_[df_["date"] <= day]
 
     @deprecated(reason="this is happening in the result-model. test...")
     def add_default(
-        self,
-        v_df: DataFrame,
-        type_: Literal["single", "multiple"],
-        fillNa: str,
+            self,
+            v_df: DataFrame,
+            type_: Literal["single", "multiple"],
+            fillNa: str,
     ) -> DataFrame:
         ass_df = self._assignment_df.copy()
         ass_df["date"] = pd.to_datetime(ass_df["ts"]).dt.date
@@ -325,13 +325,13 @@ class Agreements:
         return merged_df
 
     def agreement_calc(
-        self,
-        variables: Optional[list[str]] = None,
-        exclude_variables: Optional[list[str]] = None,
-        force_default: Optional[str] = "NONE",
-        max_coders: int = 2,
-        agreement_types: Optional[Agreement_types] = None,
-        keep_tasks: bool = True,
+            self,
+            variables: Optional[list[str]] = None,
+            exclude_variables: Optional[list[str]] = None,
+            force_default: Optional[str] = "NONE",
+            max_coders: int = 2,
+            agreement_types: Optional[Agreement_types] = None,
+            keep_tasks: bool = True,
     ) -> dict[str, AgreementResult]:
         if not variables:
             variables = list(self.po.choices.keys())
@@ -464,7 +464,7 @@ class Agreements:
                     # Group by task_id and check if any user has a value of 1
                     tasks_with_option_select = option_df[
                         option_df["value"] == 1
-                    ]["task_id"].unique()
+                        ]["task_id"].unique()
                     # Filter the DataFrame to keep only those tasks
                     option_select = option_df[
                         option_df["task_id"].isin(tasks_with_option_select)
