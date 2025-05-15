@@ -101,10 +101,6 @@ class Settings(BaseSettings):
         return self.BASE_DATA_DIR / "variable_extensions"
 
     @property
-    def unifix_extensions_file_path(self) -> Path:
-        return self.var_extensions_dir / "unifixes.json"
-
-    @property
     def temp_file_path(self) -> Path:
         return self.BASE_DATA_DIR / "temp"
 

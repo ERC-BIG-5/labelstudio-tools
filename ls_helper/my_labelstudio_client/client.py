@@ -7,7 +7,6 @@ from typing import Optional
 
 import httpx
 from httpx import Response
-from tools.project_logging import get_logger
 
 from ls_helper.my_labelstudio_client.models import (
     ProjectModel,
@@ -18,6 +17,7 @@ from ls_helper.my_labelstudio_client.models import (
     TaskResultModel,
     UserModel,
 )
+from tools.project_logging import get_logger
 
 if typing.TYPE_CHECKING:
     pass
@@ -231,7 +231,8 @@ class LabelStudioBase:
         resp = self._client_wrapper.httpx_client.get(
             f"api/dm/views/?project={project_id}"
         )
-        return [ProjectViewModel.model_validate(v) for v in resp.json()]
+        data = resp.json()
+        return [ProjectViewModel.model_validate(v) for v in data]
 
     def get_users(self, dump: bool = True):
         resp = self._client_wrapper.httpx_client.get("/api/users")
@@ -270,6 +271,7 @@ class LabelStudioBase:
         resp = self._client_wrapper.httpx_client.patch(
             f"/api/dm/views/{view_id}", json=data
         )
+        # resp_data = resp.json()
         return resp
 
     def get_task(self, task_id: int):

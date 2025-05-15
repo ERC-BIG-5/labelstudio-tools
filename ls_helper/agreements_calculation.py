@@ -283,7 +283,13 @@ class Agreements:
         for day in sorted(df_.date.unique()):
             yield day, df_[df_["date"] <= day]
 
-    def add_default(self, v_df: DataFrame, fillNa: str) -> DataFrame:
+    @deprecated(reason="this is happening in the result-model. test...")
+    def add_default(
+        self,
+        v_df: DataFrame,
+        type_: Literal["single", "multiple"],
+        fillNa: str,
+    ) -> DataFrame:
         ass_df = self._assignment_df.copy()
         ass_df["date"] = pd.to_datetime(ass_df["ts"]).dt.date
 
@@ -301,7 +307,7 @@ class Agreements:
 
         # For rows that exist only in df2, fill in default values
         merged_df["idx"] = merged_df["idx"].fillna(0)
-        merged_df["type"] = merged_df["type"].fillna("multiple")
+        merged_df["type"] = merged_df["type"].fillna(type_)
         merged_df["value"] = merged_df["value"].fillna(fillNa)
 
         # Use timestamps from df1 where available, otherwise from df2
@@ -354,7 +360,7 @@ class Agreements:
             if v_df.empty:
                 continue
             if v_df.iloc[0]["type"] == "single":
-                v_df = self.add_default(v_df, force_default)
+                v_df = self.add_default(v_df, "single", force_default)
                 v_df_s = v_df.explode("value")
 
                 result.single_overall = self._calc_agreements(
@@ -409,7 +415,7 @@ class Agreements:
 
             # multi-select
             else:
-                v_df = self.add_default(v_df, "[]")
+                v_df = self.add_default(v_df, "multiple", "[]")
                 v_df.reset_index(inplace=True)
                 for option in options:
                     option_df = v_df.copy()

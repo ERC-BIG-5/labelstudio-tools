@@ -2,7 +2,6 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from deepdiff import DeepDiff
-from lxml.etree import Element
 
 from ls_helper.models.interface_models import (
     IChoice,
@@ -12,61 +11,12 @@ from ls_helper.models.interface_models import (
     IText,
     ITextArea,
     ProjectVariableExtensions,
+    ITimelineLabel,
+    ILabel,
 )
 
 # from ls_helper.new_models import ProjectData
 from ls_helper.settings import SETTINGS
-
-
-def get_tree_n_root(xml_file: Path) -> tuple:
-    tree = ET.parse(xml_file)
-    root = tree.getroot()
-    return tree, root
-
-
-def find_all_names(root):
-    unique_names = {}
-
-    def find_name(element, current_path):
-        # Print current element's path
-        path = f"{current_path}/{element.tag}"
-        # print(path, element.get("name"))
-        if _name := element.get("name"):
-            unique_names.setdefault(_name, []).append(path)
-
-        # Recurse through all children
-        for child in element:
-            find_name(child, path)
-
-    # Start from root
-    find_name(root, "")
-
-    return unique_names
-
-
-def find_tag_name_refs(root) -> dict[str, list[Element]]:
-    """
-    checks which elements depend on all variables
-    :param root:
-    :return: dict: variable: [depending_0, depending_1, ...]
-    """
-    refs: dict[str, list[str]] = {}
-
-    def find_name(element, current_path):
-        # Print current element's path
-        path = f"{current_path}/{element.tag}"
-        # print(path, element.get("name"))
-        if _name := element.get("whenTagName"):
-            refs.setdefault(_name, []).append(element)
-
-        # Recurse through all children
-        for child in element:
-            find_name(child, path)
-
-    # Start from root
-    find_name(root, "")
-
-    return refs
 
 
 def find_duplicates(xml_file):
@@ -131,6 +81,31 @@ def parse_label_config_xml(xml_string) -> InterfaceData:
                 # keep the $ so we know its a ref to data. done,
                 input_text_fields[name] = value
                 ordered_fields_map[name] = IText()
+        elif el.tag == "TimelineLabels":
+            name = el.get("name")
+            label_list = [
+                ILabel.model_validate(choice.attrib)
+                for choice in el.findall("./Label")
+            ]
+            ordered_fields_map[name] = ITimelineLabel.model_validate(
+                el.attrib | {"labels": label_list}
+            )
+        elif el.tag in [
+            "Choice",
+            "View",
+            "Header",
+            "Panel",
+            "Collapse",
+            "Image",
+            "Style",
+            "Video",
+            "a",
+            "Label",
+            "HyperText",
+        ]:
+            pass
+        else:
+            print(f"parse_label_config_xml: Unknown Element-tag {el.tag}")
 
     return InterfaceData(
         ordered_fields_map=ordered_fields_map, inputs=input_text_fields

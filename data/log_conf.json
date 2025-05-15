@@ -23,7 +23,7 @@
       "class": "logging.handlers.RotatingFileHandler",
       "level": "DEBUG",
       "formatter": "detailed",
-      "filename": "C:\\Users\\aboka\\Documents\\labelstudio-tools\\data\\logs\\app.log",
+      "filename": "data/logs/app.log",
       "maxBytes": 10485760,
       "backupCount": 5,
       "encoding": "utf8"
@@ -32,7 +32,7 @@
       "class": "logging.handlers.RotatingFileHandler",
       "level": "ERROR",
       "formatter": "detailed",
-      "filename": "C:\\Users\\aboka\\Documents\\labelstudio-tools\\data\\logs\\error.log",
+      "filename": "data/logs/error.log",
       "maxBytes": 10485760,
       "backupCount": 5,
       "encoding": "utf8"
@@ -67,7 +67,7 @@
       "propagate": false
     },
     "ls_helper.models.main_models": {
-      "level": "DEBUG",
+      "level": "INFO",
       "handlers": [
         "console",
         "file_handler",
@@ -148,15 +148,6 @@
       "propagate": false
 
     },
-    "ls_helper.models.main_models": {
-      "level": "DEBUG",
-      "handlers": [
-        "console",
-        "file_handler",
-        "error_file_handler"
-      ],
-      "propagate": false
-    },
     "ls_helper.fresh_agreements": {
       "level": "DEBUG",
       "handlers": [
@@ -194,6 +185,24 @@
       "propagate": false
     },
     "ls_helper.command.extra": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.command.aggregate": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.agreements_calculation": {
       "level": "DEBUG",
       "handlers": [
         "console",
