@@ -198,7 +198,7 @@ def add_conflicts_to_tasks(
     tasks_conflicts = {t: "".join(c) for t, c in tasks.items()}
 
     #
-    po_tasks = po.get_tasks()
+    po_tasks = po.tasks.get()
     for task in po_tasks.root:
         task.data["conflicts"] = tasks_conflicts.get(task.id, "")
 

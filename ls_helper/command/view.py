@@ -53,7 +53,7 @@ def update_coding_game(
         view_id = view.id
 
     if refresh_views:
-        po.refresh_views()
+        po.views.get_all()
     views = po.get_views()
     if not views:
         download_project_views(id, alias, platform, language)
@@ -142,7 +142,7 @@ def download_project_views(
         language: Annotated[Optional[str], typer.Option()] = None,
 ) -> list[ProjectViewModel]:
     po = get_project(id, alias, platform, language)
-    views = po.refresh_views()
+    views = po.views.get_all()
     logger.debug(f"view file -> {po.path_for(SETTINGS.view_dir)}")
     return views
 

@@ -32,10 +32,10 @@ class ApiError(Exception):
     body: typing.Any
 
     def __init__(
-        self,
-        *,
-        status_code: Optional[int] = None,
-        body: Optional[typing.Any] = None,
+            self,
+            *,
+            status_code: Optional[int] = None,
+            body: Optional[typing.Any] = None,
     ):
         self.status_code = status_code
         self.body = body
@@ -46,7 +46,7 @@ class ApiError(Exception):
 
 class BaseClientWrapper:
     def __init__(
-        self, *, api_key: str, base_url: str, timeout: Optional[float] = None
+            self, *, api_key: str, base_url: str, timeout: Optional[float] = None
     ):
         self.api_key = api_key
         self._base_url = base_url
@@ -70,12 +70,12 @@ class BaseClientWrapper:
 
 class SyncClientWrapper(BaseClientWrapper):
     def __init__(
-        self,
-        *,
-        api_key: str,
-        base_url: str,
-        timeout: Optional[float] = None,
-        httpx_client: httpx.Client,
+            self,
+            *,
+            api_key: str,
+            base_url: str,
+            timeout: Optional[float] = None,
+            httpx_client: httpx.Client,
     ):
         super().__init__(api_key=api_key, base_url=base_url, timeout=timeout)
         self.httpx_client = httpx.Client(
@@ -123,14 +123,14 @@ class LabelStudioBase:
     """
 
     def __init__(
-        self,
-        *,
-        base_url: Optional[str] = None,
-        environment: LabelStudioEnvironment = LabelStudioEnvironment.DEFAULT,
-        api_key: Optional[str] = os.getenv("LABEL_STUDIO_API_KEY"),
-        timeout: Optional[float] = None,
-        follow_redirects: Optional[bool] = True,
-        httpx_client: Optional[httpx.Client] = None,
+            self,
+            *,
+            base_url: Optional[str] = None,
+            environment: LabelStudioEnvironment = LabelStudioEnvironment.DEFAULT,
+            api_key: Optional[str] = os.getenv("LABEL_STUDIO_API_KEY"),
+            timeout: Optional[float] = None,
+            follow_redirects: Optional[bool] = True,
+            httpx_client: Optional[httpx.Client] = None,
     ):
         _defaulted_timeout = (
             timeout
@@ -192,7 +192,7 @@ class LabelStudioBase:
             return ProjectModel.model_validate(resp.json())
 
     def patch_project(
-        self, project_id: int, data: dict
+            self, project_id: int, data: dict
     ) -> Optional[ProjectModel]:
         resp = self._client_wrapper.httpx_client.patch(
             f"/api/projects/{project_id}", json=data
@@ -203,7 +203,7 @@ class LabelStudioBase:
             print(resp.status_code, resp.json())
 
     def get_project_annotations(
-        self, project_id: int
+            self, project_id: int
     ) -> Optional[list[TaskResultModel]]:
         export_create = self._client_wrapper.httpx_client.post(
             f"/api/projects/{project_id}/exports",
@@ -279,17 +279,17 @@ class LabelStudioBase:
         return resp
 
     def get_task_list(
-        self,
-        *,
-        page: Optional[int] = None,
-        page_size: Optional[int] = 3000,
-        project: Optional[int] = None,
-        view: Optional[int] = None,
-        resolve_url: Optional[bool] = False,
-        fields: Optional[typing.Literal["all", "task_only"]] = "all",
-        review: Optional[bool] = None,
-        include: Optional[str] = None,
-        query: Optional[str] = None,
+            self,
+            *,
+            page: Optional[int] = None,
+            page_size: Optional[int] = 3000,
+            project: Optional[int] = None,
+            view: Optional[int] = None,
+            resolve_url: Optional[bool] = False,
+            fields: Optional[typing.Literal["all", "task_only"]] = "all",
+            review: Optional[bool] = None,
+            include: Optional[str] = None,
+            query: Optional[str] = None,
     ) -> list[Task]:
         # https://api.labelstud.io/api-reference/api-reference/tasks/list
         params = {}
@@ -387,11 +387,20 @@ class LabelStudioBase:
             raise ValueError(resp.json())
         return resp.json()
 
-    def delete_view(self, view_id: int):
+    def delete_view(self, view_id: int) -> bool:
+        """
+
+        :param view_id:
+        :return: bool- success
+        """
+
         resp = self._client_wrapper.httpx_client.delete(
             f"/api/dm/views/{view_id}"
         )
-        print(resp)
+        if resp.status_code != 204:
+            print(resp.status_code)
+            return False
+        return True
 
     def create_annotations(self, task_id: int, data: dict) -> dict:
         "http://localhost:8080/api/tasks/:id/annotations/"
@@ -414,7 +423,7 @@ _GLOBAL_CLIENT: Optional[LabelStudioBase] = None
 
 @lru_cache
 def ls_client(
-    dev: Optional[bool] = None, ignore_global_client: bool = False
+        dev: Optional[bool] = None, ignore_global_client: bool = False
 ) -> LabelStudioBase:
     global _GLOBAL_CLIENT
     if _GLOBAL_CLIENT and not ignore_global_client:

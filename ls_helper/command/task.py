@@ -147,7 +147,7 @@ def patch_tasks(
 
     update_map = task_platform_id_map(batch)
 
-    tasks = po.get_tasks()
+    tasks = po.tasks.get()
     platform_id_map = task_platform_id_map(tasks)
 
     # TODO,  can we do this async in order to speed things up?
@@ -169,10 +169,9 @@ def get_tasks(
         alias: Annotated[Optional[str], typer.Option("-a")] = None,
         platform: Annotated[Optional[str], typer.Argument()] = None,
         language: Annotated[Optional[str], typer.Argument()] = None,
-) -> list[LSTask]:
+) -> LSTaskList:
     po: ProjectData = get_project(id, alias, platform, language)
-    tasks = ls_client().get_task_list(project=po.id)
-    po.save_tasks(tasks)
+    tasks = po.tasks.get(True, True)
     return tasks
 
 

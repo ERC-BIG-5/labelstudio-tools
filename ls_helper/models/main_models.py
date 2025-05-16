@@ -150,6 +150,17 @@ class ProjectViews:
     def __init__(self, project_data: "ProjectData") -> None:
         self._pd = project_data
 
+    def get_all(self):
+        views = ls_client().get_project_views(self.id)
+        self._pd.path_for(SETTINGS.view_dir).write_text(
+            json.dumps([v.model_dump() for v in views], indent=2)
+        )
+        self._pd._logger.info(f"refresh views: {views}")
+        return views
+
+    def delete(self, view_id: int) -> bool:
+        return ls_client().delete_view(view_id)
+
 
 class ProjectData(ProjectCreate):
     id: int
@@ -173,6 +184,10 @@ class ProjectData(ProjectCreate):
     @property
     def tasks(self) -> ProjectTasks:
         return self._tasks
+
+    @property
+    def views(self) -> ProjectViews:
+        return self._view
 
     def path_for(
             self,
@@ -432,15 +447,6 @@ class ProjectData(ProjectCreate):
             )
         return ls_client().create_view(create)
 
-    # todo move to view model
-    def refresh_views(self) -> list[ProjectViewModel]:
-        views = ls_client().get_project_views(self.id)
-        self.path_for(SETTINGS.view_dir).write_text(
-            json.dumps([v.model_dump() for v in views], indent=2)
-        )
-        self._logger.info(f"refresh views: {views}")
-        return views
-
     def get_recent_annotations(
             self,
             accepted_age: int,
@@ -683,13 +689,10 @@ class ProjectData(ProjectCreate):
             ).items()
         }
 
-    def get_tasks(self) -> LSTaskList:
-        return self._tasks.get(download_when_missing=True, download=False)
-
     def save_tasks(
             self, tasks: list[LSTask], include_additional: set[str] = None
     ) -> Path:
-        return self._tasks.save_tasks(tasks, include_additional)
+        return self._tasks.save(TaskList(root=tasks), include_additional)
 
     def store_temp_tasks(self, tasks: LSTaskList[LSTask]) -> Path:
         dest = self.path_for(SETTINGS.temp_file_path)

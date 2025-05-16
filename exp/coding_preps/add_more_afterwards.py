@@ -13,7 +13,7 @@ cleanies = read_data(po.path_for(
 ))
 
 new_po = get_project(53)
-tasks = new_po.get_tasks()
+tasks = new_po.tasks.get()
 rel = set()
 for p_id, ann in cleanies.items():
     for a in ann:
@@ -29,7 +29,7 @@ print(len(rel))
 all_ex = [new_p.data["platform_id"] for new_p in tasks.root]
 missing = rel - set(all_ex)
 
-old_tasks = po.get_tasks()
+old_tasks = po.tasks.get()
 new_add_tasks = [t for t in old_tasks.root if t.data["platform_id"] in missing]
 for nt in new_add_tasks[1:]:
     pass
