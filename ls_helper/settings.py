@@ -1,14 +1,15 @@
 import logging
-import sys
 from dataclasses import dataclass
 from enum import Enum, auto
 from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
+import sys
 from pydantic import Field, model_validator
 from pydantic_core.core_schema import ValidationInfo
 from pydantic_settings import BaseSettings
+
 from tools.env_root import root
 
 if TYPE_CHECKING:
@@ -27,6 +28,8 @@ class Settings(BaseSettings):
     HOST_STORAGE_BASE: Optional[Path] = Field(None)
 
     DELETED_TASK_FILES_BACKUP_BASE_DIR: Optional[Path] = Field(None)
+
+    ANNOTATIONS_HISTORY_LENGTH: Optional[int] = 7
 
     __client: Optional["LabelStudioBase"] = None
 

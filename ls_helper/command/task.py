@@ -3,9 +3,9 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
-from tools.project_logging import get_logger
 from tqdm import tqdm
 
+from ls_helper.models.main_models import ProjectData, get_project
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import (
     Task as LSTask,
@@ -19,7 +19,7 @@ from ls_helper.my_labelstudio_client.models import (
 from ls_helper.my_labelstudio_client.models import (
     TaskList as LSTaskList,
 )
-from ls_helper.models.main_models import ProjectData, get_project
+from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
 
@@ -27,7 +27,7 @@ task_app = typer.Typer(name="Task related", pretty_exceptions_show_locals=True)
 
 
 def task_platform_id_map(
-    tasks: LSTaskList | LSTaskCreateList,
+        tasks: LSTaskList | LSTaskCreateList,
 ) -> dict[str, LSTask]:
     platform_id_map: dict[str, LSTask] = {}
     for task in tasks.root:
@@ -41,11 +41,11 @@ def task_platform_id_map(
 
 @task_app.command()
 def create_task(
-    src_path: Annotated[Path, typer.Argument()],
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
+        src_path: Annotated[Path, typer.Argument()],
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
 ):
     po = get_project(id, alias, platform, language)
     t = LSTaskCreate(
@@ -56,11 +56,11 @@ def create_task(
 
 @task_app.command()
 def create_tasks(
-    src_path: Annotated[Path, typer.Argument()],
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
+        src_path: Annotated[Path, typer.Argument()],
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
 ):
     """
     can deal with json files (list of tasks) or a folder, where each task is in its own file.
@@ -93,13 +93,14 @@ def create_tasks(
             for t in json.loads(src_path.read_text())
         ]
 
+    # todo, this should be at po.tasks
     resp_data = ls_client().import_tasks(po.id, batch)
     task_ids = resp_data["task_ids"]
-    tasks = [
+    tasks = LSTaskList(root=[
         LSTask(**t.model_dump(), id=task_ids[idx])
         for idx, t in enumerate(batch)
-    ]
-    po.save_tasks(tasks)
+    ])
+    po.tasks.save(tasks)
 
 
 def patch_task(task_id: int, task: LSTask):
@@ -116,11 +117,11 @@ def task_add_predictions(task_id: int, data):
 
 @task_app.command()
 def patch_tasks(
-    src_path: Annotated[Path, typer.Argument()],
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
+        src_path: Annotated[Path, typer.Argument()],
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
 ):
     """very similar to creating. But actually uses the patch api endpoint"""
     # todo, we can try if the data validates as LSTask. Meaning they have an id already.
@@ -164,10 +165,10 @@ def patch_tasks(
 
 @task_app.command()
 def get_tasks(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
 ) -> list[LSTask]:
     po: ProjectData = get_project(id, alias, platform, language)
     tasks = ls_client().get_task_list(project=po.id)
@@ -177,7 +178,7 @@ def get_tasks(
 
 @task_app.command()
 def get_task(
-    id: Annotated[Optional[int], typer.Option()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
 ) -> LSTask:
     resp = ls_client().get_task(id)
     if resp.status_code != 200:

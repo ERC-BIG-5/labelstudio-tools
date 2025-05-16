@@ -15,7 +15,7 @@
   "handlers": {
     "console": {
       "class": "logging.StreamHandler",
-      "level": "DEBUG",
+      "level": "INFO",
       "formatter": "simple",
       "stream": "ext://sys.stdout"
     },
@@ -23,7 +23,7 @@
       "class": "logging.handlers.RotatingFileHandler",
       "level": "DEBUG",
       "formatter": "detailed",
-      "filename": "data/logs/app.log",
+      "filename": "app.log",
       "maxBytes": 10485760,
       "backupCount": 5,
       "encoding": "utf8"
@@ -32,22 +32,13 @@
       "class": "logging.handlers.RotatingFileHandler",
       "level": "ERROR",
       "formatter": "detailed",
-      "filename": "data/logs/error.log",
+      "filename": "error.log",
       "maxBytes": 10485760,
       "backupCount": 5,
       "encoding": "utf8"
     }
   },
   "loggers": {
-    "ls_helper": {
-      "level": "DEBUG",
-      "handlers": [
-        "console",
-        "file_handler",
-        "error_file_handler"
-      ],
-      "propagate": false
-    },
     "ls_helper.models.variable_models": {
       "level": "DEBUG",
       "handlers": [
@@ -67,7 +58,16 @@
       "propagate": false
     },
     "ls_helper.models.main_models": {
-      "level": "INFO",
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.command.task": {
+      "level": "DEBUG",
       "handlers": [
         "console",
         "file_handler",
@@ -85,6 +85,24 @@
       "propagate": false
     },
     "ls_helper.command.backup": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.command.extra": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
+    },
+    "ls_helper.command.project_setup": {
       "level": "DEBUG",
       "handlers": [
         "console",
@@ -120,7 +138,7 @@
       ],
       "propagate": false
     },
-    "ls_helper.command.task": {
+    "ls_helper.command.view": {
       "level": "DEBUG",
       "handlers": [
         "console",
@@ -138,7 +156,7 @@
       ],
       "propagate": false
     },
-    "ls_helper.my_labelstudio_client.client": {
+    "ls_helper.models.main_models.ProjectResult": {
       "level": "DEBUG",
       "handlers": [
         "console",
@@ -146,75 +164,10 @@
         "error_file_handler"
       ],
       "propagate": false
-
-    },
-    "ls_helper.fresh_agreements": {
-      "level": "DEBUG",
-      "handlers": [
-        "console",
-        "file_handler",
-        "error_file_handler"
-      ],
-      "propagate": false
-    },
-    "ls_helper.command.project": {
-      "level": "DEBUG",
-      "handlers": [
-        "console",
-        "file_handler",
-        "error_file_handler"
-      ],
-      "propagate": false
-    },
-    "ls_helper.command.project_setup": {
-      "level": "DEBUG",
-      "handlers": [
-        "console",
-        "file_handler",
-        "error_file_handler"
-      ],
-      "propagate": false
-    },
-    "ls_helper.command.view": {
-      "level": "DEBUG",
-      "handlers": [
-        "console",
-        "file_handler",
-        "error_file_handler"
-      ],
-      "propagate": false
-    },
-    "ls_helper.command.extra": {
-      "level": "DEBUG",
-      "handlers": [
-        "console",
-        "file_handler",
-        "error_file_handler"
-      ],
-      "propagate": false
-    },
-    "ls_helper.command.aggregate": {
-      "level": "DEBUG",
-      "handlers": [
-        "console",
-        "file_handler",
-        "error_file_handler"
-      ],
-      "propagate": false
-    },
-    "ls_helper.agreements_calculation": {
-      "level": "DEBUG",
-      "handlers": [
-        "console",
-        "file_handler",
-        "error_file_handler"
-      ],
-      "propagate": false
-
     }
   },
   "root": {
-    "level": "INFO",
+    "level": "DEBUG",
     "handlers": [
       "console",
       "file_handler",

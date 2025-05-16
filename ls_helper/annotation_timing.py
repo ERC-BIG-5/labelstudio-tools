@@ -5,12 +5,12 @@ from datetime import date
 import pandas as pd
 from numpy.ma.extras import average
 
+from ls_helper.models.result_models import ProjectAnnotationResultsModel
 from ls_helper.my_labelstudio_client.models import TaskResultModel
-from ls_helper.models.main_models import ProjectAnnotationResultsModel
 
 
 def annotation_timing(
-    annotations: ProjectAnnotationResultsModel, min_annotations: int = 2
+        annotations: ProjectAnnotationResultsModel, min_annotations: int = 2
 ) -> pd.DataFrame:
     counter = collections.Counter[date]()
     for ann in annotations.task_results:
@@ -25,7 +25,7 @@ def annotation_timing(
 
 
 def get_annotation_lead_times(
-    annotations: list[TaskResultModel], min_annotations: int = 2
+        annotations: list[TaskResultModel], min_annotations: int = 2
 ) -> pd.DataFrame:
     lead_times: dict[date, list[float]] = {}
     for ann in annotations:
@@ -45,7 +45,7 @@ def get_annotation_lead_times(
 
 
 def annotation_total_over_time(
-    annotations: list[TaskResultModel], min_annotations: int = 2
+        annotations: list[TaskResultModel], min_annotations: int = 2
 ):
     df = annotation_timing(annotations, min_annotations)
     result_df = df.sort_values("date")
@@ -56,11 +56,11 @@ def annotation_total_over_time(
 
 
 def plot_date_distribution(
-    df: pd.DataFrame,
-    title: str = "Completed tasks per Day",
-    y_col: str = "count",
-    xlabel: str = "Date",
-    ylabel: str = "Count",
+        df: pd.DataFrame,
+        title: str = "Completed tasks per Day",
+        y_col: str = "count",
+        xlabel: str = "Date",
+        ylabel: str = "Count",
 ):
     try:
         import matplotlib.pyplot as plt
@@ -89,8 +89,8 @@ def plot_date_distribution(
 
 
 def plot_cumulative_annotations(
-    cumulative_df: pd.DataFrame,
-    title: str = "Cumulative Annotations Over Time",
+        cumulative_df: pd.DataFrame,
+        title: str = "Cumulative Annotations Over Time",
 ) -> tempfile.NamedTemporaryFile:
     """
     Creates a line plot showing the cumulative total of annotations over time.
