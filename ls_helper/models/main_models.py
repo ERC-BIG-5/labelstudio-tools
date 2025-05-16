@@ -64,9 +64,6 @@ ProjectAccess = (
 )
 
 
-# logger = get_logger(__file__)
-
-
 class UserInfo(BaseModel):
     users: dict[int, str]
 
@@ -148,6 +145,12 @@ class ProjectTasks:
         return self.fp
 
 
+class ProjectViews:
+
+    def __init__(self, project_data: "ProjectData") -> None:
+        self._pd = project_data
+
+
 class ProjectData(ProjectCreate):
     id: int
     _project_data: Optional[LSProjectModel] = None
@@ -156,12 +159,14 @@ class ProjectData(ProjectCreate):
     _ann_results: Optional["ProjectResult"] = None
     _logger: Optional[Logger] = None
     _tasks: ProjectTasks = PrivateAttr()
+    _view: ProjectViews = PrivateAttr()
 
     model_config = ConfigDict()
 
     def model_post_init(self, context: Any) -> None:
         self._logger = get_model_logger(self)
         self._tasks = ProjectTasks(self)
+        self._view = ProjectViews(self)
 
     # views, predictions, results
 
@@ -186,6 +191,15 @@ class ProjectData(ProjectCreate):
     def project_data(self) -> LSProjectModel:
         if self._project_data:
             return self._project_data
+
+        def guarantee_ls_project_data():
+            if not self.path_for(SETTINGS.projects_dir).exists():
+                project_data = ls_client().get_project(self.id)
+                if not project_data:
+                    raise ValueError(f"No project found: {self.id}")
+                self.save_project_data(project_data)
+
+        guarantee_ls_project_data()
         fin: Optional[Path] = None
         if (p_i := SETTINGS.projects_dir / f"{self.id}.json").exists():
             fin = p_i
@@ -399,6 +413,7 @@ class ProjectData(ProjectCreate):
                 f"{repr(self)} has no 'variable_extensions' file. Call: 'generate_variable_extensions_template'"
             )
 
+    # todo move to view model
     def get_views(self) -> Optional[list[ProjectViewModel]]:
         view_file = self.path_for(SETTINGS.view_dir)
         if not view_file.exists():
@@ -406,6 +421,7 @@ class ProjectData(ProjectCreate):
         data = json.load(view_file.open())
         return [ProjectViewModel.model_validate(v) for v in data]
 
+    # todo move to view model
     def create_view(
             self, create: ProjectViewCreate, default_hidden_columns: bool = True
     ) -> ProjectViewModel:
@@ -416,6 +432,7 @@ class ProjectData(ProjectCreate):
             )
         return ls_client().create_view(create)
 
+    # todo move to view model
     def refresh_views(self) -> list[ProjectViewModel]:
         views = ls_client().get_project_views(self.id)
         self.path_for(SETTINGS.view_dir).write_text(
