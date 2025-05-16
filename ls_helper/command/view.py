@@ -45,7 +45,7 @@ def update_coding_game(
     view_id = po.coding_game_view_id
     if not view_id:
         print("No views found for coding game")
-        view = po.create_view(
+        view = po.views.create(
             ProjectViewCreate.model_validate(
                 {"project": po.id, "data": {"title": "Coding Game"}}
             )
@@ -111,7 +111,7 @@ def set_view_items(
             return
         else:  # create the view
             # todo, use utils func with id, title, adding in the defautl columns.
-            po.create_view(
+            po.views.create(
                 ProjectViewCreate(
                     project=po.id, data=ProjectViewDataModel(title=view_title)
                 )
@@ -177,7 +177,7 @@ def create_conflict_view(
     conflict_task_ids = conflict_task_ids[:30]
 
     title = f"conflict:{variable}"
-    view = po.create_view(
+    view = po.views.create(
         ProjectViewCreate.model_validate(
             {
                 "project": po.id,

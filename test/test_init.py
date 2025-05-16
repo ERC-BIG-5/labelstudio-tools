@@ -14,9 +14,9 @@ def default_project() -> ProjectData:
 
 
 def test_create_view(default_project: ProjectData):
-    resp = default_project.create_view(ProjectViewCreate(project=P_ID,
-                                                         data=ProjectViewDataModel(
-                                                             title="test",
-                                                         )))
+    resp = default_project.views.create(ProjectViewCreate(project=P_ID,
+                                                          data=ProjectViewDataModel(
+                                                              title="test",
+                                                          )))
     assert isinstance(resp, ProjectViewModel)
     assert default_project.views.delete(resp.id) == True

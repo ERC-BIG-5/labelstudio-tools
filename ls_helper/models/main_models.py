@@ -168,6 +168,14 @@ class ProjectViews:
         data = json.load(view_file.open())
         return [ProjectViewModel.model_validate(v) for v in data]
 
+    def create(self, create_data: ProjectViewCreate) -> ProjectViewModel:
+        if not create_data.data.hiddenColumns:
+            create_data.data.hiddenColumns = read_data(
+                SETTINGS.BASE_DATA_DIR
+                / "default/ls_project_view_hiddenColumns.json"
+            )
+        return ls_client().create_view(create_data)
+
 
 class ProjectData(ProjectCreate):
     id: int
@@ -434,17 +442,6 @@ class ProjectData(ProjectCreate):
             raise ValueError(
                 f"{repr(self)} has no 'variable_extensions' file. Call: 'generate_variable_extensions_template'"
             )
-
-    # todo move to view model
-    def create_view(
-            self, create: ProjectViewCreate, default_hidden_columns: bool = True
-    ) -> ProjectViewModel:
-        if not create.data.hiddenColumns:
-            create.data.hiddenColumns = read_data(
-                SETTINGS.BASE_DATA_DIR
-                / "default/ls_project_view_hiddenColumns.json"
-            )
-        return ls_client().create_view(create)
 
     def get_recent_annotations(
             self,
@@ -809,7 +806,7 @@ class ProjectOverview(BaseModel):
         project_model = ls_client().create_project(model)
         p_i = ProjectData(id=project_model.id, **p.model_dump())
         if add_coding_game_view:
-            p_i.create_view(
+            p_i.views.create(
                 ProjectViewCreate.model_validate(
                     {"project": project_model.id, "data": {}}
                 )
