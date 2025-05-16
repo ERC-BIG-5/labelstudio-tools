@@ -2,7 +2,6 @@ import json
 import re
 from csv import DictWriter
 from datetime import datetime, timedelta
-from enum import Enum, auto
 from logging import Logger
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, cast, Annotated
@@ -93,12 +92,6 @@ class ProjectCreate(BaseModel):
     @property
     def pl_lang(self) -> PlLang:
         return self.platform, self.language
-
-
-class ItemType(str, Enum):
-    project_data = auto()
-    agreement_report = auto()
-    xml_template = auto()
 
 
 class ProjectTasks:
@@ -193,8 +186,6 @@ class ProjectData(ProjectCreate):
         self._logger = get_model_logger(self)
         self._tasks = ProjectTasks(self)
         self._view = ProjectViews(self)
-
-    # views, predictions, results
 
     @property
     def tasks(self) -> ProjectTasks:
@@ -684,11 +675,6 @@ class ProjectData(ProjectCreate):
                 self.path_for(SETTINGS.agreements_dir).open()
             ).items()
         }
-
-    def save_tasks(
-            self, tasks: list[LSTask], include_additional: set[str] = None
-    ) -> Path:
-        return self._tasks.save(TaskList(root=tasks), include_additional)
 
     def store_temp_tasks(self, tasks: LSTaskList[LSTask]) -> Path:
         dest = self.path_for(SETTINGS.temp_file_path)
