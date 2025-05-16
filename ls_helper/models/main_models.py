@@ -150,7 +150,7 @@ class ProjectViews:
     def __init__(self, project_data: "ProjectData") -> None:
         self._pd = project_data
 
-    def get_all(self):
+    def download(self):
         views = ls_client().get_project_views(self.id)
         self._pd.path_for(SETTINGS.view_dir).write_text(
             json.dumps([v.model_dump() for v in views], indent=2)
@@ -160,6 +160,13 @@ class ProjectViews:
 
     def delete(self, view_id: int) -> bool:
         return ls_client().delete_view(view_id)
+
+    def get(self) -> list[ProjectViewModel]:
+        view_file = self._pd.path_for(SETTINGS.view_dir)
+        if not view_file.exists():
+            self.download()
+        data = json.load(view_file.open())
+        return [ProjectViewModel.model_validate(v) for v in data]
 
 
 class ProjectData(ProjectCreate):
@@ -427,14 +434,6 @@ class ProjectData(ProjectCreate):
             raise ValueError(
                 f"{repr(self)} has no 'variable_extensions' file. Call: 'generate_variable_extensions_template'"
             )
-
-    # todo move to view model
-    def get_views(self) -> Optional[list[ProjectViewModel]]:
-        view_file = self.path_for(SETTINGS.view_dir)
-        if not view_file.exists():
-            return None
-        data = json.load(view_file.open())
-        return [ProjectViewModel.model_validate(v) for v in data]
 
     # todo move to view model
     def create_view(

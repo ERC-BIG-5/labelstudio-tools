@@ -53,13 +53,11 @@ def update_coding_game(
         view_id = view.id
 
     if refresh_views:
-        po.views.get_all()
-    views = po.get_views()
-    if not views:
-        download_project_views(id, alias, platform, language)
-        views = po.get_views()
-        # print("No views found for project. Call 'download_project_views' first")
-        # return
+        po.views.download()
+    views = po.views.get()
+
+    # print("No views found for project. Call 'download_project_views' first")
+    # return
     view_ = [v for v in views if v.id == view_id]
     if not view_:
         # todo: create view
@@ -95,7 +93,7 @@ def set_view_items(
         create_view: Annotated[Optional[bool], typer.Option()] = True,
 ):
     po = get_project(id, alias, platform, language)
-    views = po.get_views()
+    views = po.view.get()()
     if not views and not create_view:
         print("No views found")
         return
@@ -142,7 +140,7 @@ def download_project_views(
         language: Annotated[Optional[str], typer.Option()] = None,
 ) -> list[ProjectViewModel]:
     po = get_project(id, alias, platform, language)
-    views = po.views.get_all()
+    views = po.views.download()
     logger.debug(f"view file -> {po.path_for(SETTINGS.view_dir)}")
     return views
 

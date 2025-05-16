@@ -50,7 +50,7 @@ if __name__ == "__main__":
         view_id = {
             43: 195
         }
-        food_view = [v for v in new_po.get_views() if v.id == view_id.get(po.id)]
+        food_view = [v for v in new_po.view.get() if v.id == view_id.get(po.id)]
         if not food_view:
             print(f"No view found for {po.alias}")
             continue
