@@ -1,7 +1,7 @@
 import json
 from logging import Logger
 from pathlib import Path
-from typing import Optional, Any, cast
+from typing import Optional, Any, cast, TYPE_CHECKING
 
 import pandas as pd
 from pandas import DataFrame
@@ -9,17 +9,18 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ls_helper.agreements_calculation import Agreements
 from ls_helper.models.interface_models import ProjectVariableExtensions, InterfaceData
-from ls_helper.models.main_models import ProjectData
 from ls_helper.models.variable_models import ChoiceVariableModel, VariableModel, VariableType
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, TaskResultModel
 from ls_helper.settings import SETTINGS, DFCols, DFFormat
 from tools.project_logging import get_model_logger
 from tools.pydantic_annotated_types import SerializableDatetime
 
+if TYPE_CHECKING:
+    from ls_helper.models.main_models import ProjectData
+
 
 class ProjectResult(BaseModel):
-    project_data: ProjectData
-    # annotation_structure: ResultStruct
+    project_data: "ProjectData"
     data_extensions: Optional[ProjectVariableExtensions] = None
     raw_annotation_result: Optional["ProjectAnnotationResultsModel"] = None
     project_views: Optional[list[ProjectViewModel]] = None

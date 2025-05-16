@@ -26,7 +26,7 @@ def basic(
 ):
     po = get_project(id, alias)
     res = po.get_annotations_results()
-    variables = {"nature_any", "nature_text", "nature_visual_any"}
+    variables = {"nature_any", "nature_text", "nature_visual_any", "has_compound"}
     rename = {"nature_visual_any": "nature_visual"}
     _, data = res.clean_annotation_results(variables=variables)
     rows = []
@@ -37,8 +37,16 @@ def basic(
             # todo make this a param!
             data[p_id] = res[:2]
         row = {rename.get(v, v): 0 for v in variables}
-        for d in res:
+        del row["has_compound"]
+        for d in res[:2]:
+            if "has_compound" in d:
+                if d.get("has_compound") == "Yes":
+                    d["nature_visual_any"] = "Yes"
+                    d["nature_text"] = "Yes"
+                del d["has_compound"]
             for v in variables:
+                if v == "has_compound":
+                    continue
                 new_n = rename.get(v, v)
                 row[new_n] += 1 if d.get(v, "No") == "Yes" else 0
         rows.append(row)
@@ -52,18 +60,25 @@ def basic(
 
     sns.set_theme(style="whitegrid")
 
-    # figure 1
+    # figure 1 Nature any - conflicts
     df_nat_any = agreement_count_df(df, "nature_any")
     fig, ax = plt.subplots(figsize=(6, 15))
     sns.set_color_codes("pastel")
-    sns.barplot(x="nature_any", y="count", data=df_nat_any,
-                label="Total", color="b")
-
-    sns.despine(left=True, bottom=True)
-    if show:
-        plt.show()
+    plot0 = sns.barplot(x="nature_any", y="count", data=df_nat_any,
+                        label="Total", color="b", )
+    plot0.set(title='Nature any agreements')
+    # bar-values ABS (REL)
+    values = df_nat_any["count"]
+    total = values.sum()
+    rel_values = values / total
+    rel_values = rel_values.round(2)
+    bar_values = [f"{a} ({r})" for a, r in zip(values, rel_values)]
+    for i in plot0.containers:
+        ax.bar_label(i, bar_values)
 
     fig.savefig(po.path_for(SETTINGS.plots_dir, f"nature_0_{po.id}", ext=".png"))
+    if show:
+        plt.show()
 
     # figure 2
     fig, ax = plt.subplots(figsize=(6, 15))
@@ -74,25 +89,27 @@ def basic(
     df_nat_any_dis.loc[df_nat_any_dis['both'] == 1, 'nature_visual'] = 0
     df_nat_any_dis_c = df_nat_any_dis.sum().to_frame().reset_index().rename(
         columns={"index": "nature", 0: "count"})
-    sns.barplot(x="nature", y="count", data=df_nat_any_dis_c,
-                label="Total", color="b")
+    plot1 = sns.barplot(x="nature", y="count", data=df_nat_any_dis_c,
+                        label="Total", color="b")
+    plot1.set(title='One coder only: selection')
 
-    sns.despine(left=True, bottom=True)
     fig.savefig(po.path_for(SETTINGS.plots_dir, f"nature_1_{po.id}", ext=".png"))
-
     if show:
         plt.show()
 
-    ###
+    ### figure 3
     df_nat_any_ag = df[df["nature_any"] == 2].drop(["nature_any"], axis=1)
     df_nat_agg_p = df_nat_any_ag.groupby(["nature_text"]).value_counts().unstack()
     df_nat_agg_p.columns.rename("nature_visual", inplace=True)
     df_nat_agg_p.sort_index(axis=0, inplace=True, ascending=False)
+    df_nat_agg_p.fillna(0, inplace=True)
+    df_nat_agg_p = df_nat_agg_p.astype(int)
     ##
 
     # Draw a heatmap with the numeric values in each cell
     fig, ax = plt.subplots(figsize=(9, 6))
-    sns.heatmap(df_nat_agg_p, annot=True, linewidths=.5, ax=ax, cmap="crest")
+    #
+    sns.heatmap(df_nat_agg_p, annot=True, fmt="d", linewidths=.5, ax=ax, cmap="crest")
     if show:
         plt.show()
 

@@ -235,6 +235,8 @@ def clean_results(
     :param variables:
     :return: filepath and result-dict: platform_id: [{coder-results}]
     """
+    if not variables:
+        raise ValueError("No variables selected")
     res_file, results = (
         get_project(id, alias, platform, language)
         .get_annotations_results(use_existing=True)

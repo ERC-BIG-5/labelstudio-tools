@@ -832,3 +832,6 @@ def get_project(
     po = platforms_overview.get_project((id, alias, platform, language))
     ls_logger.debug(repr(po))
     return po
+
+
+ProjectResult.model_rebuild()
