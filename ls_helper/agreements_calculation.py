@@ -435,7 +435,7 @@ class Agreements:
                         var_col = self.option_tasks.setdefault(var, {})
                         option_col = var_col.setdefault(option, {})
 
-                        option_col["filtered_ids"] = task_ids
+                        option_col["filtered_ids"] = task_ids.to_list()
 
                         pv_df = self.create_coder_pivot_df(option_df)
 
