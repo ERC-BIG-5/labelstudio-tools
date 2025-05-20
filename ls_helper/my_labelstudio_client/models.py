@@ -301,10 +301,11 @@ class TimelineLabels(BaseModel):
     timelinelabels: list[str]
 
     @property
-    def direct_value(self) -> list[str]:
-        return [
-            f'{",".join(self.timelinelabels)}:{"".join([r.str_value for r in self.ranges])}'
-        ]
+    def direct_value(self) -> list[tuple[str, int, int]]:
+        return [(self.timelinelabels[idx], range.start, range.end) for idx, range in enumerate(self.ranges)]
+        # return [
+        #     f'{",".join(self.timelinelabels)}:{"".join([r.str_value for r in self.ranges])}'
+        # ]
 
 
 class AnnotationResult(BaseModel):

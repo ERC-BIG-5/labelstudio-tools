@@ -280,7 +280,6 @@ class ProjectResult(BaseModel):
 
         # pack 'range-labels' which are multiple rows, into one row with lists
         def merge_range_labels(df_) -> DataFrame:
-
             df_range_labels = df_[df_["type"] == "range-labels"]
             if len(df_range_labels) > 0:
                 merge_value = df_range_labels["value"].to_list()

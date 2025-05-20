@@ -6,7 +6,9 @@ import pandas as pd
 import typer
 
 from ls_helper.models.main_models import get_project
+from ls_helper.models.variable_models import VariableType
 from ls_helper.settings import SETTINGS
+from tools.files import save_json
 from tools.project_logging import get_logger
 
 logger = get_logger(__file__)
@@ -117,6 +119,8 @@ def get_confusions(
     conf_all["count_annot"] = count_drv_all
     # Get the count & type of confusions for each DRV
     for drv in all_values:
+        # todo, this could be a loop, over text, visual, composite
+        # but then conf_{var}_count and conf_{var}[drv] need to be dicts as well....
         # text confusions
         df_sub_t = df[df["variable"] == f'rel-value_text_conf_{drv}']
         found_values, found_dict = list(df_sub_t["value"]), {}
@@ -249,3 +253,25 @@ def get_confusions(
         ext=".csv",
     )
     # df.to_csv(dest)
+
+
+def extract_video_frames(
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None
+):
+    po = get_project(id, alias)
+    po_vars = po.variables()
+
+    # print(po_vars)
+    range_vars = {
+        var: var_info
+        for var, var_info in po_vars.items()
+        if var_info.type == VariableType.range
+    }
+    _, annotation_df = po.get_annotations_results().get_annotation_df()
+    range_values = annotation_df[annotation_df["variable"].isin(list(range_vars.keys()))]
+    range_values = range_values[["platform_id", "value"]].set_index("platform_id")["value"]
+    range_values = range_values.loc[lambda v: v != ""]
+    dest = po.path_for(SETTINGS.temp_file_path, alternative="video_frames")
+    save_json(dest, range_values.to_dict())
+    logger.info(f"Saved video frame ranges to {dest}")

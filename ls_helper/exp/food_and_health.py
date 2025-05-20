@@ -6,8 +6,9 @@ from ls_helper.funcs import build_view_with_filter_p_ids
 from ls_helper.models.main_models import get_project
 from ls_helper.settings import SETTINGS
 
-if __name__ == "__main__":
-    # project 50 (youtube-en) is not completed yes
+
+def depr_create_views():
+    # project 50 (youtube-en) is not completed yet
     writer: dict[str, DictWriter] = {}
     vars = ["Food"]
     for d in vars:
@@ -57,3 +58,31 @@ if __name__ == "__main__":
         else:
             view = food_view[0]
         build_view_with_filter_p_ids(view, [p_id for p_id in p_ids])
+
+
+def flat_food_mask(extras_col) -> bool:
+    return any(["Food" in res for res in extras_col])
+
+
+def filter_food(p_id):
+    po = get_project(p_id)
+    flat = po.get_annotations_results().flatten_annotation_results()
+    mask = flat['extras'].apply(flat_food_mask)
+    flat_filtered = flat[mask]
+    pass
+    # import pyarrow as pa
+    # import pyarrow.feather as feather
+    # feather.write_feather(flat_filtered, f'food_{p_id}.feather')
+    # import pyreadr
+    # print(type(flat_filtered))
+    # import pandas as pd
+    # fresh_df = pd.DataFrame(flat_filtered)
+    # pyreadr.write_rds(fresh_df, f"food_{p_id}.rds")
+
+    flat_filtered.to_csv(f'food_{p_id}.csv')
+
+
+if __name__ == "__main__":
+    # 53, twitter-en-5
+    # 54 twitter-es-5
+    filter_food(53)

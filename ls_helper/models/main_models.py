@@ -203,7 +203,11 @@ class ProjectData(ProjectCreate):
     ) -> Path:
         if not ext:
             ext = ".json"
-        return base_p / f"{alternative if alternative else self.id}{ext}"
+        # todo. temp info
+        if alternative:
+            self._logger.info(f"Note, that the project-id does not need to be passed anymore for 'alternative'")
+        name = f"{alternative}_{self.id}" if alternative else self.id
+        return base_p / f"{name}{ext}"
 
     def __repr__(self) -> str:
         return f"{self.id}/{self.alias}/{self.platform}/{self.language}"
@@ -436,7 +440,7 @@ class ProjectData(ProjectCreate):
 
     def get_recent_annotations(
             self,
-            accepted_age: int,
+            accepted_age: int = 6,
             use_existing: bool = False,
     ) -> Optional[
         tuple[
@@ -445,7 +449,7 @@ class ProjectData(ProjectCreate):
         ]
     ]:
         """
-
+        todo. unify it with (get_annotations_results)
         :param project_id:
         :param accepted_age:
         :return: true, list of anns; True if existing file
