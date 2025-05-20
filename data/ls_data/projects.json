@@ -118,5 +118,15 @@
     "default": false,
     "coding_game_view_id": 189,
     "id": 54
+  },
+  "57": {
+    "title": "Weibo p.v5",
+    "alias": "weibo-ch-5",
+    "platform": "weibo",
+    "language": "ch",
+    "description": null,
+    "default": false,
+    "coding_game_view_id": null,
+    "id": 57
   }
 }

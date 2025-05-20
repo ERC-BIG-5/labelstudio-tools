@@ -704,6 +704,9 @@ class ProjectOverview(BaseModel):
         default_factory=dict, exclude=True
     )
 
+    def model_post_init(self, context: Any, /) -> None:
+        self._logger = get_model_logger(self)
+
     @model_validator(mode="after")
     def post_build(cls, overview: "ProjectOverview") -> "ProjectOverview":
         overview.create_map()
@@ -775,6 +778,13 @@ class ProjectOverview(BaseModel):
             add_coding_game_view: Optional[bool] = True,
             maximum_annotations: Optional[int] = 2,
     ) -> ProjectData:
+        """
+        TODO coding game view is not created ?!?!
+        :param p:
+        :param add_coding_game_view:
+        :param maximum_annotations:
+        :return:
+        """
         if p.alias in self.alias_map:
             raise ValueError(f"alias {p.alias} already exists")
         if p.default:

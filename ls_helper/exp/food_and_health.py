@@ -65,11 +65,17 @@ def flat_food_mask(extras_col) -> bool:
 
 
 def filter_food(p_id):
+    """
+    get all food relevant posts in the flattened format
+    :param p_id:
+    :return:
+    """
     po = get_project(p_id)
     flat = po.get_annotations_results().flatten_annotation_results()
     mask = flat['extras'].apply(flat_food_mask)
     flat_filtered = flat[mask]
-    pass
+
+    # too bad. more R friedly formats didnt work. writers complained...
     # import pyarrow as pa
     # import pyarrow.feather as feather
     # feather.write_feather(flat_filtered, f'food_{p_id}.feather')
@@ -85,4 +91,4 @@ def filter_food(p_id):
 if __name__ == "__main__":
     # 53, twitter-en-5
     # 54 twitter-es-5
-    filter_food(53)
+    filter_food(54)

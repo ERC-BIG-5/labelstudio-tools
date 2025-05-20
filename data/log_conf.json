@@ -218,6 +218,15 @@
         "error_file_handler"
       ],
       "propagate": false
+    },
+    "ls_helper.models.main_models.ProjectOverview": {
+      "level": "DEBUG",
+      "handlers": [
+        "console",
+        "file_handler",
+        "error_file_handler"
+      ],
+      "propagate": false
     }
   },
   "root": {
