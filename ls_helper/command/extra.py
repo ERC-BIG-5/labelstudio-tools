@@ -116,7 +116,8 @@ def get_confusions(
     count_drv_all = [count_drv_text[ind] + count_drv_visual[ind] for ind in range(conf_all.shape[0])]
     conf_all["count_annot"] = count_drv_all
     # Get the count & type of confusions for each DRV
-    for drv in all_values:
+    count_text_confs, count_visual_confs, count_all_confs = [], [], []
+    for drv in all_values:     
         # text confusions
         df_sub_t = df[df["variable"] == f'rel-value_text_conf_{drv}']
         found_values, found_dict = list(df_sub_t["value"]), {}
@@ -127,7 +128,7 @@ def get_confusions(
                 else:
                     found_dict[value] += 1
         conf_text_count = [found_dict[key] if key in found_dict.keys() else 0 for key in all_values]
-        conf_text[drv] = conf_text_count
+        count_text_confs.append(conf_text_count)
         # visual confusions
         df_sub_v = df[df["variable"] == f'rel-value_visual_conf_{drv}']
         found_values, found_dict = list(df_sub_v["value"]), {}
@@ -137,10 +138,19 @@ def get_confusions(
                     found_dict[value] = 1
                 else:
                     found_dict[value] += 1
-        conf_visual_count = [found_dict[key] if key in found_dict.keys() else 0 for key in all_values]
-        conf_visual[drv] = conf_visual_count
+        conf_visual_count = [found_dict[key] if key in found_dict.keys() else 0 for key in all_values]           
+        count_visual_confs.append(conf_visual_count)
         # all confusions
-        conf_all[drv] = [conf_text_count[ind] + conf_visual_count[ind] for ind in range(len(all_values))]
+        count_all_confs.append(np.add(conf_text_count, conf_visual_count))
+    # transpose for insertion in the dataframe as new vectors
+    count_text_confs_tr = np.transpose(count_text_confs)
+    count_visual_confs_tr = np.transpose(count_visual_confs)
+    count_all_confs_tr = np.transpose(count_all_confs)
+    for pos in range(len(all_values)):
+        for drv in all_values:
+            conf_text[drv] = count_text_confs_tr[pos]
+            conf_visual[drv] = count_visual_confs_tr[pos]
+            conf_all[drv] = count_all_confs_tr[pos]
     # Get the count of annotations for each value with a confusion attached
     conf_text["count_dirty"] = conf_text.apply(lambda x: sum([x[drv] for drv in all_values]), axis=1)
     conf_visual["count_dirty"] = conf_visual.apply(lambda x: sum([x[drv] for drv in all_values]), axis=1)
