@@ -15,7 +15,7 @@ from ls_helper.my_labelstudio_client.models import (
     Task,
     TaskCreate,
     TaskResultModel,
-    UserModel,
+    UserModel, TaskCreateList, TaskList,
 )
 from tools.project_logging import get_logger
 
@@ -377,15 +377,21 @@ class LabelStudioBase:
             raise ValueError(resp.json())
         return resp
 
-    def import_tasks(self, project_id: int, tasks: list[TaskCreate]):
+    def import_tasks(self, project_id: int, tasks: TaskCreateList) -> TaskList:
         resp = self._client_wrapper.httpx_client.post(
             f"/api/projects/{project_id}/import?return_task_ids=true",
-            json=[t.model_dump()["data"] for t in tasks],
+            json=[t.model_dump()["data"] for t in tasks.root],
         )
         if resp.status_code != 201:
             print(resp)
             raise ValueError(resp.json())
-        return resp.json()
+        resp_data = resp.json()
+        task_ids = resp_data["task_ids"]
+        tasks = TaskList(root=[
+            Task(**t.model_dump(), id=task_ids[idx])
+            for idx, t in enumerate(tasks.root)
+        ])
+        return tasks
 
     def delete_view(self, view_id: int) -> bool:
         """

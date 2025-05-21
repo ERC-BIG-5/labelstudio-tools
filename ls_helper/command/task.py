@@ -94,13 +94,7 @@ def create_tasks(
         ]
 
     # todo, this should be at po.tasks
-    resp_data = ls_client().import_tasks(po.id, batch)
-    task_ids = resp_data["task_ids"]
-    tasks = LSTaskList(root=[
-        LSTask(**t.model_dump(), id=task_ids[idx])
-        for idx, t in enumerate(batch)
-    ])
-    po.tasks.save(tasks)
+    po.tasks.import_tasks(LSTaskCreateList(root=batch))
 
 
 def patch_task(task_id: int, task: LSTask):

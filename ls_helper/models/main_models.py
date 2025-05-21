@@ -31,17 +31,12 @@ from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.my_labelstudio_client.models import (
     ProjectModel as LSProjectModel,
     ProjectModel,
-    ProjectViewCreate, TaskList,
-)
-from ls_helper.my_labelstudio_client.models import (
+    ProjectViewCreate,
     ProjectViewModel,
     TaskResultModel,
-)
-from ls_helper.my_labelstudio_client.models import (
     Task as LSTask,
-)
-from ls_helper.my_labelstudio_client.models import (
     TaskList as LSTaskList,
+    TaskCreateList as LSTaskCreateList
 )
 from ls_helper.settings import (
     SETTINGS,
@@ -104,7 +99,7 @@ class ProjectTasks:
         return self._pd.path_for(SETTINGS.tasks_dir)
 
     def download_tasks(self, save: bool = True) -> LSTaskList:
-        tasks = TaskList.model_validate(ls_client().get_task_list(project=self._pd.id))
+        tasks = LSTaskList.model_validate(ls_client().get_task_list(project=self._pd.id))
         if save:
             self.save(tasks)
         return tasks
@@ -119,6 +114,11 @@ class ProjectTasks:
         return LSTaskList.model_validate_json(
             self.fp.read_text()
         )
+
+    def import_tasks(self, tasks: LSTaskCreateList) -> LSTaskList:
+        tasks = ls_client().import_tasks(self._pd.id, tasks)
+        self.save(tasks)
+        return tasks
 
     def save(self, tasks: LSTaskList, include_additional_fields: Optional[set[str]] = None) -> Path:
         if not include_additional_fields:

@@ -15,6 +15,7 @@ dependencies = [
     "pandas>=2.2.3",
     "pydantic-settings>=2.9.1",
     "pystache>=0.6.8",
+    "python-project-tools",
     "tqdm>=4.67.1",
     "typer>=0.15.2",
 ]
@@ -41,3 +42,6 @@ extras = [
 [tool.ruff]
 # Set the maximum line length to 79.
 line-length = 79
+
+[tool.uv.sources]
+python-project-tools = { git = "https://github.com/transfluxus/python-project-tools" }
