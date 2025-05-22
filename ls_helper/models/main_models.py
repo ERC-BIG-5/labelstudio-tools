@@ -95,7 +95,7 @@ class ProjectTasks:
         self._pd = project_data
 
     @property
-    def fp(self):
+    def fp(self) -> Path:
         return self._pd.path_for(SETTINGS.tasks_dir)
 
     def download_tasks(self, save: bool = True) -> LSTaskList:

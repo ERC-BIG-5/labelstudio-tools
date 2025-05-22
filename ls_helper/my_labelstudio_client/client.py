@@ -387,6 +387,8 @@ class LabelStudioBase:
             raise ValueError(resp.json())
         resp_data = resp.json()
         task_ids = resp_data["task_ids"]
+        # todo we could make sure, that ids are kicked out of the tasks here, otherwise that will crash
+        # passing tasks instead of create-tasks seems common, when moving relevant tasks from one po to another
         tasks = TaskList(root=[
             Task(**t.model_dump(), id=task_ids[idx])
             for idx, t in enumerate(tasks.root)

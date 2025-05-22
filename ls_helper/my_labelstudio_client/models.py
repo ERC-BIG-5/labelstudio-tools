@@ -210,7 +210,7 @@ class TaskCreate(BaseModel):
     data: Optional[dict[str, Any]] = None
     predictions: Optional[list] = None
 
-    # model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="ignore")
 
 
 class Task(TaskCreate):

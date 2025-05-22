@@ -7,7 +7,8 @@
     "description": null,
     "default": false,
     "coding_game_view_id": null,
-    "id": 31
+    "id": 31,
+    "finished": false
   },
   "33": {
     "title": "YouTube EN - p.v2",
@@ -50,7 +51,8 @@
     "description": null,
     "default": true,
     "coding_game_view_id": null,
-    "id": 50
+    "id": 50,
+    "finished": false
   },
   "51": {
     "title": "Twitter ES - p.v4",
@@ -93,6 +95,18 @@
     "description": null,
     "default": false,
     "coding_game_view_id": null,
-    "id": 57
+    "id": 57,
+    "finished": false
+  },
+  "58": {
+    "title": "Youtube EN - p.v6",
+    "alias": "youtube-en-6",
+    "platform": "youtube",
+    "language": "en",
+    "description": null,
+    "default": false,
+    "coding_game_view_id": null,
+    "id": 58,
+    "finished": false
   }
 }
