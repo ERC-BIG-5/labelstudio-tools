@@ -145,6 +145,8 @@ class ProjectResult(BaseModel):
             type_ = choice_var.choice
             if type_ == "multiple":
                 fillNa = choice_var.default or "[]"
+        else:
+            type_ = type_.name
         # For rows that exist only in df2, fill in default values
         # todo. instead of 0, we need to fill in the proper length (or 0-4)
         merged_df["variable"] = v_df.name
@@ -301,11 +303,10 @@ class ProjectResult(BaseModel):
         # todo, shall we still use this metadata thingy??
         df.attrs["format"] = DFFormat.raw_annotation
 
-        """
-        raw_annotation_df = df.astype(
-            {"task_id": "int32", "ann_id": "int32", 'user_id': "category", "value_idx": "int32",
-             'type': "category", 'question': "category", 'value': "string"})
-        """
+        df = df.astype(
+            {"task_id": "int32", "ann_id": "UInt8", 'user_id': "UInt8", "idx": "UInt8",
+             'type': "category", 'variable': "category", 'value': "object"}, errors='ignore')
+
         self.raw_annotation_df = df
         return df, self.assignment_df
 

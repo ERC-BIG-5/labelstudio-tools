@@ -10,7 +10,7 @@ import pandas as pd
 from lxml.etree import ElementTree
 from pydantic import BaseModel, ConfigDict, Field, model_validator, PrivateAttr
 
-from ls_helper.agreements_calculation import AgreementResult
+from ls_helper.agreements_calculation import VariableAgreementResult
 from ls_helper.build_configs import (
     LabelingInterfaceBuildConfig,
     build_from_template,
@@ -684,10 +684,10 @@ class ProjectData(ProjectCreate):
 
         return paths
 
-    def get_agreement_data(self) -> dict[str, AgreementResult]:
+    def get_agreement_data(self) -> dict[str, VariableAgreementResult]:
         # todo test
         return {
-            var: AgreementResult.model_validate(ag)
+            var: VariableAgreementResult.model_validate(ag)
             for var, ag in json.load(
                 self.path_for(SETTINGS.agreements_dir).open()
             ).items()

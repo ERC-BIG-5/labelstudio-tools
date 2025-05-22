@@ -30,7 +30,7 @@ type AgreementsCol = dict[str, Optional[float]]
 type OptionOccurances = dict[str, list[int]]
 
 
-class AgreementResult(BaseModel):
+class VariableAgreementResult(BaseModel):
     variable: str
     single_overall: Optional[AgreementsCol] = Field(default_factory=dict)
     options_agreements: dict[str, AgreementsCol] = Field(default_factory=dict)
@@ -57,7 +57,7 @@ class Agreements:
         self._init_df: Optional[DataFrame] = self.create_init_df()
         self._assignment_df = self.po_results.assignment_df
 
-        self.results: dict[str, AgreementResult] = {}
+        self.results: dict[str, VariableAgreementResult] = {}
         # self.collections: dict[str, OptionOccurances] = {}
         self.logger = get_logger(__file__)
 
@@ -92,13 +92,12 @@ class Agreements:
             return df.set_index(["task_id", "user_id"])
 
     def select_variables(
-            self, variables: list[str], always_as_dict: bool = True
-    ) -> dict[str, DataFrame] | DataFrame:
+            self, variables: list[str]
+    ) -> dict[str, DataFrame]:
         df = self.get_init_df()
 
         selected_variables = []
         po_variables = self.po.variables()
-        variables_dfs: dict[str, DataFrame] = {}
 
         for var in variables:
             variable_def = po_variables.get(var)
@@ -113,13 +112,14 @@ class Agreements:
 
             selected_variables.append(var)
 
-            variables_dfs = df[
-                df["variable"].isin(selected_variables)
-            ].groupby("variable")
+        variables_dfs = df[
+            df["variable"].isin(selected_variables)
+        ].groupby("variable", observed=True)
 
-        if not always_as_dict and len(variables_dfs) == 1:
-            return list(variables_dfs.values())[0]
-        return dict(list(variables_dfs))
+        dfs: list[tuple[str, DataFrame]] = list(variables_dfs)
+        for v_name, v_df in dfs:
+            v_df.drop("variable", axis=1)
+        return dict(dfs)
 
     def create_coder_pivot_df(self, df: DataFrame) -> DataFrame:
         """
@@ -332,18 +332,24 @@ class Agreements:
             max_coders: int = 2,
             agreement_types: Optional[Agreement_types] = None,
             keep_tasks: bool = True,
-    ) -> dict[str, AgreementResult]:
+    ) -> dict[str, VariableAgreementResult]:
+        # variables, if not specified, use all choice variables
         if not variables:
             variables = list(self.po.choices.keys())
             if exclude_variables:
                 variables = list(set(variables) - set(exclude_variables))
         self.max_coders = max_coders
+        # get all independet variables dataframes
         variables_dfs = self.select_variables(variables)
 
+        # agreement types: "gwet", "fleiss", "ratio", "abs" default: ("gwet", "ratio", "abs")
         if not agreement_types:
             agreement_types = self.agreement_types
 
+        # project variables map to get the options
         po_variables: dict[str, ChoiceVariableModel] = self.po.variables()
+        # iterate through all variables
+        # index, variable-name, variable-df
         for idx, (var, v_df) in enumerate(variables_dfs.items()):
             print(
                 f"{idx:>2}/{len(variables_dfs)}",
@@ -351,25 +357,25 @@ class Agreements:
                 len(v_df),
                 po_variables[var].choice,
             )
-            result = AgreementResult(variable=var)
+            # init AgreementResult for variable
+            result = VariableAgreementResult(variable=var)
             self.results[var] = result
-            if "variable" in v_df.columns:
-                v_df = v_df.drop("variable", axis=1)
 
             options = po_variables[var].options
+            # TODO, instead consider it all being NONE
             if v_df.empty:
                 continue
-            if v_df.iloc[0]["type"] == "single":
+            if po_variables[var].choice == "single":
+                # add NONE, for missing response
                 v_df = self.add_default(v_df, "single", force_default)
-                v_df_s = v_df.explode("value")
+                v_df = v_df.explode("value")
 
                 result.single_overall = self._calc_agreements(
-                    v_df_s, agreement_types
+                    v_df, agreement_types
                 )
                 for option in options + [force_default]:
                     # Use vectorized operations when possible for performance
                     option_df = v_df.copy()
-                    option_df = option_df.explode("value")
                     option_df = option_df.groupby("task_id").filter(
                         lambda group: (group["value"] == option).any()
                     )
