@@ -4,7 +4,6 @@ import typer
 from deepdiff import DeepDiff
 
 from ls_helper.models.interface_models import (
-    InterfaceData,
     ProjectVariableExtensions,
     FieldExtension,
 )
@@ -28,12 +27,12 @@ project_app = typer.Typer(
 
 @project_app.command(short_help="Create a new project in LS", help="xxxx")
 def create_project(
-    title: Annotated[str, typer.Option()],
-    alias: Annotated[str, typer.Option()],
-    platform: Annotated[str, typer.Option()],
-    language: Annotated[str, typer.Option()],
-    maximum_annotations: Annotated[int, typer.Option()] = 2,
-    create_coding_game_view: Annotated[bool, typer.Option()] = True,
+        title: Annotated[str, typer.Option()],
+        alias: Annotated[str, typer.Option()],
+        platform: Annotated[str, typer.Option()],
+        language: Annotated[str, typer.Option()],
+        maximum_annotations: Annotated[int, typer.Option()] = 2,
+        create_coding_game_view: Annotated[bool, typer.Option()] = True,
 ):
     platforms_overview.create(
         ProjectCreate(
@@ -52,28 +51,25 @@ def create_project(
     short_help="[setup] Required for annotation result processing. needs project-data"
 )
 def generate_variable_extensions_template(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    add_if_not_exists: Annotated[bool, typer.Option()] = True,
-    overwrite_if_exists: Annotated[bool, typer.Option()] = False,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        add_if_not_exists: Annotated[bool, typer.Option()] = True,
+        overwrite_if_exists: Annotated[bool, typer.Option()] = False,
 ):
     po = get_project(id, alias, platform, language)
 
-    def get_variable_extensions(
-        annotation_struct: InterfaceData,
-    ) -> ProjectVariableExtensions:
-        data: dict[str, FieldExtension] = {}
+    # TODO TEST (change done at commit: 8d4a8ab8)
+    interf_struct = po.raw_interface_struct
+    data: dict[str, FieldExtension] = {}
 
-        for field in annotation_struct.inputs:
-            data[field] = FieldExtension()
-        for field in annotation_struct.ordered_fields:
-            data[field] = FieldExtension()
+    for field in interf_struct.inputs:
+        data[field] = FieldExtension()
+    for field in interf_struct.ordered_fields:
+        data[field] = FieldExtension()
 
-        return ProjectVariableExtensions(extensions=data)
-
-    res_template = get_variable_extensions(po.raw_interface_struct)
+    res_template = ProjectVariableExtensions(extensions=data)
 
     try:
         existing = po.variable_extensions.model_dump(include={"extensions"})
@@ -114,10 +110,10 @@ def generate_variable_extensions_template(
 
 @project_app.command(short_help="[maint]")
 def download_project_data(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Argument()] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Argument()] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
 ) -> ProjectModel:
     po = get_project(id, alias, platform, language)
     project_data = ls_client().get_project(po.id)

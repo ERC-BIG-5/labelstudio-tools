@@ -34,7 +34,6 @@ from ls_helper.my_labelstudio_client.models import (
     ProjectViewCreate,
     ProjectViewModel,
     TaskResultModel,
-    Task as LSTask,
     TaskList as LSTaskList,
     TaskCreateList as LSTaskCreateList
 )
@@ -170,6 +169,55 @@ class ProjectViews:
         return ls_client().create_view(create_data)
 
 
+class ProjectLabelConfig:
+
+    def __init__(self, project_data: "ProjectData") -> None:
+        self._pd = project_data
+
+    def build_ls_labeling_config(
+            self, alternative_template: Optional[str] = None
+    ) -> tuple[Path, ElementTree, bool]:
+        """
+
+        :param alternative_template:
+        :return: the path of the file, the tree, if its valid
+        """
+        template_path = self._pd.path_for(
+            SETTINGS.labeling_templates, alternative_template, ".xml"
+        )
+        destination_path = self._pd.path_for(
+            SETTINGS.built_labeling_configs, alternative_template, ".xml"
+        )
+        destination_path.parent.mkdir(exist_ok=True)
+
+        if not template_path.exists():
+            raise FileNotFoundError(f"No template File: {template_path.stem}")
+        build_config = LabelingInterfaceBuildConfig(template=template_path)
+        built_tree, broken_refs, duplicates = build_from_template(build_config)
+        built_tree.write(destination_path, encoding="utf-8", pretty_print=True)
+        self._pd._logger.info(
+            f"labelstudio xml labeling config written to file://{destination_path.absolute()}"
+        )
+        valid = not broken_refs and not duplicates
+        return (
+            self._pd.path_for(SETTINGS.built_labeling_configs),
+            built_tree,
+            valid,
+        )
+
+    def read_built_labeling_config(
+            self, alternative_build: Optional[str] = None
+    ) -> str:
+        """
+        reads the built labeling config file
+        :param alternative_build:
+        :return:
+        """
+        return self._pd.path_for(
+            SETTINGS.built_labeling_configs, alternative_build, ".xml"
+        ).read_text(encoding="utf-8")
+
+
 class ProjectData(ProjectCreate):
     id: int
     finished: bool = False
@@ -180,6 +228,7 @@ class ProjectData(ProjectCreate):
     _logger: Optional[Logger] = None
     _tasks: ProjectTasks = PrivateAttr()
     _view: ProjectViews = PrivateAttr()
+    _label_config: ProjectLabelConfig = PrivateAttr()
 
     model_config = ConfigDict()
 
@@ -187,6 +236,7 @@ class ProjectData(ProjectCreate):
         self._logger = get_model_logger(self)
         self._tasks = ProjectTasks(self)
         self._view = ProjectViews(self)
+        self._label_config = ProjectLabelConfig(self)
 
     @property
     def tasks(self) -> ProjectTasks:
@@ -195,6 +245,10 @@ class ProjectData(ProjectCreate):
     @property
     def views(self) -> ProjectViews:
         return self._view
+
+    @property
+    def label_config(self) -> ProjectLabelConfig:
+        return self._label_config
 
     def path_for(
             self,
@@ -246,49 +300,6 @@ class ProjectData(ProjectCreate):
             )
         )
         self._logger.info(f"project-data saved for {repr(self)}: -> {dest}")
-
-    def build_ls_labeling_config(
-            self, alternative_template: Optional[str] = None
-    ) -> tuple[Path, ElementTree, bool]:
-        """
-
-        :param alternative_template:
-        :return: the path of the file, the tree, if its valid
-        """
-        template_path = self.path_for(
-            SETTINGS.labeling_templates, alternative_template, ".xml"
-        )
-        destination_path = self.path_for(
-            SETTINGS.built_labeling_configs, alternative_template, ".xml"
-        )
-        destination_path.parent.mkdir(exist_ok=True)
-
-        if not template_path.exists():
-            raise FileNotFoundError(f"No template File: {template_path.stem}")
-        build_config = LabelingInterfaceBuildConfig(template=template_path)
-        built_tree, broken_refs, duplicates = build_from_template(build_config)
-        built_tree.write(destination_path, encoding="utf-8", pretty_print=True)
-        self._logger.info(
-            f"labelstudio xml labeling config written to file://{destination_path.absolute()}"
-        )
-        valid = not broken_refs and not duplicates
-        return (
-            self.path_for(SETTINGS.built_labeling_configs),
-            built_tree,
-            valid,
-        )
-
-    def read_labeling_config(
-            self, alternative_build: Optional[str] = None
-    ) -> str:
-        """
-        reads the built labeling config file
-        :param alternative_build:
-        :return:
-        """
-        return self.path_for(
-            SETTINGS.built_labeling_configs, alternative_build, ".xml"
-        ).read_text(encoding="utf-8")
 
     def group_index_variable(self, variable_name: str) -> tuple[str, int]:
         """
@@ -681,20 +692,6 @@ class ProjectData(ProjectCreate):
                 self.path_for(SETTINGS.agreements_dir).open()
             ).items()
         }
-
-    def store_temp_tasks(self, tasks: LSTaskList[LSTask]) -> Path:
-        dest = self.path_for(SETTINGS.temp_file_path)
-        dest.write_text(
-            json.dumps(
-                [
-                    t.model_dump(include={"data", "id", "project"})
-                    for t in tasks.root
-                ],
-                indent=2,
-            )
-        )
-        self._logger.info(f"Save tasks to: {dest.as_posix()}")
-        return dest
 
 
 class ProjectOverview(BaseModel):

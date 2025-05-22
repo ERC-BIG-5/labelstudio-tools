@@ -6,11 +6,10 @@ from deepdiff import DeepDiff
 
 from ls_helper.command.project_setup import download_project_data
 from ls_helper.config_helper import parse_label_config_xml
+from ls_helper.models.main_models import get_project, platforms_overview
+from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.settings import SETTINGS
 from tools.project_logging import get_logger
-
-from ls_helper.my_labelstudio_client.client import ls_client
-from ls_helper.models.main_models import get_project, platforms_overview
 
 logger = get_logger(__file__)
 
@@ -24,11 +23,11 @@ labeling_conf_app = typer.Typer(
     help="Uses platform specific template",
 )
 def build(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("--alias", "-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
-    alternative_template: Annotated[Optional[str], typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("--alias", "-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
+        alternative_template: Annotated[Optional[str], typer.Argument()] = None,
 ) -> tuple[Path, bool]:
     """
 
@@ -40,24 +39,24 @@ def build(
     :return:  path, is_valid
     """
     po = get_project(id, alias, platform, language)
-    path, tree, valid = po.build_ls_labeling_config(alternative_template)
+    path, tree, valid = po.label_config.build_ls_labeling_config(alternative_template)
     return path, valid
 
 
 @labeling_conf_app.command(help="[ls maint] Upload labeling config")
 def update_labeling_config(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Argument()] = None,
-    language: Annotated[Optional[str], typer.Argument()] = None,
-    alternative_built: Annotated[Optional[str], typer.Argument()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Argument()] = None,
+        language: Annotated[Optional[str], typer.Argument()] = None,
+        alternative_built: Annotated[Optional[str], typer.Argument()] = None,
 ):
     # todo, if we do that. save it
     # download_project_data(platform, language)
     client = ls_client()
     po = get_project(id, alias, platform, language)
 
-    label_config = po.read_labeling_config(alternative_built)
+    label_config = po.label_config.read_built_labeling_config(alternative_built)
 
     print("Validating config")
     resp = client.validate_project_labeling_config(po.id, label_config)
@@ -82,10 +81,10 @@ def update_labeling_config(
 
 @labeling_conf_app.command()
 def build_extension_index(
-    take_all_defaults: Annotated[
-        bool, typer.Option(help="take default projects (pl/lang)")
-    ] = True,
-    project_ids: Annotated[Optional[list[int]], typer.Option("-pid")] = None,
+        take_all_defaults: Annotated[
+            bool, typer.Option(help="take default projects (pl/lang)")
+        ] = True,
+        project_ids: Annotated[Optional[list[int]], typer.Option("-pid")] = None,
 ):
     """
     Checks
@@ -105,8 +104,8 @@ def build_extension_index(
         raise ValueError("Unclear parameter for build_extension_index")
     index = _build_extension_index(projects)
     dest = (
-        SETTINGS.temp_file_path
-        / f"annot_ext_index_{'_'.join(str(p.id) for p in projects)}.json"
+            SETTINGS.temp_file_path
+            / f"annot_ext_index_{'_'.join(str(p.id) for p in projects)}.json"
     )
     dest.write_text(index.model_dump_json(indent=2))
     print(f"index saved to {dest}")
@@ -114,11 +113,11 @@ def build_extension_index(
 
 @labeling_conf_app.command()
 def check_labelling_config(
-    build_file_name: str,
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
+        build_file_name: str,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
 ):
     po = get_project(id, alias, platform, language)
 
@@ -137,10 +136,10 @@ def check_labelling_config(
 
 @labeling_conf_app.command()
 def from_project(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
 ):
     """
     Get the labeling conf from a concrete project file and dump it to labeling_configs/project/<id>.xml
@@ -154,7 +153,7 @@ def from_project(
     po = get_project(id, alias, platform, language)
     config_xml = po.project_data.label_config
     dest_file = (
-        SETTINGS.BASE_DATA_DIR / f"labeling_configs/project/{po.id}.xml"
+            SETTINGS.BASE_DATA_DIR / f"labeling_configs/project/{po.id}.xml"
     )
     dest_file.parent.mkdir(exist_ok=True)
     dest_file.write_text(config_xml)
@@ -162,10 +161,10 @@ def from_project(
 
 
 def patch_from_modyfied_project_xml(
-    id: Annotated[Optional[int], typer.Option()] = None,
-    alias: Annotated[Optional[str], typer.Option("-a")] = None,
-    platform: Annotated[Optional[str], typer.Option()] = None,
-    language: Annotated[Optional[str], typer.Option()] = None,
+        id: Annotated[Optional[int], typer.Option()] = None,
+        alias: Annotated[Optional[str], typer.Option("-a")] = None,
+        platform: Annotated[Optional[str], typer.Option()] = None,
+        language: Annotated[Optional[str], typer.Option()] = None,
 ):
     """
     get the xml from 'labeling_configs/project/{po.id}.xml'
