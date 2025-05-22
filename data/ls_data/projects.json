@@ -7,7 +7,8 @@
     "description": null,
     "default": false,
     "coding_game_view_id": 85,
-    "id": 43
+    "id": 43,
+    "finished": true
   },
   "33": {
     "title": "YT - en - part1",
@@ -17,7 +18,8 @@
     "description": null,
     "default": false,
     "coding_game_view_id": 56,
-    "id": 33
+    "id": 33,
+    "finished": true
   },
   "36": {
     "title": "YT - es - part1",
@@ -27,7 +29,8 @@
     "description": null,
     "default": false,
     "coding_game_view_id": 57,
-    "id": 36
+    "id": 36,
+    "finished": true
   },
   "31": {
     "title": "test - general",
@@ -47,7 +50,8 @@
     "description": null,
     "default": false,
     "coding_game_view_id": null,
-    "id": 29
+    "id": 29,
+    "finished": true
   },
   "25": {
     "title": "twitter images",
@@ -57,7 +61,8 @@
     "description": null,
     "default": false,
     "coding_game_view_id": null,
-    "id": 25
+    "id": 25,
+    "finished": true
   },
   "2": {
     "title": "Nature - 4 Axis",
@@ -67,7 +72,8 @@
     "description": null,
     "default": false,
     "coding_game_view_id": null,
-    "id": 2
+    "id": 2,
+    "finished": true
   },
   "50": {
     "title": "Youtube - EN - protocol.v4",
@@ -87,7 +93,8 @@
     "description": null,
     "default": false,
     "coding_game_view_id": 145,
-    "id": 51
+    "id": 51,
+    "finished": true
   },
   "39": {
     "title": "Twitter - en - part1",
@@ -97,7 +104,8 @@
     "description": null,
     "default": false,
     "coding_game_view_id": 67,
-    "id": 39
+    "id": 39,
+    "finished": true
   },
   "53": {
     "title": "Twitter - EN - protocol.v5",
@@ -107,7 +115,8 @@
     "description": null,
     "default": true,
     "coding_game_view_id": 193,
-    "id": 53
+    "id": 53,
+    "finished": true
   },
   "54": {
     "title": "Twitter - ES - protocol.v5",
@@ -117,7 +126,8 @@
     "description": null,
     "default": false,
     "coding_game_view_id": 189,
-    "id": 54
+    "id": 54,
+    "finished": true
   },
   "57": {
     "title": "Weibo p.v5 (1)",

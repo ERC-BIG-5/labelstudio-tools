@@ -82,7 +82,7 @@ class ProjectCreate(BaseModel):
 
     @property
     def full_description(self) -> str:
-        return f"{self.title}\n{self.platform}:{self.language}\n{self.description}"
+        return f"{self.alias};{self.platform}:{self.language};{self.description}"
 
     @property
     def pl_lang(self) -> PlLang:
@@ -172,6 +172,7 @@ class ProjectViews:
 
 class ProjectData(ProjectCreate):
     id: int
+    finished: bool = False
     _project_data: Optional[LSProjectModel] = None
     _interface_data: Optional[InterfaceData] = None
     _variable_extensions: Optional[ProjectVariableExtensions] = None
@@ -442,6 +443,7 @@ class ProjectData(ProjectCreate):
             self,
             accepted_age: int = 6,
             use_existing: bool = False,
+            ignore_finished: bool = False,
     ) -> Optional[
         tuple[
             Annotated[bool, "use_local"],
@@ -452,6 +454,7 @@ class ProjectData(ProjectCreate):
         todo. unify it with (get_annotations_results)
         :param project_id:
         :param accepted_age:
+        :param ignore_finished: field 'finished' in project_data prevents new downloads, no matter the age.
         :return: true, list of anns; True if existing file
         """
         # todo change the list back to another model in order to pack some functions like dropping cancelations...
@@ -462,9 +465,11 @@ class ProjectData(ProjectCreate):
             if (
                     datetime.now() - file_dt < timedelta(hours=accepted_age)
                     or use_existing
+                    or (self.finished and not ignore_finished)
             ):
+                is_finished_str = f"(FINISHED)" if self.finished else ""
                 self._logger.info(
-                    f"Get recent, gets latest annotation: {file_dt:%m%d_%H%M}"
+                    f"Get recent {is_finished_str}, gets latest annotation: {file_dt:%m%d_%H%M}"
                 )
 
                 annotation_file = get_latest_annotation_file(self.id)
@@ -662,10 +667,7 @@ class ProjectData(ProjectCreate):
                             row_data[agreement_type] = agreement_value
                         writer.writerow(row_data)
 
-        conflicts_dest = self.path_for(SETTINGS.agreements_dir)
-        conflicts_dest = (
-                conflicts_dest.parent / f"{conflicts_dest.stem}_conflicts.json"
-        )
+        conflicts_dest = self.path_for(SETTINGS.agreements_dir, alternative="conflicts")
         paths.append(conflicts_dest)
         save_json(conflicts_dest, agreement_report.option_tasks)
 

@@ -185,7 +185,7 @@ def add_conflicts_to_tasks(
     po = get_project(id, alias, platform, language)
     # get conflicts and create the strings that are added to the tasks data
     conflicts = read_data(
-        po.path_for(SETTINGS.agreements_dir, alternative=f"{po.id}_conflicts")
+        po.path_for(SETTINGS.agreements_dir, alternative=f"conflicts")
     )
     tasks: dict[int, set] = {}
     for variable, variable_data in conflicts.items():
@@ -240,6 +240,6 @@ def clean_results(
     res_file, results = (
         get_project(id, alias, platform, language)
         .get_annotations_results(use_existing=True)
-        .clean_annotation_results(simplify_single, variables)
+        .clean_annotation_results(simplify_single, set(variables))
     )
     return res_file, results

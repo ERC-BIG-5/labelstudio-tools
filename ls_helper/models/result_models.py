@@ -113,7 +113,7 @@ class ProjectResult(BaseModel):
 
         dest = self.project_data.path_for(
             SETTINGS.annotations_dir,
-            alternative=f"clean_{self.project_data.id}",
+            alternative=f"clean",
         )
         dest.write_text(json.dumps(results))
         self._logger.info(f"Clean results written to {dest}")

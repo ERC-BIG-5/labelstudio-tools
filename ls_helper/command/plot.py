@@ -76,7 +76,7 @@ def basic(
     for i in plot0.containers:
         ax.bar_label(i, bar_values)
 
-    fig.savefig(po.path_for(SETTINGS.plots_dir, f"nature_0_{po.id}", ext=".png"))
+    fig.savefig(po.path_for(SETTINGS.plots_dir, f"nature_0", ext=".png"))
     if show:
         plt.show()
 
@@ -93,7 +93,7 @@ def basic(
                         label="Total", color="b")
     plot1.set(title='One coder only: selection')
 
-    fig.savefig(po.path_for(SETTINGS.plots_dir, f"nature_1_{po.id}", ext=".png"))
+    fig.savefig(po.path_for(SETTINGS.plots_dir, f"nature_1", ext=".png"))
     if show:
         plt.show()
 
@@ -113,4 +113,4 @@ def basic(
     if show:
         plt.show()
 
-    fig.savefig(po.path_for(SETTINGS.plots_dir, f"nature_2_{po.id}", ext=".png"))
+    fig.savefig(po.path_for(SETTINGS.plots_dir, f"nature_2", ext=".png"))

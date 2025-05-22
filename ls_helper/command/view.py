@@ -157,7 +157,7 @@ def create_conflict_view(
 ):
     po = get_project(id, alias, platform, language)
     conflicts = read_data(
-        po.path_for(SETTINGS.agreements_dir, alternative=f"{po.id}_conflicts")
+        po.path_for(SETTINGS.agreements_dir, alternative=f"conflicts")
     )
     if variable not in conflicts:
         print(f"No conflict data for {variable}. Wrong variable-name?")
