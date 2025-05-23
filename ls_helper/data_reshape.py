@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 import pandas as pd
+from pandas import DataFrame
 
 if TYPE_CHECKING:
     from ls_helper.models.result_models import ProjectResult
@@ -11,41 +12,21 @@ class ResultTransform:
     def __init__(self, res: "ProjectResult"):
         self.res = res
 
-    def fulvia_output_format(self):
+    def fulvia_output_format(self) -> tuple[DataFrame, DataFrame]:
         """
-        Transform annotation data from long format to binary-encoded format.
-        Creates two DataFrames - one for each annotator across all tasks.
+        The Fulvia-format:
+            - two dataframes, one for annotator1 and one for annotator2
+            - each dataframe has one row per task
+            - each row has a binary indicator for each variable-option combination
 
-        Parameters:
-        -----------
-        df : pandas.DataFrame
-            Input dataframe with columns: task_id, ann_id, variable, idx, value
-            where 'value' contains lists of strings
-        variable_info : dict
-            Dictionary with variable metadata:
-            {
-                'variable_name': {
-                    'type': 'single' or 'multiple',
-                    'options': ['option1', 'option2', ...]
-                }
-            }
-
-        Returns:
-        --------
-        tuple of (df_annotator1, df_annotator2)
-            Two dataframes, one for first annotator per task, one for second annotator per task
+        :return: tuple[DataFrame, DataFrame]
         """
-
-        # Ensure value column contains lists
-        # if not df['value'].apply(lambda x: isinstance(x, list)).all():
-        #     df = df.copy()
-        #     df['value'] = df['value'].apply(lambda x: x if isinstance(x, list) else [x])
 
         # Explode the value lists to create one row per value
-        df, ass = self.res.build_annotation_df(test_rebuild=True, ignore_groups=True)
-        # df = res.raw_annotation_df
+        # todo, maybe this could be stored in a specific file...
+        df_orig, ass = self.res.build_annotation_df(test_rebuild=True, ignore_groups=True)
 
-        df = self.res.limit_annotators_from_raw(df)
+        df = self.res.limit_annotators_from_raw(df_orig)
         df = self.res.filter_choices_only_from_raw(df)
         df = self.res.drop_variables_from_raw(df)
         variables = self.res.project_data.choices(exclude=["coding-game", "harmful_any", "harmful_visual"])
@@ -86,7 +67,7 @@ class ResultTransform:
         missing_columns = [col for col in all_columns if col not in pivot_df.columns]
 
         if missing_columns:
-            # Create DataFrame with missing columns filled with 0s
+            # Create a DataFrame with missing columns filled with 0s
             missing_df = pd.DataFrame(0,
                                       index=pivot_df.index,
                                       columns=missing_columns)
@@ -112,6 +93,8 @@ class ResultTransform:
         annotator1_data = []
         annotator2_data = []
         task_ids = []
+        ann1_ids = []
+        ann2_ids = []
 
         for task_id in sorted(task_ann_pairs.keys()):
             ann1, ann2 = task_ann_pairs[task_id]
@@ -120,12 +103,25 @@ class ResultTransform:
             annotator1_data.append(pivot_df.loc[(task_id, ann1)])
             annotator2_data.append(pivot_df.loc[(task_id, ann2)])
             task_ids.append(task_id)
+            ann1_ids.append(ann1)
+            ann2_ids.append(ann2)
 
         # Create final DataFrames
         df_annotator1 = pd.DataFrame(annotator1_data, index=task_ids)
         df_annotator1.index.name = 'task_id'
+        df_annotator1['ann_id'] = ann1_ids
 
         df_annotator2 = pd.DataFrame(annotator2_data, index=task_ids)
         df_annotator2.index.name = 'task_id'
+        df_annotator2['ann_id'] = ann2_ids
+
+        p_ids = df_orig[['task_id', 'platform_id']].drop_duplicates().set_index('task_id')
+        u_ids = df_orig[['ann_id', 'user_id']].drop_duplicates().set_index('ann_id')
+
+        df_annotator1 = df_annotator1.join(p_ids)
+        df_annotator2 = df_annotator2.join(p_ids)
+
+        df_annotator1 = df_annotator1.reset_index().set_index('ann_id').join(u_ids).reset_index().set_index('task_id')
+        df_annotator2 = df_annotator2.reset_index().set_index('ann_id').join(u_ids).reset_index().set_index('task_id')
 
         return df_annotator1, df_annotator2

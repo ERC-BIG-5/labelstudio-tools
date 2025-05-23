@@ -190,5 +190,7 @@ def overview():
 if __name__ == "__main__":
     try:
         from ls_helper.local_main import main
+
+        main()
     except ImportError:
         print("You wanna create 'ls_helper.local_main' with a main function... its in gitignore and we keep main clean")
