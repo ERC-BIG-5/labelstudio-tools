@@ -21,8 +21,7 @@ from ls_helper.command.view import view_app
 from ls_helper.config_helper import parse_label_config_xml
 from ls_helper.models.interface_models import IChoices, InterfaceData
 from ls_helper.models.main_models import (
-    get_project,
-)
+    get_project, )
 from ls_helper.my_labelstudio_client.client import ls_client
 from ls_helper.settings import SETTINGS
 from ls_helper.tasks import strict_update_project_task_data
@@ -189,143 +188,7 @@ def overview():
 
 
 if __name__ == "__main__":
-    twitter = "twitter"
-    youtube = "youtube"
-    en = "en"
-    es = "es"
-    tw_es = {"platform": twitter, "language": es}
-    yt_en4 = {"id": 50}
-    _default = tw_es
-
-    # setup
-
-    # setup.add_projects()
-
-    # this will work, since there is just one spanish twitter (so it's set to default)
-
-    if False:
-        from ls_helper.command.annotations import agreements
-
-        agreements(
-            **{"alias": "twitter-es-4"},
-            accepted_ann_age=200,
-            # variables=["coding-game"],
-            exclude_variables=[
-                "rel-value_text_conf_aesthetics",
-                "rel-value_text_conf_cultural-identity",
-                "rel-value_text_conf_social-cohesion",
-                "rel-value_text_conf_good-life",
-                "rel-value_text_conf_kinship",
-                "rel-value_text_conf_livelihoods",
-                "rel-value_text_conf_personal-identity",
-                "rel-value_text_conf_reciprocity",
-                "rel-value_text_conf_sense-of-agency",
-                "rel-value_text_conf_sense-of-place",
-                "rel-value_text_conf_social-relations",
-                "rel-value_text_conf_social-responsibility",
-                "rel-value_text_conf_spirituality",
-                "rel-value_text_conf_stewardship-principle",
-                "rel-value_text_conf_well-being",
-                "rel-value_visual_conf_aesthetics",
-                "rel-value_visual_conf_cultural-identity",
-                "rel-value_visual_conf_social-cohesion",
-                "rel-value_visual_conf_good-life",
-                "rel-value_visual_conf_kinship",
-                "rel-value_visual_conf_livelihoods",
-                "rel-value_visual_conf_personal-identity",
-                "rel-value_visual_conf_reciprocity",
-                "rel-value_visual_conf_sense-of-agency",
-                "rel-value_visual_conf_sense-of-place",
-                "rel-value_visual_conf_social-relations",
-                "rel-value_visual_conf_social-responsibility",
-                "rel-value_visual_conf_spirituality",
-                "rel-value_visual_conf_stewardship-principle",
-                "rel-value_visual_conf_well-being",
-            ],
-        )
-
-    # reconfigure twitter-en/es pv.5
-
-    # redo, label configs for # p 5
-
-    # for i in [54]:
-    #     # labeling_conf.build(i)
-    #     # labeling_conf.update_labeling_config(i)
-    #     project_setup.generate_variable_extensions_template(
-    #         id=i, overwrite_if_exists=False
-    #     )
-
-    # labeling_conf.build_ls_labeling_interface(id=53)
-
-    # print(get_variables_info(53, from_built=True))
-
-    # labeling_conf.build_extension_index(False,[51,50])
-    """project_setup.create_project(
-        title="Twitter - ES - protocol.v5",
-        alias="twitter-es-5",
-        platform="twitter",
-        language="en",
-    )"""
-    # project_setup.generate_variable_extensions_template(53)
-    # project_setup.generate_variable_extensions_template(54)
-
-    # create_conflict_view("nature_any",**{"alias": "twitter-es-4"})
-    # get_tasks(**{"alias": "twitter-es-4"})
-    # add_conflicts_to_tasks(**{"alias": "twitter-es-4"})
-
-    """
-    # for creating/testing version 5 of the protocol
-    from ls_helper.command import labeling_conf
-
-    p, valid = labeling_conf.build_ls_labeling_interface(**{"id": 53})
-
-    if valid:
-        labeling_conf.update_labeling_config(**{"id": 53})
-
-    yaml.dump(get_variables_info(id=53), Path("53.yaml").open("w", encoding="utf-8"))
-    """
-    # get_confusions(id=51)
-    # add_conflicts_to_tasks(id=51)
-    # get_confusions(id=51)
-    # update_coding_game(id=51)
-    # from ls_helper.command import pipeline
-    # pipeline.reformat_for_datapipelines(id=43)
-    # pipeline.reformat_for_datapipelines(alias="twitter-es-4")
-
-    # overview()
-
-    # project_setup.generate_variable_extensions_template(43)
-
-    """ extras, food, health
-    project_setup.download_project_data(50)
-    # project_setup.generate_variable_extensions_template(id=50)
-    for i in [43, 50, 51]:  # tw-en,yt-en, tw-es,
-        annotations.clean_results(i, variables={"extras"})
-    """
-
-    # for i in [43]:  # tw-en,yt-en, tw-es,
-    #     annotations.clean_results(i, variables=["nature_any", "nature_text", "nature_visual_any"])
-
-    # task.get_tasks(id=54)
-    # annotations(**{"id": 54, "accepted_ann_age": 0})
-
-    # po = get_project(id=51)
-    # res = po.get_annotations_results()
-    # # df = res.flatten_annotation_results()
-    # raw_df, _ = res.get_annotation_df(
-    #     debug_tasks=[33000], debug_task_limit=10, test_rebuild=True
-    # )
-    # df = res.flatten_annotation_results()
-    # pass
-
-    # aggregate.check_projects([51, 53, 54])
-    # get_project(54).refresh_views()
-
-    # annotations.annotations(id=50, accepted_ann_age=0, min_coders=1)
-    # view.download_project_views(id=53)
-    # annotations.agreements(id=54)
-    # task.get_tasks(id=53)
-    # view.update_coding_game(id=53)
-    # annotations.add_conflicts_to_tasks(id=54)
-
-    # plot.basic_agreements(id=51, show=False)
+    try:
+        from ls_helper.local_main import main
+    except ImportError:
+        print("You wanna create 'ls_helper.local_main' with a main function... its in gitignore and we keep main clean")

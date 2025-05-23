@@ -8,6 +8,7 @@ from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict, Field
 
 from ls_helper.agreements_calculation import Agreements
+from ls_helper.data_reshape import ResultTransform
 from ls_helper.models.interface_models import ProjectVariableExtensions, InterfaceData
 from ls_helper.models.variable_models import ChoiceVariableModel, VariableModel, VariableType
 from ls_helper.my_labelstudio_client.models import ProjectViewModel, TaskResultModel
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
     from ls_helper.models.main_models import ProjectData
 
 
-class ProjectResult(BaseModel):
+class ProjectResult:
     project_data: "ProjectData"
     data_extensions: Optional[ProjectVariableExtensions] = None
     raw_annotation_result: Optional["ProjectAnnotationResultsModel"] = None
@@ -30,8 +31,10 @@ class ProjectResult(BaseModel):
     _extension_applied: Optional[bool] = False
     _logger: Optional[Logger] = None
 
-    def model_post_init(self, context: Any, /) -> None:
+    def __init__(self, project_data: "ProjectData", /) -> None:
+        self.project_data = project_data
         self._logger = get_model_logger(self)
+        self.transform = ResultTransform(self)
 
     @property
     def id(self) -> int:
@@ -40,6 +43,23 @@ class ProjectResult(BaseModel):
     @property
     def interface(self) -> InterfaceData:
         return self.project_data.raw_interface_struct
+
+    def limit_annotators_from_raw(self, df: DataFrame, num_coders=2) -> DataFrame:
+
+        def get_first_two_anns(group):
+            unique_anns = group['ann_id'].unique()[:num_coders]
+            return group[group['ann_id'].isin(unique_anns)]
+
+        filtered_df = df.groupby('task_id').apply(get_first_two_anns).reset_index(drop=True)
+
+        # validation...
+        # ann_counts_per_task = self.raw_annotation_df.groupby('task_id')['ann_id'].nunique()
+        # tasks_with_more_than_2_anns = (ann_counts_per_task > num_coders).sum()
+        # print(tasks_with_more_than_2_anns)
+        return filtered_df
+
+    def filter_choices_only_from_raw(self, df: DataFrame) -> DataFrame:
+        return df[df["type"].isin(["single", "multiple"])]
 
     def clean_annotation_results(
             self, simplify_single: bool = True, variables: set[str] = None
@@ -152,7 +172,8 @@ class ProjectResult(BaseModel):
         merged_df["variable"] = v_df.name
         merged_df["idx"] = merged_df["idx"].fillna(0)
         merged_df["type"] = merged_df["type"].fillna(type_)
-        merged_df["value"] = merged_df["value"].fillna(fillNa)
+        mask = merged_df["value"].isna()
+        merged_df.loc[mask, "value"] = merged_df.loc[mask, "value"].apply(lambda x: [])
 
         # Use timestamps from df1 where available, otherwise from df2
         for col in ["ts", "user_id", "platform_id"]:
@@ -169,9 +190,13 @@ class ProjectResult(BaseModel):
         # Sort by task_id and user_id
         merged_df = merged_df.sort_values(["task_id", "ann_id"])
         # merged_df = merged_df.set_index(["task_id", "ann_id"])
-        return merged_df.reset_index()
+        return merged_df.reset_index(drop=True)
 
-    def get_annotation_df(
+    def drop_variables_from_raw(self, df: DataFrame,
+                                variables: list[str] = ("coding-game", "harmful_any", "harmful_visual")) -> DataFrame:
+        return df[~df["variable"].isin(variables)]
+
+    def build_annotation_df(
             self,
             drop_cancels: bool = True,
             fill_defaults: bool = True,
@@ -290,6 +315,7 @@ class ProjectResult(BaseModel):
             return df_
 
         df = df.groupby(["task_id", "ann_id"], as_index=False).apply(merge_range_labels)
+        df.reset_index(drop=True, inplace=True)
 
         self.assignment_df = DataFrame(assignment_df_rows)
         if fill_defaults:
@@ -305,7 +331,7 @@ class ProjectResult(BaseModel):
 
         df = df.astype(
             {"task_id": "int32", "ann_id": "UInt8", 'user_id': "UInt8", "idx": "UInt8",
-             'type': "category", 'variable': "category", 'value': "object"}, errors='ignore')
+             'type': "category", 'variable': "UInt8", 'value': "object"}, errors='ignore')
 
         self.raw_annotation_df = df
         return df, self.assignment_df

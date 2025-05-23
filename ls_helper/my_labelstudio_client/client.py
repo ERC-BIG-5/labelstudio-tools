@@ -17,6 +17,7 @@ from ls_helper.my_labelstudio_client.models import (
     TaskResultModel,
     UserModel, TaskCreateList, TaskList,
 )
+from ls_helper.settings import SETTINGS
 from tools.project_logging import get_logger
 
 if typing.TYPE_CHECKING:
@@ -240,7 +241,7 @@ class LabelStudioBase:
         if dump:
             json.dump(
                 list(map(UserModel.model_dump, users)),
-                open("data/users.json", "w", encoding="utf-8"),
+                open(SETTINGS.user_file, "w", encoding="utf-8"),
                 ensure_ascii=False,
                 indent=2,
             )

@@ -35,7 +35,7 @@ from ls_helper.my_labelstudio_client.models import (
     ProjectViewModel,
     TaskResultModel,
     TaskList as LSTaskList,
-    TaskCreateList as LSTaskCreateList
+    TaskCreateList as LSTaskCreateList, UserModel as LSUserModel,
 )
 from ls_helper.settings import (
     SETTINGS,
@@ -55,10 +55,6 @@ ProjectAccess = (
         | PlLang
         | tuple[Optional[int], Optional[str], Optional[str], Optional[str]]
 )
-
-
-class UserInfo(BaseModel):
-    users: dict[int, str]
 
 
 class ProjectCreate(BaseModel):
@@ -390,12 +386,11 @@ class ProjectData(ProjectCreate):
     def variables_names(self) -> list[str]:
         return list(self.variables().keys())
 
-    @property
-    def choices(self) -> dict[str, ChoiceVariableModel]:
+    def choices(self, include: list[str] = None, exclude: list[str] = None) -> dict[str, ChoiceVariableModel]:
         return {
             k: v
             for k, v in self.variables().items()
-            if isinstance(v, ChoiceVariableModel)
+            if (isinstance(v, ChoiceVariableModel) and (not include or k in include) and (exclude and k not in exclude))
         }
 
     @property
@@ -549,7 +544,7 @@ class ProjectData(ProjectCreate):
         return raw_annotation_result
 
     def fetch_annotations(self) -> "ProjectAnnotationResultsModel":
-        mp = ProjectResult(project_data=self)
+        mp = ProjectResult(self)
         _, mp.raw_annotation_result = self.get_recent_annotations(0)
         return mp.raw_annotation_result
 
@@ -568,7 +563,7 @@ class ProjectData(ProjectCreate):
         if self._ann_results:
             return self._ann_results
 
-        ann_results = ProjectResult(project_data=self)
+        ann_results = ProjectResult(self)
         from_existing, ann_results.raw_annotation_result = (
             self.get_recent_annotations(accepted_ann_age, use_existing)
         )
@@ -586,7 +581,7 @@ class ProjectData(ProjectCreate):
         # new file or there is no raw_dataframe
         # todo, assign within ann_results
         ann_results.raw_annotation_df, ann_results.assignment_df = (
-            ann_results.get_annotation_df()
+            ann_results.build_annotation_df()
         )
         ann_results.raw_annotation_df.to_pickle(
             SETTINGS.annotations_dir / f"raw_{self.id}.pickle"
@@ -596,17 +591,6 @@ class ProjectData(ProjectCreate):
         )
         self._ann_results = ann_results
         return ann_results
-
-    # todo, move somewhere else?
-    @staticmethod
-    def users() -> "UserInfo":
-        pp = Path(SETTINGS.BASE_DATA_DIR / "users.json")
-        if not pp.exists():
-            users = UserInfo(**{})
-            json.dump(users.model_dump(), pp.open("w"), indent=2)
-            return users
-        else:
-            return UserInfo.model_validate(json.load(pp.open()))
 
     def store_agreement_report(
             self, agreement_report: "Agreements", gen_csv_tables: bool = True
@@ -834,6 +818,18 @@ class ProjectOverview(BaseModel):
     def project_list(self) -> list[ProjectData]:
         return list(self.projects.values())
 
+    @staticmethod
+    def users(download: bool = False) -> list[LSUserModel]:
+        pp = Path(SETTINGS.user_file)
+        if not pp.exists() or download:
+            return ls_client().get_users()
+        else:
+            return list(map(LSUserModel.model_validate, json.load(pp.open())))
+
+    @staticmethod
+    def user_id_map() -> dict[int, str]:
+        return {u.id: u.username for u in ProjectOverview.users()}
+
 
 platforms_overview: ProjectOverview = ProjectOverview.load()
 
@@ -847,6 +843,3 @@ def get_project(
     po = platforms_overview.get_project((id, alias, platform, language))
     ls_logger.debug(repr(po))
     return po
-
-
-ProjectResult.model_rebuild()

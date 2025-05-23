@@ -53,11 +53,11 @@ def annotations(
     po = get_project(id, alias, platform, language)
     po.validate_extensions()
 
-    ann_results = ProjectResult(project_data=po)
+    ann_results = ProjectResult(po)
     use_local, ann_results.raw_annotation_result = po.get_recent_annotations(
         accepted_ann_age
     )
-    raw_annotation_df, _ = ann_results.get_annotation_df(ignore_groups=True)
+    raw_annotation_df, _ = ann_results.build_annotation_df(ignore_groups=True)
 
     res = ann_results.flatten_annotation_results(
         min_coders, ann_results.interface.ordered_fields

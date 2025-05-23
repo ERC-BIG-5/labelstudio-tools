@@ -7,3 +7,4 @@
 /data/ls_data/project/
 /data/ls_data/agreements/
 *.pyc
+/ls_helper/local_main.py

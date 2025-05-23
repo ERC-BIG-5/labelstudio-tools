@@ -32,7 +32,7 @@ def get_confusions(
     po = get_project(id, alias, platform, language)
     # po.validate_extensions()
     mp = po.get_annotations_results(accepted_ann_age=accepted_ann_age)
-    df, _ = mp.get_annotation_df()
+    df, _ = mp.build_annotation_df()
 
     ##############################
     # mp.flatten_annotation_results().to_csv("testing.csv")
@@ -187,7 +187,7 @@ def get_confusions(
         conf_all[drv] = matrix_all_new[pos]
     # Save results as Excel file
     #### TODO: CURRENTLY DUMPED TO THE MAIN DIR, SHOULD IMPROVE THIS ####
-    # po.path_for(SETTINGS.annotations_dir,alternative=f"confusion_{po.id}", ext="xlsx")
+    # po.path_for(SETTINGS.annotations_dir,alternative=f"confusion_{po.id}", ext=".xlsx")
     with pd.ExcelWriter("confusions.xlsx") as writer:
         conf_all.to_excel(writer, sheet_name="all", index=False)
         conf_text.to_excel(writer, sheet_name="text", index=False)
@@ -268,7 +268,7 @@ def extract_video_frames(
         for var, var_info in po_vars.items()
         if var_info.type == VariableType.range
     }
-    _, annotation_df = po.get_annotations_results().get_annotation_df()
+    _, annotation_df = po.get_annotations_results().build_annotation_df()
     range_values = annotation_df[annotation_df["variable"].isin(list(range_vars.keys()))]
     range_values = range_values[["platform_id", "value"]].set_index("platform_id")["value"]
     range_values = range_values.loc[lambda v: v != ""]

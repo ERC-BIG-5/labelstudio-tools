@@ -115,6 +115,10 @@ class Settings(BaseSettings):
     def projects_main_file(self) -> Path:
         return self.BASE_DATA_DIR / "projects.json"
 
+    @property
+    def user_file(self) -> Path:
+        return self.BASE_DATA_DIR / "users.json"
+
 
 SETTINGS = Settings()
 if (root() / ".dev.env").exists():
@@ -129,6 +133,7 @@ ls_logger.propagate = False
 
 class DFFormat(Enum):
     raw_annotation = auto()
+    agreement_pivot = auto()
     flat = auto()
     flat_csv_ready = auto()
 
